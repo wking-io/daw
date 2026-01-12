@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"types": ["vite/client"],
+		"jsx": "react-jsx",
+		"resolveJsonModule": true,
+		"strict": true,
+		"noEmit": true,
+		"composite": true
+	},
+	"include": ["src", "vite.config.ts"]
+}

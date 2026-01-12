@@ -1,0 +1,32 @@
+{
+	"name": "@daw/desktop",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "bun run typecheck && vite build",
+		"preview": "vite preview",
+		"tauri": "tauri",
+		"rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml",
+		"rust:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+		"rust:check": "cargo check --manifest-path src-tauri/Cargo.toml",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"fmt": "biome check --write ."
+	},
+	"dependencies": {
+		"@daw/app": "workspace:*",
+		"@tauri-apps/api": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@biomejs/biome": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:"
+	}
+}

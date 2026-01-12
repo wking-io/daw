@@ -1,0 +1,33 @@
+{
+	"name": "@daw/app",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./vite.plugin": "./src/vite.plugin.ts"
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"fmt": "biome check --write ."
+	},
+	"dependencies": {
+		"@daw/contract": "workspace:*",
+		"effect": "catalog:",
+		"ulid": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:"
+	},
+	"devDependencies": {
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"@biomejs/biome": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:"
+	}
+}

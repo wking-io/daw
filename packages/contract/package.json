@@ -1,0 +1,20 @@
+{
+	"name": "@daw/contract",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"fmt": "biome check --write ."
+	},
+	"dependencies": {
+		"effect": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:"
+	}
+}

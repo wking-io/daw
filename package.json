@@ -1,0 +1,37 @@
+{
+  "name": "daw",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "catalog": {
+    "@biomejs/biome": "2.3.11",
+    "@tauri-apps/api": "2.9.1",
+    "@tauri-apps/cli": "2.9.6",
+    "@tsconfig/bun": "1.0.8",
+    "@types/bun": "1.2.21",
+    "@types/node": "24.3.1",
+    "@types/react": "19.2.8",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "@tailwindcss/vite": "4.1.18",
+    "effect": "3.19.14",
+    "tailwindcss": "4.1.18",
+    "ulid": "3.0.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "vite": "7.1.4"
+  },
+  "scripts": {
+    "preinstall": "node ./scripts/ensure-bun.cjs",
+    "typecheck": "bun run --cwd packages/contract typecheck && bun run --cwd packages/app typecheck && bun run --cwd packages/desktop typecheck",
+    "fmt": "bun run --cwd packages/app fmt && bun run --cwd packages/contract fmt && bun run --cwd packages/desktop fmt",
+    "lint": "bun run --cwd packages/app lint && bun run --cwd packages/contract lint && bun run --cwd packages/desktop lint",
+    "check": "bun run typecheck && bun run lint && bun run --cwd packages/desktop rust:check"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}
