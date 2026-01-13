@@ -11,23 +11,40 @@
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
+		"test": "vitest run",
+		"test:e2e": "bun run build && bunx playwright install && bunx playwright test",
+		"test:ci": "bun run test && bun run test:e2e",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
 		"@daw/contract": "workspace:*",
+		"@effect-atom/atom": "catalog:",
+		"@effect-atom/atom-react": "catalog:",
+		"@effect/experimental": "catalog:",
+		"@effect/platform": "catalog:",
+		"@effect/rpc": "catalog:",
 		"effect": "catalog:",
-		"ulid": "catalog:",
 		"react": "catalog:",
-		"react-dom": "catalog:"
+		"react-dom": "catalog:",
+		"scheduler": "catalog:",
+		"ulid": "catalog:"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@playwright/test": "1.57.0",
+		"@testing-library/jest-dom": "6.9.1",
+		"@testing-library/react": "16.3.0",
+		"@testing-library/user-event": "14.6.1",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
+		"@types/scheduler": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
-		"@biomejs/biome": "catalog:",
+		"@vitest/coverage-v8": "catalog:",
+		"happy-dom": "20.1.0",
 		"typescript": "catalog:",
-		"vite": "catalog:"
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	}
 }

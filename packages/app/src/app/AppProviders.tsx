@@ -1,14 +1,8 @@
-import {
-	createContext,
-	type PropsWithChildren,
-	useContext,
-	useMemo,
-} from "react";
-import { type DawStore, makeDawStore } from "../daw/store";
+import { RegistryProvider } from "@effect-atom/atom-react";
+import { createContext, type PropsWithChildren, useContext } from "react";
 import { NoopPlatform, type Platform } from "../ports/Platform";
 
 export interface AppServices {
-	store: DawStore;
 	platform: Platform;
 }
 
@@ -26,11 +20,12 @@ export function AppProviders(
 	}>,
 ) {
 	const platform = props.platform ?? NoopPlatform;
-	const store = useMemo(() => makeDawStore(), []);
 
 	return (
-		<AppServicesContext.Provider value={{ store, platform }}>
-			{props.children}
-		</AppServicesContext.Provider>
+		<RegistryProvider>
+			<AppServicesContext.Provider value={{ platform }}>
+				{props.children}
+			</AppServicesContext.Provider>
+		</RegistryProvider>
 	);
 }

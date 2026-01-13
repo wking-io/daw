@@ -1,0 +1,3 @@
+- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
+- Only use bun as the package manager
+- If a dependency is only used by one package then install it in the package locally otherwise use catalog for version consistency

@@ -1,0 +1,33 @@
+{
+	"name": "@daw/mcp",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"build": "bun run scripts/build-binary.ts",
+		"build:binary": "bun run scripts/build-binary.ts --single",
+		"build:binaries": "bun run scripts/build-binary.ts --all",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"lint": "biome check .",
+		"fmt": "biome check --write ."
+	},
+	"dependencies": {
+		"@daw/contract": "workspace:*",
+		"@effect/ai": "catalog:",
+		"@effect/platform": "catalog:",
+		"@effect/platform-bun": "catalog:",
+		"effect": "catalog:",
+		"ulid": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@vitest/coverage-v8": "catalog:",
+		"@types/bun": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}
+

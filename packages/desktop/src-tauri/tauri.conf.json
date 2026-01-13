@@ -9,6 +9,9 @@
 		"devUrl": "http://localhost:1420",
 		"frontendDist": "../dist"
 	},
+	"bundle": {
+		"externalBin": ["sidecars/daw-mcp"]
+	},
 	"app": {
 		"withGlobalTauri": true,
 		"security": {

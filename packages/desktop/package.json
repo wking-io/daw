@@ -4,10 +4,15 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
+		"predev": "bun ./scripts/predev.ts",
 		"dev": "vite",
+		"prebuild": "bun ./scripts/predev.ts",
 		"build": "bun run typecheck && vite build",
 		"preview": "vite preview",
 		"tauri": "tauri",
+		"test:js": "bun test ./scripts",
+		"test:rust": "bun ./scripts/test-rust.ts",
+		"test": "bun run test:js && bun run test:rust",
 		"rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml",
 		"rust:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
 		"rust:check": "cargo check --manifest-path src-tauri/Cargo.toml",
@@ -23,10 +28,13 @@
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "catalog:",
+		"@vitest/coverage-v8": "catalog:",
+		"@types/bun": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@biomejs/biome": "catalog:",
 		"typescript": "catalog:",
-		"vite": "catalog:"
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	}
 }

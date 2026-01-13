@@ -1,24 +1,27 @@
-import type { Instrument } from "@daw/contract";
 import { CreateInstrumentCommand } from "@daw/contract";
+import * as Registry from "@effect-atom/atom/Registry";
+import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
 import { Effect, Schema } from "effect";
-import { useEffect, useMemo, useState } from "react";
-import { executeCreateInstrument } from "../daw/commands";
+import { useContext, useEffect } from "react";
+import {
+	encodeCreateInstrumentResultJson,
+	executeCreateInstrument,
+} from "../daw/commands";
+import { instrumentsAtom, logsAtom } from "../daw/state";
 import { useAppServices } from "./AppProviders";
 
 export function AppRoot() {
-	const { store, platform } = useAppServices();
-	const initial = useMemo(() => store.getState().instruments, [store]);
-	const [instruments, setInstruments] =
-		useState<ReadonlyArray<Instrument>>(initial);
-	const [logs, setLogs] = useState<ReadonlyArray<string>>([]);
+	const { platform } = useAppServices();
+	const instruments = useAtomValue(instrumentsAtom);
+	const logs = useAtomValue(logsAtom);
+	const registry = useContext(RegistryContext) as Registry.Registry;
 
 	useEffect(() => {
-		const unsubscribeStore = store.subscribe((state) => {
-			setInstruments(state.instruments);
-		});
-
 		const unsubscribePlatform = platform.onCommand((req) => {
-			setLogs((l) => [...l, `← ${req.name} ${JSON.stringify(req.payload)}`]);
+			registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+				...l,
+				`← ${req.name} ${JSON.stringify(req.payload)}`,
+			]);
 
 			if (req.name === "daw.instrument.create") {
 				try {
@@ -26,16 +29,30 @@ export function AppRoot() {
 						req.payload,
 					);
 					const instrument = Effect.runSync(
-						executeCreateInstrument(store, cmd),
+						executeCreateInstrument(cmd).pipe(
+							Effect.provideService(Registry.AtomRegistry, registry),
+						),
 					);
-					const resultJson = JSON.stringify({ ok: true, instrument });
+					const resultJson = encodeCreateInstrumentResultJson({
+						ok: true,
+						instrument,
+					});
 					void platform.respond(req.requestId, resultJson);
-					setLogs((l) => [...l, `→ ok ${instrument.name}`]);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`→ ok ${instrument.name}`,
+					]);
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
-					const resultJson = JSON.stringify({ ok: false, error: message });
+					const resultJson = encodeCreateInstrumentResultJson({
+						ok: false,
+						error: message,
+					});
 					void platform.respond(req.requestId, resultJson);
-					setLogs((l) => [...l, `→ error ${message}`]);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`→ error ${message}`,
+					]);
 				}
 			} else {
 				const resultJson = JSON.stringify({
@@ -47,10 +64,9 @@ export function AppRoot() {
 		});
 
 		return () => {
-			unsubscribeStore();
 			unsubscribePlatform();
 		};
-	}, [platform, store]);
+	}, [platform, registry]);
 
 	return (
 		<div style={{ padding: "16px", fontFamily: "system-ui, sans-serif" }}>

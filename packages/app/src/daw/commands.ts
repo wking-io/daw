@@ -1,17 +1,20 @@
 import type {
 	CreateInstrumentCommand,
+	CreateInstrumentResult,
 	Instrument,
 	InstrumentId,
 } from "@daw/contract";
-import { Effect } from "effect";
+import { CreateInstrumentResult as CreateInstrumentResultSchema } from "@daw/contract";
+import * as Registry from "@effect-atom/atom/Registry";
+import { Effect, Schema } from "effect";
 import { ulid } from "ulid";
-import type { DawStore } from "./store";
+import { instrumentsAtom } from "./state";
 
 export const executeCreateInstrument = (
-	store: DawStore,
 	cmd: CreateInstrumentCommand,
-): Effect.Effect<Instrument> =>
-	Effect.sync(() => {
+): Effect.Effect<Instrument, never, Registry.AtomRegistry> =>
+	Effect.gen(function* () {
+		const registry = yield* Registry.AtomRegistry;
 		const instrument: Instrument = {
 			id: ulid() as InstrumentId,
 			type: cmd.type,
@@ -19,6 +22,14 @@ export const executeCreateInstrument = (
 			params: {},
 			createdAt: new Date(),
 		};
-		store.addInstrument(instrument);
+		registry.update(instrumentsAtom, (prev: ReadonlyArray<Instrument>) => [
+			...prev,
+			instrument,
+		]);
 		return instrument;
 	});
+
+export const encodeCreateInstrumentResultJson = (
+	result: CreateInstrumentResult,
+): string =>
+	JSON.stringify(Schema.encodeSync(CreateInstrumentResultSchema)(result));
