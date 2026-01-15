@@ -1,24 +1,37 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import type { DawCommandHttpRequest } from "../dawIpcClient";
-import { DawIpcClient } from "../dawIpcClient";
+import { Project } from "@daw/contract";
+import { DawStateClient } from "../dawIpcClient";
 import { handleCreateInstrument } from "../handlers";
 
 describe("mcp tool handlers", () => {
-	it("sends daw.instrument.create via DawIpcClient and decodes success", async () => {
-		const calls: DawCommandHttpRequest[] = [];
+	it("submits instrument.create via DawStateClient and decodes success", async () => {
+		const submits: Project.Submit[] = [];
 
-		const stubIpc = DawIpcClient.of({
-			postCommand: (req) => {
-				calls.push(req);
+		const stubClient = DawStateClient.of({
+			getSnapshot: () => Effect.succeed({ version: 0, doc: { instruments: [] } }),
+			submitOp: (req) => {
+				submits.push(req);
 				return Effect.succeed({
-					ok: true,
-					instrument: {
-						id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-						type: "synth",
-						name: "Bass",
-						params: {},
-						createdAt: Date.now(),
+					version: 1,
+					patches: {
+						version: 1,
+						patches: [
+							{
+								t: "instrument.add",
+								instrument: {
+									id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+									type: "synth",
+									name: "Bass",
+									params: {},
+									createdAt: Date.now(),
+								},
+							},
+						],
+					},
+					audioDeltas: {
+						version: 1,
+						deltas: [],
 					},
 				});
 			},
@@ -26,28 +39,40 @@ describe("mcp tool handlers", () => {
 
 		const result = await Effect.runPromise(
 			handleCreateInstrument({ type: "synth", name: "Bass" }).pipe(
-				Effect.provideService(DawIpcClient, stubIpc),
+				Effect.provideService(DawStateClient, stubClient),
 			),
 		);
 
-		expect(calls).toHaveLength(1);
-		expect(calls[0]?.name).toBe("daw.instrument.create");
-		expect(calls[0]?.payload).toEqual({ type: "synth", name: "Bass" });
+		expect(submits).toHaveLength(1);
+		expect(submits[0]?.op).toEqual({
+			t: "instrument.create",
+			type: "synth",
+			name: "Bass",
+			preset: undefined,
+		});
 		expect(result.ok).toBe(true);
 	});
 
 	it("returns ok:false when the IPC response doesn't match the contract schema", async () => {
-		const stubIpc = DawIpcClient.of({
-			postCommand: () =>
+		const stubClient = DawStateClient.of({
+			getSnapshot: () => Effect.succeed({ version: 0, doc: { instruments: [] } }),
+			submitOp: () =>
 				Effect.succeed({
-					ok: true,
-					// missing instrument
+					version: 1,
+					patches: {
+						version: 1,
+						patches: [],
+					},
+					audioDeltas: {
+						version: 1,
+						deltas: [],
+					},
 				}),
 		});
 
 		const result = await Effect.runPromise(
 			handleCreateInstrument({ type: "synth", name: "Bass" }).pipe(
-				Effect.provideService(DawIpcClient, stubIpc),
+				Effect.provideService(DawStateClient, stubClient),
 			),
 		);
 

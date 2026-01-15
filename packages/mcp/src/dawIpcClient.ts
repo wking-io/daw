@@ -1,57 +1,55 @@
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "@effect/platform";
+import { Project } from "@daw/contract";
+import {
+	FetchHttpClient,
+	HttpClient,
+	HttpClientRequest,
+} from "@effect/platform";
 import type { HttpClientError } from "@effect/platform/HttpClientError";
 import { Context, Effect, Layer, Schema } from "effect";
-import { CreateInstrumentCommand } from "@daw/contract";
+import type { ParseError } from "effect/ParseResult";
+import { McpConfig } from "./config";
 
-export interface DawCommandHttpRequest {
-	readonly requestId: string;
-	readonly name: string;
-	readonly payload: unknown;
-}
-
-export class DawIpcClient extends Context.Tag("daw/DawIpcClient")<
-	DawIpcClient,
+export class DawStateClient extends Context.Tag("daw/DawStateClient")<
+	DawStateClient,
 	{
-		readonly postCommand: (
-			req: DawCommandHttpRequest,
-		) => Effect.Effect<unknown, HttpClientError>;
+		readonly getSnapshot: () => Effect.Effect<
+			Project.Snapshot,
+			HttpClientError | ParseError
+		>;
+		readonly submitOp: (
+			req: Project.Submit,
+		) => Effect.Effect<Project.SubmitResult, HttpClientError | ParseError>;
 	}
 >() {}
 
 /**
- * Effect-native client for the DAW Tauri-hosted IPC endpoint:
- * `POST http://127.0.0.1:${DAW_IPC_PORT}/command`
+ * Effect-native client for the DAW state sidecar:
+ * `GET http://127.0.0.1:${DAW_STATE_PORT}/snapshot`
+ * `POST http://127.0.0.1:${DAW_STATE_PORT}/submitOp`
  */
-export const DawIpcClientLive = (options?: {
-	readonly host?: string;
-	readonly port?: number;
-}): Layer.Layer<DawIpcClient> =>
-	Layer.effect(
-		DawIpcClient,
-		Effect.gen(function* () {
-			const client = yield* HttpClient.HttpClient;
+export const DawStateClientLive = Layer.effect(
+	DawStateClient,
+	Effect.gen(function* () {
+		const client = yield* HttpClient.HttpClient;
+		const config = yield* McpConfig;
 
-			const host = options?.host ?? "127.0.0.1";
-			const port =
-				options?.port ??
-				Number.parseInt(process.env.DAW_IPC_PORT ?? "43123", 10) ??
-				43123;
+		const baseUrl = `http://${config.dawStateHost}:${config.dawStatePort}`;
 
-			const url = `http://${host}:${port}/command`;
-
-			return {
-				postCommand: (req) =>
-					HttpClientRequest.post(url).pipe(
-						HttpClientRequest.setHeader("content-type", "application/json"),
-						HttpClientRequest.bodyUnsafeJson(req),
-						client.execute,
-						Effect.flatMap((res) => res.json),
-					),
-			} as const;
-		}),
-	).pipe(Layer.provide(FetchHttpClient.layer));
-
-export const decodeCreateInstrumentArgs = Schema.decodeUnknownSync(
-	CreateInstrumentCommand,
-);
-
+		return {
+			getSnapshot: () =>
+				HttpClientRequest.get(`${baseUrl}/snapshot`).pipe(
+					client.execute,
+					Effect.flatMap((res) => res.json),
+					Effect.flatMap(Schema.decodeUnknown(Project.Snapshot)),
+				),
+			submitOp: (req) =>
+				HttpClientRequest.post(`${baseUrl}/submitOp`).pipe(
+					HttpClientRequest.setHeader("content-type", "application/json"),
+					HttpClientRequest.bodyUnsafeJson(req),
+					client.execute,
+					Effect.flatMap((res) => res.json),
+					Effect.flatMap(Schema.decodeUnknown(Project.SubmitResult)),
+				),
+		} as const;
+	}),
+).pipe(Layer.provide(FetchHttpClient.layer));

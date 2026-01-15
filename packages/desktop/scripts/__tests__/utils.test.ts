@@ -10,12 +10,12 @@ afterEach(() => {
 
 describe("desktop sidecar utilities", () => {
 	it("maps rust targets to binary names", () => {
-		expect(getCurrentSidecar("aarch64-apple-darwin").binaryName).toBe(
-			"daw-mcp-darwin-arm64",
-		);
-		expect(getCurrentSidecar("x86_64-unknown-linux-gnu").binaryName).toBe(
-			"daw-mcp-linux-x64",
-		);
+		expect(
+			getCurrentSidecar("daw-mcp", "aarch64-apple-darwin").binaryName,
+		).toBe("daw-mcp-darwin-arm64");
+		expect(
+			getCurrentSidecar("daw-mcp", "x86_64-unknown-linux-gnu").binaryName,
+		).toBe("daw-mcp-linux-x64");
 	});
 
 	it("copies a binary into src-tauri/sidecars with target suffix", async () => {

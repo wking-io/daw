@@ -1,15 +1,11 @@
 import type { HttpClientError } from "@effect/platform/HttpClientError";
 import * as Cause from "effect/Cause";
-import { Effect, Schema } from "effect";
+import { Effect } from "effect";
 import * as ParseResult from "effect/ParseResult";
 import { TreeFormatter, type ParseError } from "effect/ParseResult";
 import { ulid } from "ulid";
-import {
-	type CreateInstrumentCommand,
-	type CreateInstrumentResult,
-	CreateInstrumentResult as CreateInstrumentResultSchema,
-} from "@daw/contract";
-import { DawIpcClient } from "./dawIpcClient";
+import { InstrumentCommands, Project } from "@daw/contract";
+import { DawStateClient } from "./dawIpcClient";
 
 const formatCreateInstrumentError = (cause: Cause.Cause<unknown>): string => {
 	const error = Cause.squash(cause);
@@ -26,25 +22,42 @@ const formatCreateInstrumentError = (cause: Cause.Cause<unknown>): string => {
  * (tool/runtime/transport), then collapse them to an `ok:false` domain result.
  */
 export const createInstrumentEffect = (
-	params: CreateInstrumentCommand,
+	params: InstrumentCommands.CreateCommand,
 ): Effect.Effect<
-	CreateInstrumentResult,
+	InstrumentCommands.CreateResult,
 	HttpClientError | ParseError,
-	DawIpcClient
+	DawStateClient
 > =>
 	Effect.gen(function* () {
-		const ipc = yield* DawIpcClient;
-		const raw = yield* ipc.postCommand({
-			requestId: ulid(),
-			name: "daw.instrument.create",
-			payload: params,
-		});
-		return yield* Schema.decodeUnknown(CreateInstrumentResultSchema)(raw);
+		const client = yield* DawStateClient;
+		const snapshot = yield* client.getSnapshot();
+		const submit: Project.Submit = {
+			opId: ulid(),
+			baseVersion: snapshot.version,
+			actor: "agent",
+			op: {
+				t: "instrument.create",
+				type: params.type,
+				name: params.name,
+				preset: params.preset,
+			},
+		};
+		const result = yield* client.submitOp(submit);
+		const created = result.patches.patches.find((patch) => patch.t === "instrument.add");
+		if (!created) {
+			return yield* Effect.fail(
+				new Error("submitOp succeeded but no instrument.add patch returned"),
+			);
+		}
+		return {
+			ok: true,
+			instrument: created.instrument,
+		} satisfies InstrumentCommands.CreateResult;
 	});
 
 export const handleCreateInstrument = (
-	params: CreateInstrumentCommand,
-): Effect.Effect<CreateInstrumentResult, never, DawIpcClient> =>
+	params: InstrumentCommands.CreateCommand,
+): Effect.Effect<InstrumentCommands.CreateResult, never, DawStateClient> =>
 	createInstrumentEffect(params).pipe(
 		Effect.catchAllCause((cause) => {
 			// Don't turn cancellation into a "business error"
@@ -55,7 +68,7 @@ export const handleCreateInstrument = (
 				({
 					ok: false,
 					error: formatCreateInstrumentError(cause),
-				}) satisfies CreateInstrumentResult,
+				}) satisfies InstrumentCommands.CreateResult,
 			);
 		}),
 	);

@@ -1,0 +1,28 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@server/*": [
+				"src/*"
+			]
+		},
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": [
+			"ESNext"
+		],
+		"types": [
+			"bun"
+		],
+		"skipLibCheck": true,
+		"strict": true,
+		"noEmit": true
+	},
+	"include": [
+		"src",
+		"scripts",
+		"e2e"
+	]
+}

@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 /**
  * Enforce Bun as the only package manager for this workspace.
  *
@@ -13,21 +15,20 @@ const ua = process.env.npm_config_user_agent || "";
 const isBun = /\bbun\/\d+\./.test(ua) || ua.startsWith("bun/");
 
 if (!isBun) {
-  const pm = ua.split(" ")[0] || "(unknown package manager)";
-  console.error(
-    [
-      "This monorepo is Bun-only.",
-      "",
-      `Detected: ${pm}`,
-      "",
-      "Use:",
-      "  bun install",
-      "  bun add <pkg> --cwd packages/<name>",
-      "  bun update",
-      "",
-      `npm_config_user_agent=${JSON.stringify(ua)}`,
-    ].join("\n"),
-  );
-  process.exit(1);
+	const pm = ua.split(" ")[0] || "(unknown package manager)";
+	console.error(
+		[
+			"This monorepo is Bun-only.",
+			"",
+			`Detected: ${pm}`,
+			"",
+			"Use:",
+			"  bun install",
+			"  bun add <pkg> --cwd packages/<name>",
+			"  bun update",
+			"",
+			`npm_config_user_agent=${JSON.stringify(ua)}`,
+		].join("\n"),
+	);
+	process.exit(1);
 }
-

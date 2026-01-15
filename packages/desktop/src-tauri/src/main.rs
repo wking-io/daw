@@ -12,6 +12,7 @@ use tauri::Emitter;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 use tokio::{net::TcpListener, sync::oneshot};
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
 struct PendingRequests(Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>);
@@ -65,6 +66,13 @@ fn mcp_port() -> u16 {
         .unwrap_or(43124)
 }
 
+fn state_port() -> u16 {
+    std::env::var("DAW_STATE_PORT")
+        .ok()
+        .and_then(|s| s.parse::<u16>().ok())
+        .unwrap_or(43125)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,6 +99,18 @@ mod tests {
 
         std::env::set_var("DAW_MCP_PORT", "not-a-number");
         assert_eq!(mcp_port(), 43124);
+    }
+
+    #[test]
+    fn parses_state_port_from_env_or_defaults() {
+        std::env::remove_var("DAW_STATE_PORT");
+        assert_eq!(state_port(), 43125);
+
+        std::env::set_var("DAW_STATE_PORT", "50003");
+        assert_eq!(state_port(), 50003);
+
+        std::env::set_var("DAW_STATE_PORT", "not-a-number");
+        assert_eq!(state_port(), 43125);
     }
 
     #[test]
@@ -123,6 +143,7 @@ fn main() {
             // The sidecar hosts MCP over Streamable HTTP at http://127.0.0.1:${DAW_MCP_PORT}/mcp
             let mcp_port = mcp_port();
             let ipc_port_num = ipc_port();
+            let state_port = state_port();
             let sidecar = app
                 .shell()
                 .sidecar("daw-mcp")
@@ -155,11 +176,47 @@ fn main() {
                 drop(child);
             });
 
+            let statecar = app
+                .shell()
+                .sidecar("daw-server")
+                .expect("failed to create daw-server sidecar command")
+                .env("DAW_STATE_PORT", format!("{state_port}"));
+
+            let (mut state_rx, state_child) =
+                statecar.spawn().expect("failed to spawn daw-server sidecar");
+
+            tauri::async_runtime::spawn(async move {
+                while let Some(event) = state_rx.recv().await {
+                    match event {
+                        CommandEvent::Stdout(line) => {
+                            let line = String::from_utf8_lossy(&line);
+                            print!("[daw-server] {line}");
+                        }
+                        CommandEvent::Stderr(line) => {
+                            let line = String::from_utf8_lossy(&line);
+                            eprint!("[daw-server] {line}");
+                        }
+                        CommandEvent::Terminated(payload) => {
+                            eprintln!("[daw-server] terminated: {:?}", payload);
+                        }
+                        _ => {}
+                    }
+                }
+
+                drop(state_child);
+            });
+
             tauri::async_runtime::spawn(async move {
                 let port = ipc_port_num;
                 let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
                 let handle_for_router = handle.clone();
+                let cors = CorsLayer::new()
+                    // Local-only IPC, allow any origin (dev server, Tauri webview, etc.)
+                    .allow_origin(Any)
+                    .allow_headers(Any)
+                    .allow_methods(Any);
+
                 let router = Router::new()
                     .route(
                         "/command",
@@ -221,7 +278,8 @@ fn main() {
                             },
                         ),
                     )
-                    .with_state(pending);
+                    .with_state(pending)
+                    .layer(cors);
 
                 let listener = TcpListener::bind(addr)
                     .await

@@ -1,0 +1,33 @@
+{
+	"name": "@daw/server",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"build": "bun run scripts/build-binary.ts",
+		"build:binary": "bun run scripts/build-binary.ts --single",
+		"build:binaries": "bun run scripts/build-binary.ts --all",
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"lint": "biome check .",
+		"fmt": "biome check --write ."
+	},
+	"dependencies": {
+		"@daw/contract": "workspace:*",
+		"@effect/platform": "catalog:",
+		"@effect/platform-bun": "catalog:",
+		"@effect/rpc": "catalog:",
+		"@effect/sql": "catalog:",
+		"@effect/sql-sqlite-bun": "catalog:",
+		"effect": "catalog:",
+		"ulid": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@types/react": "catalog:",
+		"@types/bun": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	}
+}

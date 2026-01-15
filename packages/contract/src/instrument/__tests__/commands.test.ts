@@ -1,14 +1,14 @@
 import { Effect, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
-	CreateInstrumentCommand,
-	CreateInstrumentResult,
+	CreateCommand,
+	CreateResult,
 } from "../commands";
 
 describe("contract schemas", () => {
-	it("decodes CreateInstrumentCommand (preset optional)", async () => {
+	it("decodes CreateCommand (preset optional)", async () => {
 		const decoded = await Effect.runPromise(
-			Schema.decodeUnknown(CreateInstrumentCommand)({
+			Schema.decodeUnknown(CreateCommand)({
 				type: "synth",
 				name: "Bass",
 			}),
@@ -24,15 +24,15 @@ describe("contract schemas", () => {
 		await expect(
 			Effect.runPromise(
 				// missing `type`
-				Schema.decodeUnknown(CreateInstrumentCommand)({ name: "Bass" }),
+				Schema.decodeUnknown(CreateCommand)({ name: "Bass" }),
 			),
 		).rejects.toBeDefined();
 	});
 
-	it("decodes CreateInstrumentResult success (DateFromNumber conversion)", async () => {
+	it("decodes CreateResult success (DateFromNumber conversion)", async () => {
 		const now = Date.now();
 		const decoded = await Effect.runPromise(
-			Schema.decodeUnknown(CreateInstrumentResult)({
+			Schema.decodeUnknown(CreateResult)({
 				ok: true,
 				instrument: {
 					id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",

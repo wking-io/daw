@@ -1,5 +1,4 @@
-export * from "./commands";
-export * from "./instrument";
-export * from "./pattern";
-export * from "./project";
-export * from "./track";
+export * as InstrumentCommands from "./instrument/commands";
+export * as Instrument from "./instrument/domain";
+export * as InstrumentTools from "./instrument/tools";
+export * as Project from "./project";

@@ -5,6 +5,7 @@
     "": {
       "name": "daw",
       "devDependencies": {
+        "@biomejs/biome": "catalog:",
         "@tsconfig/bun": "catalog:",
         "@types/node": "catalog:",
         "typescript": "catalog:",
@@ -20,10 +21,12 @@
         "@effect/experimental": "catalog:",
         "@effect/platform": "catalog:",
         "@effect/rpc": "catalog:",
+        "clsx": "2.1.1",
         "effect": "catalog:",
         "react": "catalog:",
         "react-dom": "catalog:",
         "scheduler": "catalog:",
+        "tailwind-merge": "3.4.0",
         "ulid": "catalog:",
       },
       "devDependencies": {
@@ -96,17 +99,39 @@
         "vitest": "catalog:",
       },
     },
+    "packages/server": {
+      "name": "@daw/server",
+      "version": "0.0.0",
+      "dependencies": {
+        "@daw/contract": "workspace:*",
+        "@effect/platform": "catalog:",
+        "@effect/platform-bun": "catalog:",
+        "@effect/rpc": "catalog:",
+        "@effect/sql": "catalog:",
+        "@effect/sql-sqlite-bun": "catalog:",
+        "effect": "catalog:",
+        "ulid": "catalog:",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@types/react": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
   },
   "catalog": {
     "@biomejs/biome": "2.3.11",
     "@effect-atom/atom": "0.4.12",
     "@effect-atom/atom-react": "0.4.5",
-    "@effect/ai": "0.33.0",
-    "@effect/experimental": "0.57.11",
+    "@effect/ai": "0.33.2",
+    "@effect/experimental": "0.58.0",
     "@effect/platform": "0.94.1",
     "@effect/platform-bun": "0.87.0",
-    "@effect/platform-node": "0.104.0",
     "@effect/rpc": "0.73.0",
+    "@effect/sql": "0.49.0",
+    "@effect/sql-sqlite-bun": "0.50.0",
     "@tailwindcss/vite": "4.1.18",
     "@tauri-apps/api": "2.9.1",
     "@tauri-apps/cli": "2.9.6",
@@ -219,15 +244,17 @@
 
     "@daw/mcp": ["@daw/mcp@workspace:packages/mcp"],
 
+    "@daw/server": ["@daw/server@workspace:packages/server"],
+
     "@effect-atom/atom": ["@effect-atom/atom@0.4.12", "", { "peerDependencies": { "@effect/experimental": "^0.57.0", "@effect/platform": "^0.93.0", "@effect/rpc": "^0.72.1", "effect": "^3.19.0" } }, "sha512-df04Ic4ja3wWxK514dBTQGlUPX4VxfBQiUrW/UiIsTfeJ758K4LhvzilpzBDrkGuri3m+dJ0o9T0Lvq7YaZtZg=="],
 
     "@effect-atom/atom-react": ["@effect-atom/atom-react@0.4.5", "", { "dependencies": { "@effect-atom/atom": "^0.4.12" }, "peerDependencies": { "effect": "^3.19", "react": ">=18 <20", "scheduler": "*" } }, "sha512-N29Lj3jZ4cnSGrubFwWuYmJHkxr7VyExDVnz6ZQJ+jhpBd+p3u0OJGXKI1pAZk7shs+FjO2SbklIx7Y9NZ4wPQ=="],
 
-    "@effect/ai": ["@effect/ai@0.33.0", "", { "dependencies": { "find-my-way-ts": "^0.1.6" }, "peerDependencies": { "@effect/experimental": "^0.58.0", "@effect/platform": "^0.94.0", "@effect/rpc": "^0.73.0", "effect": "^3.19.13" } }, "sha512-ffIbZZCknJtq8Jblz3Fiw7dfxUh8Bl1pXenaWidjgdf4gF8MQer4rly5DMCUMncjRScvxzY6/h73Krq2Iwg3/A=="],
+    "@effect/ai": ["@effect/ai@0.33.2", "", { "dependencies": { "find-my-way-ts": "^0.1.6" }, "peerDependencies": { "@effect/experimental": "^0.58.0", "@effect/platform": "^0.94.1", "@effect/rpc": "^0.73.0", "effect": "^3.19.14" } }, "sha512-iJ6pz9qiKFXhcnriJJSBQ5+Bz3oEg+6hVQ7OPmmTa0dVkKUPIgX9nHqHfstcwLnDfdXBj/zCl79U+iMpGtQBnA=="],
 
     "@effect/cluster": ["@effect/cluster@0.56.1", "", { "dependencies": { "kubernetes-types": "^1.30.0" }, "peerDependencies": { "@effect/platform": "^0.94.1", "@effect/rpc": "^0.73.0", "@effect/sql": "^0.49.0", "@effect/workflow": "^0.16.0", "effect": "^3.19.14" } }, "sha512-gnrsH6kfrUjn+82j/bw1IR4yFqJqV8tc7xZvrbJPRgzANycc6K1hu3LMg548uYbUkTzD8YYyqrSatMO1mkQpzw=="],
 
-    "@effect/experimental": ["@effect/experimental@0.57.11", "", { "dependencies": { "uuid": "^11.0.3" }, "peerDependencies": { "@effect/platform": "^0.93.6", "effect": "^3.19.9", "ioredis": "^5", "lmdb": "^3" }, "optionalPeers": ["ioredis", "lmdb"] }, "sha512-M5uug3Drs/gyTHLfA+XzcIZQGUEV/Jn5yi1POki4oZswhpzNmsVTHl4THpxAordRKwa5lFvTSlsRP684YH7pSw=="],
+    "@effect/experimental": ["@effect/experimental@0.58.0", "", { "dependencies": { "uuid": "^11.0.3" }, "peerDependencies": { "@effect/platform": "^0.94.0", "effect": "^3.19.13", "ioredis": "^5", "lmdb": "^3" }, "optionalPeers": ["ioredis", "lmdb"] }, "sha512-IEP9sapjF6rFy5TkoqDPc86st/fnqUfjT7Xa3pWJrFGr1hzaMXHo+mWsYOZS9LAOVKnpHuVziDK97EP5qsCHVA=="],
 
     "@effect/platform": ["@effect/platform@0.94.1", "", { "dependencies": { "find-my-way-ts": "^0.1.6", "msgpackr": "^1.11.4", "multipasta": "^0.2.7" }, "peerDependencies": { "effect": "^3.19.14" } }, "sha512-SlL8OMTogHmMNnFLnPAHHo3ua1yrB1LNQOVQMiZsqYu9g3216xjr0gn5WoDgCxUyOdZcseegMjWJ7dhm/2vnfg=="],
 
@@ -238,6 +265,8 @@
     "@effect/rpc": ["@effect/rpc@0.73.0", "", { "dependencies": { "msgpackr": "^1.11.4" }, "peerDependencies": { "@effect/platform": "^0.94.0", "effect": "^3.19.13" } }, "sha512-iMPf6tTriz8sK0l5x4koFId8Hz5nFptHYg8WqyjHGIIVLTpZxuiSqhmXZG7FnAs5N2n6uCEws4wWGcIgXNUrFg=="],
 
     "@effect/sql": ["@effect/sql@0.49.0", "", { "dependencies": { "uuid": "^11.0.3" }, "peerDependencies": { "@effect/experimental": "^0.58.0", "@effect/platform": "^0.94.0", "effect": "^3.19.13" } }, "sha512-9UEKR+z+MrI/qMAmSvb/RiD9KlgIazjZUCDSpwNgm0lEK9/Q6ExEyfziiYFVCPiptp52cBw8uBHRic8hHnwqXA=="],
+
+    "@effect/sql-sqlite-bun": ["@effect/sql-sqlite-bun@0.50.0", "", { "peerDependencies": { "@effect/experimental": "^0.58.0", "@effect/platform": "^0.94.0", "@effect/sql": "^0.49.0", "effect": "^3.19.13" } }, "sha512-4L/cIc6DHFXpNlu2hn8Cu8+FTnQyTSNKwYz8T4EpG31T5dwwkt3qfMJwFlrj8NySarT0InSQ3QeHFaeAGawLdA=="],
 
     "@effect/workflow": ["@effect/workflow@0.16.0", "", { "peerDependencies": { "@effect/experimental": "^0.58.0", "@effect/platform": "^0.94.0", "@effect/rpc": "^0.73.0", "effect": "^3.19.13" } }, "sha512-MiAdlxx3TixkgHdbw+Yf1Z3tHAAE0rOQga12kIydJqj05Fnod+W/I+kQGRMY/XWRg+QUsVxhmh1qTr7Ype6lrw=="],
 
@@ -509,6 +538,8 @@
 
     "chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
 
+    "clsx": ["clsx@2.1.1", "", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
+
     "convert-source-map": ["convert-source-map@2.0.0", "", {}, "sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg=="],
 
     "css-tree": ["css-tree@3.1.0", "", { "dependencies": { "mdn-data": "2.12.2", "source-map-js": "^1.0.1" } }, "sha512-0eW44TGN5SQXU1mWSkKwFstI/22X2bG1nYzZTYMAWjylYURhse752YgbE4Cx46AC+bAvI+/dYTPRk1LqSUnu6w=="],
@@ -681,6 +712,8 @@
 
     "symbol-tree": ["symbol-tree@3.2.4", "", {}, "sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw=="],
 
+    "tailwind-merge": ["tailwind-merge@3.4.0", "", {}, "sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g=="],
+
     "tinybench": ["tinybench@2.9.0", "", {}, "sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg=="],
 
     "tinyexec": ["tinyexec@1.0.2", "", {}, "sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg=="],
@@ -734,6 +767,8 @@
     "@asamuzakjp/dom-selector/lru-cache": ["lru-cache@11.2.4", "", {}, "sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg=="],
 
     "@babel/code-frame/js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
+
+    "@effect-atom/atom/@effect/experimental": ["@effect/experimental@0.57.11", "", { "dependencies": { "uuid": "^11.0.3" }, "peerDependencies": { "@effect/platform": "^0.93.6", "effect": "^3.19.9", "ioredis": "^5", "lmdb": "^3" }, "optionalPeers": ["ioredis", "lmdb"] }, "sha512-M5uug3Drs/gyTHLfA+XzcIZQGUEV/Jn5yi1POki4oZswhpzNmsVTHl4THpxAordRKwa5lFvTSlsRP684YH7pSw=="],
 
     "@testing-library/dom/aria-query": ["aria-query@5.3.0", "", { "dependencies": { "dequal": "^2.0.3" } }, "sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A=="],
 

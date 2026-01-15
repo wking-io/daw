@@ -25,10 +25,12 @@
 		"@effect/experimental": "catalog:",
 		"@effect/platform": "catalog:",
 		"@effect/rpc": "catalog:",
+		"clsx": "2.1.1",
 		"effect": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"scheduler": "catalog:",
+		"tailwind-merge": "3.4.0",
 		"ulid": "catalog:"
 	},
 	"devDependencies": {

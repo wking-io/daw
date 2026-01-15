@@ -1,14 +1,14 @@
 import type { Instrument } from "@daw/contract";
 
 export interface DawState {
-	instruments: ReadonlyArray<Instrument>;
+	instruments: ReadonlyArray<Instrument.Instrument>;
 }
 
 type Listener = (state: DawState) => void;
 
 export interface DawStore {
 	getState: () => DawState;
-	addInstrument: (instrument: Instrument) => void;
+	addInstrument: (instrument: Instrument.Instrument) => void;
 	subscribe: (listener: Listener) => () => void;
 }
 

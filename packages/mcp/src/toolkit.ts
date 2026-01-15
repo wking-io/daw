@@ -1,15 +1,14 @@
 import { Tool, Toolkit } from "@effect/ai";
 import {
-	CreateInstrumentCommand,
-	CreateInstrumentResult as CreateInstrumentResultSchema,
+	InstrumentTools,
 } from "@daw/contract";
-import { DawIpcClient } from "./dawIpcClient";
+import { DawStateClient } from "./dawIpcClient";
 
-export const CreateInstrumentTool = Tool.make("daw.instrument.create", {
-	description: "Create a new instrument in the DAW",
-	parameters: CreateInstrumentCommand.fields,
-	success: CreateInstrumentResultSchema,
-}).addDependency(DawIpcClient);
+export const CreateInstrumentTool = Tool.make(InstrumentTools.CreateTool.name, {
+	description: InstrumentTools.CreateTool.description,
+	parameters: InstrumentTools.CreateTool.inputSchema.fields,
+	success: InstrumentTools.CreateTool.outputSchema,
+	dependencies: [DawStateClient],
+});
 
 export const DawToolkit = Toolkit.make(CreateInstrumentTool);
-

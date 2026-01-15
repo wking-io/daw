@@ -27,19 +27,23 @@ const env = {
 };
 
 const ext = process.platform === "win32" ? ".exe" : "";
-const dest = `src-tauri/sidecars/daw-mcp-${triple}${ext}`;
+const sidecars = ["daw-mcp", "daw-server"];
 
 await $`mkdir -p src-tauri/sidecars`.env(env);
 
-// Create a tiny stub executable if missing.
-try {
-	await $`test -f ${dest}`.env(env);
-} catch {
-	if (process.platform === "win32") {
-		await $`cmd /c type nul > ${dest}`.env(env);
-	} else {
-		await Bun.write(dest, "#!/bin/sh\nexit 0\n");
-		await $`chmod +x ${dest}`.env(env);
+for (const sidecar of sidecars) {
+	const dest = `src-tauri/sidecars/${sidecar}-${triple}${ext}`;
+
+	// Create a tiny stub executable if missing.
+	try {
+		await $`test -f ${dest}`.env(env);
+	} catch {
+		if (process.platform === "win32") {
+			await $`cmd /c type nul > ${dest}`.env(env);
+		} else {
+			await Bun.write(dest, "#!/bin/sh\nexit 0\n");
+			await $`chmod +x ${dest}`.env(env);
+		}
 	}
 }
 
