@@ -3,28 +3,18 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@app/*": [
-				"src/*"
-			]
+			"@app/*": ["src/*"]
 		},
 		"target": "ESNext",
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"lib": [
-			"ESNext",
-			"DOM",
-			"DOM.Iterable"
-		],
-		"types": [
-			"vite/client"
-		],
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"types": ["vite/client"],
 		"jsx": "react-jsx",
 		"resolveJsonModule": true,
+		"skipLibCheck": true,
 		"strict": true,
 		"noEmit": true
 	},
-	"include": [
-		"src",
-		"vite.config.ts"
-	]
+	"include": ["src", "vite.config.ts"]
 }

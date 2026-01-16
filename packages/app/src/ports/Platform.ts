@@ -10,7 +10,8 @@ export function isTauriRuntime(): boolean {
 	// typically `window.__TAURI_INTERNALS__` (used by `@tauri-apps/api`).
 	return (
 		typeof window !== "undefined" &&
-		(typeof (window as unknown as { __TAURI__?: unknown }).__TAURI__ !== "undefined" ||
+		(typeof (window as unknown as { __TAURI__?: unknown }).__TAURI__ !==
+			"undefined" ||
 			typeof (window as unknown as { __TAURI_INTERNALS__?: unknown })
 				.__TAURI_INTERNALS__ !== "undefined")
 	);

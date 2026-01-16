@@ -3,7 +3,23 @@ import { describe, expect, it, vi } from "vitest";
 import { AppProviders } from "./AppProviders";
 import { AppRoot } from "./AppRoot";
 
-let patchesHandler: ((batch: { version: number; patches: Array<{ t: string; instrument: unknown }> }) => void) | undefined;
+type OpHandler = (entry: {
+	version: number;
+	submit: {
+		opId: string;
+		baseVersion: number;
+		actor: "ui" | "agent";
+		op: {
+			t: "instrument.create";
+			type: string;
+			name: string;
+			instrumentId: string;
+			createdAt: number;
+		};
+	};
+}) => void;
+
+let opHandler: OpHandler = () => {};
 
 const mockClient = {
 	getSnapshot: vi.fn(async () => ({
@@ -15,11 +31,14 @@ const mockClient = {
 		patches: { version: 0, patches: [] },
 		audioDeltas: { version: 0, deltas: [] },
 	})),
-	subscribePatches: vi.fn(({ onBatch }: { onBatch: typeof patchesHandler }) => {
-		patchesHandler = onBatch ?? undefined;
+	getOps: vi.fn(async () => ({
+		fromVersion: 0,
+		ops: [],
+	})),
+	connectOps: vi.fn(({ onOp }: { onOp: OpHandler }) => {
+		opHandler = onOp;
 		return () => {};
 	}),
-	subscribeAudioDeltas: vi.fn(() => () => {}),
 };
 
 vi.mock("../rpc/client", () => ({
@@ -28,7 +47,7 @@ vi.mock("../rpc/client", () => ({
 
 describe("AppRoot", () => {
 	it("renders and handles daw.instrument.create commands", async () => {
-		patchesHandler = undefined;
+		opHandler = () => {};
 
 		render(
 			<AppProviders>
@@ -37,20 +56,25 @@ describe("AppRoot", () => {
 		);
 
 		expect(screen.getByText("DAW")).toBeInTheDocument();
-		await waitFor(() => expect(patchesHandler).toBeTypeOf("function"));
+		await waitFor(() => expect(opHandler).toBeTypeOf("function"));
 
-		patchesHandler?.({
+		opHandler({
 			version: 1,
-			patches: [
-				{
-					t: "instrument.add",
-					instrument: { id: "inst-1", type: "synth", name: "Bass" },
+			submit: {
+				opId: "op-1",
+				baseVersion: 0,
+				actor: "ui",
+				op: {
+					t: "instrument.create",
+					type: "synth",
+					name: "Bass",
+					instrumentId: "inst-1",
+					createdAt: Date.now(),
 				},
-			],
+			},
 		});
 
 		// Instrument should appear in the list.
 		expect(await screen.findByText(/synth: Bass/)).toBeInTheDocument();
 	});
 });
-

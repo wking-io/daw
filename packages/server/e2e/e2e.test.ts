@@ -1,12 +1,12 @@
-import { describe, expect, it, beforeAll, afterAll } from "bun:test";
-import { RpcClient, RpcSerialization } from "@effect/rpc";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import type { Project } from "@daw/contract";
 import { FetchHttpClient } from "@effect/platform";
-import { Chunk, Effect, Fiber, Layer, Stream } from "effect";
-import { Project } from "@daw/contract";
+import { RpcClient, RpcSerialization } from "@effect/rpc";
 import { ProjectRpcs } from "@server/rpc/requests";
+import { Chunk, Effect, Fiber, Layer, Stream } from "effect";
 import { mkdtemp, rm } from "fs/promises";
-import { join } from "path";
 import { tmpdir } from "os";
+import { join } from "path";
 
 const serverRoot = new URL("..", import.meta.url).pathname;
 
@@ -45,10 +45,7 @@ const waitForServer = async (
 
 const makeClientLayer = (baseUrl: string) =>
 	RpcClient.layerProtocolHttp({ url: `${baseUrl}/rpc` }).pipe(
-		Layer.provide([
-			FetchHttpClient.layer,
-			RpcSerialization.layerNdjson,
-		]),
+		Layer.provide([FetchHttpClient.layer, RpcSerialization.layerNdjson]),
 	);
 
 describe("RPC e2e", () => {
@@ -123,7 +120,10 @@ describe("RPC e2e", () => {
 			const client = yield* RpcClient.make(ProjectRpcs);
 			const snapshot = yield* client.GetSnapshot();
 			const stream = client.PatchStream({ fromVersion: snapshot.version });
-			const fiber = yield* Stream.take(stream, 1).pipe(Stream.runCollect, Effect.fork);
+			const fiber = yield* Stream.take(stream, 1).pipe(
+				Stream.runCollect,
+				Effect.fork,
+			);
 			yield* Effect.yieldNow();
 			yield* client.SubmitOp({
 				opId: "e2e-op-2",
@@ -136,7 +136,7 @@ describe("RPC e2e", () => {
 				},
 			});
 			return yield* Fiber.join(fiber);
-	}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
+		}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
 
 		const patchesChunk = await Effect.runPromise(program);
 		const patches = Chunk.toArray(patchesChunk);
@@ -148,7 +148,10 @@ describe("RPC e2e", () => {
 			const client = yield* RpcClient.make(ProjectRpcs);
 			const snapshot = yield* client.GetSnapshot();
 			const stream = client.AudioDeltaStream({ fromVersion: snapshot.version });
-			const fiber = yield* Stream.take(stream, 1).pipe(Stream.runCollect, Effect.fork);
+			const fiber = yield* Stream.take(stream, 1).pipe(
+				Stream.runCollect,
+				Effect.fork,
+			);
 			yield* Effect.yieldNow();
 			yield* client.SubmitOp({
 				opId: "e2e-op-3",
@@ -161,7 +164,7 @@ describe("RPC e2e", () => {
 				},
 			});
 			return yield* Fiber.join(fiber);
-	}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
+		}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
 
 		const deltasChunk = await Effect.runPromise(program);
 		const deltas = Chunk.toArray(deltasChunk);

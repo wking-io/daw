@@ -1,7 +1,5 @@
+import { InstrumentTools } from "@daw/contract";
 import { Tool, Toolkit } from "@effect/ai";
-import {
-	InstrumentTools,
-} from "@daw/contract";
 import { DawStateClient } from "./dawIpcClient";
 
 export const CreateInstrumentTool = Tool.make(InstrumentTools.CreateTool.name, {

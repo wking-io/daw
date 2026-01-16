@@ -8,8 +8,7 @@ import { $ } from "bun";
  * need the file to exist so the build script doesn't fail.
  */
 
-const triple =
-	Bun.env.TAURI_ENV_TARGET_TRIPLE;
+const triple = Bun.env.TAURI_ENV_TARGET_TRIPLE;
 
 if (!triple) throw new Error("Failed to determine Rust target triple");
 
@@ -30,4 +29,3 @@ try {
 		await $`chmod +x ${dest}`;
 	}
 }
-

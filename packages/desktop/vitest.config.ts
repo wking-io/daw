@@ -6,4 +6,3 @@ export default defineConfig({
 		include: ["scripts/**/*.test.ts"],
 	},
 });
-

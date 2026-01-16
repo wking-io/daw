@@ -1,27 +1,30 @@
-import type * as Px from '../../lib/px'
+import type * as Px from "../../lib/px";
 
 export type DawClip = Readonly<{
-	id: string
-	trackId: string
-	start: Px.Px
-	end: Px.Px
-	title: string
-}>
+	id: string;
+	trackId: string;
+	start: Px.Px;
+	end: Px.Px;
+	title: string;
+}>;
 
 export type DawTrack = Readonly<{
-	id: string
-	name: string
+	id: string;
+	name: string;
 	/** Track color used for clips. CSS color string (e.g. '#ff5500', 'rgba(255,85,0,1)') */
-	color: string
-}>
+	color: string;
+}>;
 
 export type DawData = Readonly<{
-	tracks: readonly DawTrack[]
-	clips: readonly DawClip[]
-}>
+	tracks: readonly DawTrack[];
+	clips: readonly DawClip[];
+}>;
 
 export type DawUiState = Readonly<{
-	selectedClipId: string | null
-}>
+	selectedClipId: string | null;
+}>;
 
-export type DawAction = Readonly<{ type: 'select-clip'; clipId: string | null }>
+export type DawAction = Readonly<{
+	type: "select-clip";
+	clipId: string | null;
+}>;

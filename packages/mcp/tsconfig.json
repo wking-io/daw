@@ -4,16 +4,11 @@
 		"target": "ESNext",
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"lib": [
-			"ESNext"
-		],
-		"types": [
-			"bun"
-		],
+		"lib": ["ESNext"],
+		"types": ["bun"],
+		"skipLibCheck": true,
 		"strict": true,
 		"noEmit": true
 	},
-	"include": [
-		"src"
-	]
+	"include": ["src"]
 }

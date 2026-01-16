@@ -9,24 +9,33 @@ export interface DawStateClientOptions {
 export interface DawStateClient {
 	getSnapshot: () => Promise<Project.Snapshot>;
 	submitOp: (submit: Project.Submit) => Promise<Project.SubmitResult>;
-	subscribePatches: (options: {
+	getOps: (fromVersion: number) => Promise<Project.OpsResponse>;
+	connectOps: (options: {
 		fromVersion: number;
-		onBatch: (batch: Project.PatchBatch) => void;
-		onError?: (error: Event) => void;
-	}) => () => void;
-	subscribeAudioDeltas: (options: {
-		fromVersion: number;
-		onBatch: (batch: Project.AudioDeltaBatch) => void;
-		onError?: (error: Event) => void;
+		clientId: string;
+		onOp: (entry: Project.OpEntry) => void;
+		onPresence?: (clients: ReadonlyArray<string>) => void;
+		onLocks?: (
+			locks: ReadonlyArray<{
+				resource: string;
+				clientId: string;
+				acquiredAt: number;
+			}>,
+		) => void;
+		onError?: (error: Event | Error) => void;
+		onClose?: () => void;
 	}) => () => void;
 }
 
 const decodeSnapshot = Schema.decodeUnknownSync(Project.Snapshot);
 const decodeSubmitResult = Schema.decodeUnknownSync(Project.SubmitResult);
-const decodePatchBatch = Schema.decodeUnknownSync(Project.PatchBatch);
-const decodeAudioDeltaBatch = Schema.decodeUnknownSync(Project.AudioDeltaBatch);
+const decodeOpsResponse = Schema.decodeUnknownSync(Project.OpsResponse);
+const decodeOpEntry = Schema.decodeUnknownSync(Project.OpEntry);
 
-const defaultPort = Number.parseInt(import.meta.env.VITE_DAW_STATE_PORT ?? "43125", 10);
+const defaultPort = Number.parseInt(
+	import.meta.env.VITE_DAW_STATE_PORT ?? "43125",
+	10,
+);
 
 const resolveBaseUrl = (options?: DawStateClientOptions) => {
 	const host = options?.host ?? "127.0.0.1";
@@ -38,14 +47,90 @@ export const createDawStateClient = (
 	options?: DawStateClientOptions,
 ): DawStateClient => {
 	const baseUrl = resolveBaseUrl(options);
-
 	return {
 		getSnapshot: async () => {
-			const res = await fetch(`${baseUrl}/snapshot`);
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						location: "packages/app/src/rpc/client.ts:getSnapshot",
+						message: "ui.rpc.getSnapshot.start",
+						data: { baseUrl },
+						timestamp: Date.now(),
+						sessionId: "debug-session",
+						runId: "pre-fix",
+						hypothesisId: "H7",
+					}),
+				},
+			).catch(() => {});
+			// #endregion agent log
+			let res: Response;
+			try {
+				res = await fetch(`${baseUrl}/snapshot`);
+			} catch (error) {
+				// #region agent log
+				fetch(
+					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							location: "packages/app/src/rpc/client.ts:getSnapshot",
+							message: "ui.rpc.getSnapshot.fetchError",
+							data: { baseUrl, error: String(error) },
+							timestamp: Date.now(),
+							sessionId: "debug-session",
+							runId: "pre-fix",
+							hypothesisId: "H7",
+						}),
+					},
+				).catch(() => {});
+				// #endregion agent log
+				throw error;
+			}
 			if (!res.ok) {
+				// #region agent log
+				fetch(
+					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							location: "packages/app/src/rpc/client.ts:getSnapshot",
+							message: "ui.rpc.getSnapshot.httpError",
+							data: { baseUrl, status: res.status, statusText: res.statusText },
+							timestamp: Date.now(),
+							sessionId: "debug-session",
+							runId: "pre-fix",
+							hypothesisId: "H7",
+						}),
+					},
+				).catch(() => {});
+				// #endregion agent log
 				throw new Error(`snapshot failed: ${res.status} ${res.statusText}`);
 			}
 			const json = await res.json();
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						location: "packages/app/src/rpc/client.ts:getSnapshot",
+						message: "ui.rpc.getSnapshot.success",
+						data: { baseUrl },
+						timestamp: Date.now(),
+						sessionId: "debug-session",
+						runId: "pre-fix",
+						hypothesisId: "H7",
+					}),
+				},
+			).catch(() => {});
+			// #endregion agent log
 			return decodeSnapshot(json);
 		},
 		submitOp: async (submit) => {
@@ -56,36 +141,88 @@ export const createDawStateClient = (
 			});
 			if (!res.ok) {
 				const text = await res.text();
-				throw new Error(text.length > 0 ? text : `submit failed: ${res.status}`);
+				throw new Error(
+					text.length > 0 ? text : `submit failed: ${res.status}`,
+				);
 			}
 			const json = await res.json();
 			return decodeSubmitResult(json);
 		},
-		subscribePatches: ({ fromVersion, onBatch, onError }) => {
-			const source = new EventSource(
-				`${baseUrl}/patches?fromVersion=${encodeURIComponent(String(fromVersion))}`,
+		getOps: async (fromVersion) => {
+			const res = await fetch(
+				`${baseUrl}/ops?fromVersion=${encodeURIComponent(String(fromVersion))}`,
 			);
-			source.addEventListener("patches", (event) => {
-				const parsed = decodePatchBatch(JSON.parse((event as MessageEvent).data));
-				onBatch(parsed);
-			});
-			source.onerror = (event) => {
-				onError?.(event);
-			};
-			return () => source.close();
+			if (!res.ok) {
+				const text = await res.text();
+				throw new Error(text.length > 0 ? text : `ops failed: ${res.status}`);
+			}
+			const json = await res.json();
+			return decodeOpsResponse(json);
 		},
-		subscribeAudioDeltas: ({ fromVersion, onBatch, onError }) => {
-			const source = new EventSource(
-				`${baseUrl}/audio-deltas?fromVersion=${encodeURIComponent(String(fromVersion))}`,
-			);
-			source.addEventListener("audio-deltas", (event) => {
-				const parsed = decodeAudioDeltaBatch(JSON.parse((event as MessageEvent).data));
-				onBatch(parsed);
-			});
-			source.onerror = (event) => {
-				onError?.(event);
+		connectOps: ({
+			fromVersion,
+			clientId,
+			onOp,
+			onPresence,
+			onLocks,
+			onError,
+			onClose,
+		}) => {
+			const wsUrl = `${baseUrl.replace("http", "ws")}/ws?fromVersion=${encodeURIComponent(
+				String(fromVersion),
+			)}`;
+			let socket: WebSocket | null = new WebSocket(wsUrl);
+			const close = () => {
+				if (!socket) return;
+				if (
+					socket.readyState === WebSocket.CONNECTING ||
+					socket.readyState === WebSocket.OPEN
+				) {
+					socket.close();
+				}
+				socket = null;
 			};
-			return () => source.close();
+
+			socket.onopen = () => {
+				socket?.send(
+					JSON.stringify({
+						t: "hello",
+						clientId,
+						lastSeq: fromVersion,
+					}),
+				);
+			};
+			socket.onmessage = (event) => {
+				let message: { t?: string } & Record<string, unknown>;
+				try {
+					message = JSON.parse(String(event.data)) as typeof message;
+				} catch {
+					return;
+				}
+				if (message.t === "op" && message.entry) {
+					onOp(decodeOpEntry(message.entry));
+				}
+				if (message.t === "presence" && Array.isArray(message.clients)) {
+					onPresence?.(message.clients as ReadonlyArray<string>);
+				}
+				if (message.t === "locks" && Array.isArray(message.locks)) {
+					onLocks?.(
+						message.locks as ReadonlyArray<{
+							resource: string;
+							clientId: string;
+							acquiredAt: number;
+						}>,
+					);
+				}
+			};
+			socket.onerror = () => {
+				onError?.(new Error("WebSocket error"));
+			};
+			socket.onclose = () => {
+				onClose?.();
+			};
+
+			return close;
 		},
 	};
 };

@@ -34,6 +34,36 @@ const makeHttpLive = (config: ServerConfigService) =>
 
 const Main = Effect.gen(function* () {
 	const config = yield* ServerConfig;
+	// #region agent log
+	fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			location: "packages/server/src/index.ts:Main",
+			message: "server.startup.marker",
+			data: { marker: "sse-debug-v3" },
+			timestamp: Date.now(),
+			sessionId: "debug-session",
+			runId: "pre-fix",
+			hypothesisId: "H34",
+		}),
+	}).catch(() => {});
+	// #endregion agent log
+	// #region agent log
+	fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			location: "packages/server/src/index.ts:Main",
+			message: "server.startup.config",
+			data: { statePort: config.statePort, stateDbPath: config.stateDbPath },
+			timestamp: Date.now(),
+			sessionId: "debug-session",
+			runId: "pre-fix",
+			hypothesisId: "H13",
+		}),
+	}).catch(() => {});
+	// #endregion agent log
 
 	mkdirSync(path.dirname(config.stateDbPath), { recursive: true });
 

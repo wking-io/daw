@@ -1,9 +1,6 @@
 import { Effect, Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import {
-	CreateCommand,
-	CreateResult,
-} from "../commands";
+import { CreateCommand, CreateResult } from "../commands";
 
 describe("contract schemas", () => {
 	it("decodes CreateCommand (preset optional)", async () => {
@@ -51,4 +48,3 @@ describe("contract schemas", () => {
 		}
 	});
 });
-

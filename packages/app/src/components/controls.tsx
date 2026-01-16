@@ -1,22 +1,26 @@
+import { cn } from "@app/utils/cn";
+import type {
+	HTMLAttributes,
+	LabelHTMLAttributes,
+	PropsWithChildren,
+} from "react";
 import {
 	createContext,
 	useCallback,
 	useContext,
 	useEffect,
 	useState,
-} from 'react'
-import type { HTMLAttributes, PropsWithChildren } from 'react'
-import { cn } from '~/app/utils/cn'
+} from "react";
 
 export function Controls({
 	children,
 	className,
 }: PropsWithChildren<{ className?: string }>) {
 	return (
-		<div className={cn('absolute right-0 bottom-0 z-10 w-full', className)}>
+		<div className={cn("absolute right-0 bottom-0 z-10 w-full", className)}>
 			<div className="flex items-center justify-end px-4 pb-4">{children}</div>
 		</div>
-	)
+	);
 }
 
 export function RefreshButton(props: HTMLAttributes<HTMLButtonElement>) {
@@ -28,7 +32,9 @@ export function RefreshButton(props: HTMLAttributes<HTMLButtonElement>) {
 				viewBox="0 0 16 16"
 				fill="none"
 				xmlns="http://www.w3.org/2000/svg"
+				aria-label="Refresh"
 			>
+				<title>Refresh</title>
 				<path
 					fillRule="evenodd"
 					clipRule="evenodd"
@@ -38,51 +44,51 @@ export function RefreshButton(props: HTMLAttributes<HTMLButtonElement>) {
 			</svg>
 			<span className="sr-only">Refresh</span>
 		</button>
-	)
+	);
 }
 
 const SettingsContext = createContext<{
-	open: boolean
-	toggle: () => void
+	open: boolean;
+	toggle: () => void;
 }>({
 	open: false,
 	toggle: () => {},
-})
+});
 
 function useSettings() {
-	const context = useContext(SettingsContext)
+	const context = useContext(SettingsContext);
 	if (!context) {
-		throw new Error('useSettings must be used within a SettingsProvider')
+		throw new Error("useSettings must be used within a SettingsProvider");
 	}
-	return context
+	return context;
 }
 
 function Root({ children }: PropsWithChildren) {
-	const [open, setOpen] = useState(false)
+	const [open, setOpen] = useState(false);
 
 	const toggle = useCallback(() => {
-		setOpen((prev) => !prev)
-	}, [])
+		setOpen((prev) => !prev);
+	}, []);
 
 	return (
 		<SettingsContext.Provider value={{ open, toggle }}>
 			{children}
 		</SettingsContext.Provider>
-	)
+	);
 }
 
 function Trigger(props: HTMLAttributes<HTMLButtonElement>) {
-	const { open, toggle } = useSettings()
+	const { open, toggle } = useSettings();
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === 'm') {
-				toggle()
+			if (e.key === "m") {
+				toggle();
 			}
-		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [toggle])
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [toggle]);
 
 	return (
 		<button {...props} className="p-3" onClick={toggle}>
@@ -95,6 +101,7 @@ function Trigger(props: HTMLAttributes<HTMLButtonElement>) {
 						fill="none"
 						xmlns="http://www.w3.org/2000/svg"
 					>
+						<title>Close settings</title>
 						<path
 							fillRule="evenodd"
 							clipRule="evenodd"
@@ -110,6 +117,7 @@ function Trigger(props: HTMLAttributes<HTMLButtonElement>) {
 						fill="none"
 						xmlns="http://www.w3.org/2000/svg"
 					>
+						<title>Open settings</title>
 						<path
 							fillRule="evenodd"
 							clipRule="evenodd"
@@ -121,13 +129,13 @@ function Trigger(props: HTMLAttributes<HTMLButtonElement>) {
 			</span>
 			<span className="sr-only">Settings</span>
 		</button>
-	)
+	);
 }
 
 function Panel({ children }: PropsWithChildren) {
-	const { open } = useSettings()
+	const { open } = useSettings();
 
-	if (!open) return null
+	if (!open) return null;
 
 	return (
 		<div className="border-foreground/10 absolute right-4 bottom-full mb-2 border-1 bg-white/10 p-4 backdrop-blur-sm">
@@ -137,7 +145,7 @@ function Panel({ children }: PropsWithChildren) {
 			<div className="corner corner-br" />
 			<div className="space-y-4">{children}</div>
 		</div>
-	)
+	);
 }
 
 function Field({
@@ -148,25 +156,30 @@ function Field({
 		<div
 			{...props}
 			className={cn(
-				'flex gap-0.5',
-				row ? 'items-center justify-between' : 'flex-col',
+				"flex gap-0.5",
+				row ? "items-center justify-between" : "flex-col",
 			)}
 		/>
-	)
+	);
 }
 
 function Header(props: HTMLAttributes<HTMLDivElement>) {
-	return <div {...props} className="group flex items-center justify-between" />
+	return <div {...props} className="group flex items-center justify-between" />;
 }
 
 function Actions(props: HTMLAttributes<HTMLDivElement>) {
-	return <div {...props} className="flex items-center gap-1" />
+	return <div {...props} className="flex items-center gap-1" />;
 }
 
-function Label(props: HTMLAttributes<HTMLLabelElement>) {
+function Label({ htmlFor, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
 	return (
-		<label {...props} className="font-code block text-xs font-extralight" />
-	)
+		<label
+			htmlFor={htmlFor}
+			aria-label={props["aria-label"]}
+			{...props}
+			className="font-code block text-xs font-extralight"
+		/>
+	);
 }
 
 const Settings = {
@@ -177,6 +190,6 @@ const Settings = {
 	Header,
 	Actions,
 	Label,
-}
+};
 
-export default Settings
+export default Settings;

@@ -18,12 +18,17 @@ export function applyOp(
 ): ApplyResult {
 	switch (op.t) {
 		case "instrument.create": {
+			// TODO: Fix id generation
+			const instrumentId =
+				op.instrumentId ?? (ulid() as Instrument.InstrumentId);
+			const createdAt =
+				typeof op.createdAt === "number" ? new Date(op.createdAt) : new Date();
 			const instrument: Instrument.Instrument = {
-				id: ulid() as Instrument.InstrumentId,
+				id: instrumentId,
 				type: op.type,
 				name: op.name,
 				params: {},
-				createdAt: new Date(),
+				createdAt,
 			};
 
 			const nextDoc: Project.ProjectDoc = {

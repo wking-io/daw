@@ -30,7 +30,8 @@ const pkgRoot = path.resolve(__dirname, "..");
 
 process.chdir(pkgRoot);
 
-const singleFlag = process.argv.includes("--single") || !process.argv.includes("--all");
+const singleFlag =
+	process.argv.includes("--single") || !process.argv.includes("--all");
 const allFlag = process.argv.includes("--all");
 const skipClean = process.argv.includes("--skip-clean");
 
@@ -45,7 +46,12 @@ const allTargets: Target[] = [
 ];
 
 const hostTarget: Target = {
-	os: process.platform === "win32" ? "win32" : process.platform === "darwin" ? "darwin" : "linux",
+	os:
+		process.platform === "win32"
+			? "win32"
+			: process.platform === "darwin"
+				? "darwin"
+				: "linux",
 	arch: process.arch === "arm64" ? "arm64" : "x64",
 };
 
@@ -80,9 +86,12 @@ const bunCompileTargetFor = (t: Target) => {
 const rustTripleFor = (t: Target) => {
 	if (t.os === "darwin" && t.arch === "arm64") return "aarch64-apple-darwin";
 	if (t.os === "darwin" && t.arch === "x64") return "x86_64-apple-darwin";
-	if (t.os === "linux" && t.arch === "arm64" && t.abi === "musl") return "aarch64-unknown-linux-musl";
-	if (t.os === "linux" && t.arch === "arm64") return "aarch64-unknown-linux-gnu";
-	if (t.os === "linux" && t.arch === "x64" && t.abi === "musl") return "x86_64-unknown-linux-musl";
+	if (t.os === "linux" && t.arch === "arm64" && t.abi === "musl")
+		return "aarch64-unknown-linux-musl";
+	if (t.os === "linux" && t.arch === "arm64")
+		return "aarch64-unknown-linux-gnu";
+	if (t.os === "linux" && t.arch === "x64" && t.abi === "musl")
+		return "x86_64-unknown-linux-musl";
 	if (t.os === "linux" && t.arch === "x64") return "x86_64-unknown-linux-gnu";
 	if (t.os === "win32" && t.arch === "x64") return "x86_64-pc-windows-msvc";
 	throw new Error(`No Rust triple mapping for target: ${JSON.stringify(t)}`);
@@ -105,7 +114,9 @@ for (const t of targets) {
 
 	mkdirSync(path.dirname(outfile), { recursive: true });
 
-	console.log(`building daw-mcp -> ${path.relative(pkgRoot, outfile)} (${bunCompileTargetFor(t)})`);
+	console.log(
+		`building daw-mcp -> ${path.relative(pkgRoot, outfile)} (${bunCompileTargetFor(t)})`,
+	);
 
 	const result = await Bun.build({
 		entrypoints: ["./src/index.ts"],
@@ -132,4 +143,3 @@ for (const t of targets) {
 
 	if (t.os !== "win32") chmodSync(outfile, 0o755);
 }
-

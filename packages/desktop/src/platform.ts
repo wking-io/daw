@@ -1,4 +1,8 @@
-import { isTauriRuntime, type DawCommandRequest, type Platform } from "@daw/app";
+import {
+	type DawCommandRequest,
+	isTauriRuntime,
+	type Platform,
+} from "@daw/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -22,7 +26,9 @@ export const TauriPlatform: Platform = {
 	},
 	respond: async (requestId, resultJson) => {
 		if (!isTauriRuntime()) {
-			throw new Error("Tauri runtime not available (respond called in a normal browser tab)");
+			throw new Error(
+				"Tauri runtime not available (respond called in a normal browser tab)",
+			);
 		}
 
 		await invoke("respond_daw_command", {

@@ -1,31 +1,29 @@
 // Scene Graph Types
+
+// Adapters
+export { renderToCanvas } from "./canvas-adapter";
+export { renderToDom } from "./dom-adapter";
+// Hit Testing
+export { hitTest } from "./hit-test";
 export type {
+	GroupNode,
+	InteractiveNode,
+	LineNode,
 	Point,
 	Rect,
-	Stroke,
-	TextStyle,
 	RectNode,
-	LineNode,
-	TextNode,
-	GroupNode,
-	SceneNode,
-	InteractiveNode,
 	Scene,
-} from './types'
-
+	SceneNode,
+	Stroke,
+	TextNode,
+	TextStyle,
+} from "./types";
 // Utility functions
 export {
+	nodeBounds,
 	point,
+	pointInRect,
 	rect,
 	stroke,
 	textStyle,
-	pointInRect,
-	nodeBounds,
-} from './types'
-
-// Adapters
-export { renderToCanvas } from './canvas-adapter'
-export { renderToDom } from './dom-adapter'
-
-// Hit Testing
-export { hitTest } from './hit-test'
+} from "./types";

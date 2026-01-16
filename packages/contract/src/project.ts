@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Instrument, InstrumentType } from "./instrument/domain";
+import { Instrument, InstrumentId, InstrumentType } from "./instrument/domain";
 
 export const ProjectVersion = Schema.Number;
 export type ProjectVersion = typeof ProjectVersion.Type;
@@ -14,6 +14,8 @@ export const OpInstrumentCreate = Schema.Struct({
 	type: InstrumentType,
 	name: Schema.String,
 	preset: Schema.optional(Schema.String),
+	instrumentId: Schema.optional(InstrumentId),
+	createdAt: Schema.optional(Schema.Number),
 });
 export type OpInstrumentCreate = typeof OpInstrumentCreate.Type;
 
@@ -68,3 +70,15 @@ export const Snapshot = Schema.Struct({
 	doc: ProjectDoc,
 });
 export type Snapshot = typeof Snapshot.Type;
+
+export const OpEntry = Schema.Struct({
+	version: ProjectVersion,
+	submit: Submit,
+});
+export type OpEntry = typeof OpEntry.Type;
+
+export const OpsResponse = Schema.Struct({
+	fromVersion: ProjectVersion,
+	ops: Schema.Array(OpEntry),
+});
+export type OpsResponse = typeof OpsResponse.Type;

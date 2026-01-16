@@ -2,7 +2,8 @@
   "name": "daw",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*"],  
+  "packageManager": "bun@1.3.5",
   "catalog": {
     "@biomejs/biome": "2.3.11",
     "@effect-atom/atom": "0.4.12",
@@ -33,20 +34,23 @@
     "react-dom": "19.2.3",
     "typescript": "5.9.3",
     "vite": "7.1.4",
-    "vitest": "4.0.16"
+    "vitest": "4.0.16",
+    "turbo": "2.5.0"
   },
   "scripts": {
     "preinstall": "bun ./scripts/ensure-bun.ts",
-    "typecheck": "bun run --cwd packages/contract typecheck && bun run --cwd packages/app typecheck && bun run --cwd packages/desktop typecheck",
-    "fmt": "bun run --cwd packages/app fmt && bun run --cwd packages/contract fmt && bun run --cwd packages/desktop fmt",
-    "lint": "bun run --cwd packages/app lint && bun run --cwd packages/contract lint && bun run --cwd packages/desktop lint",
+    "typecheck": "bun turbo typecheck",
+    "fmt": "bun turbo fmt",
+    "lint": "bun turbo lint",
     "check": "bun run typecheck && bun run lint && bun run --cwd packages/desktop rust:check",
-    "test": "bun run --cwd packages/contract test && bun run --cwd packages/mcp test && bun run --cwd packages/desktop test && bun run --cwd packages/app test",
+    "test": "turbo run test",
     "test:ci": "bun run test && bun run --cwd packages/app test:e2e",
     "dev:app": "bun run --cwd packages/app dev",
     "dev:desktop": "bun run --cwd packages/desktop tauri dev",
     "dev:mcp": "bun run --cwd packages/mcp dev",
     "cleanup:orphans": "bun ./scripts/cleanup-orphans.ts",
+    "verify:server": "bun ./scripts/verify-server.ts",
+    "verify:server:local": "bun ./scripts/verify-server-local.ts",
     "build:desktop": "bun run --cwd packages/desktop tauri build",
     "build:app": "bun run --cwd packages/app build"
   },
@@ -54,6 +58,7 @@
     "@biomejs/biome": "catalog:",
     "@tsconfig/bun": "catalog:",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "turbo": "catalog:"
   }
 }

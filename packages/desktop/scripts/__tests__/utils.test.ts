@@ -1,5 +1,5 @@
-import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
+import { $ } from "bun";
 import { copyBinaryToSidecarFolder, getCurrentSidecar } from "../utils";
 
 const originalCwd = process.cwd();
@@ -43,9 +43,8 @@ describe("desktop sidecar utilities", () => {
 		// macOS `stat` differs from GNU `stat`.
 		const sizeText =
 			process.platform === "darwin"
-				? (await $`stat -f%z ${expected}`.text())
-				: (await $`stat -c%s ${expected}`.text());
+				? await $`stat -f%z ${expected}`.text()
+				: await $`stat -c%s ${expected}`.text();
 		expect(Number.parseInt(sizeText.trim(), 10)).toBeGreaterThan(0);
 	});
 });
-

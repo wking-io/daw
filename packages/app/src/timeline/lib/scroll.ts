@@ -1,15 +1,15 @@
 // src/lib/timeline/projection-scroll.ts
-import type { Numeric } from './numeric'
-import * as Projection from './projection'
-import type * as Px from './px'
-import type * as Timeline from './timeline'
+import type { Numeric } from "./numeric";
+import * as Projection from "./projection";
+import type * as Px from "./px";
+import type * as Timeline from "./timeline";
 
 export function width<A extends number>(
 	N: Numeric<A>,
 	size: A,
 	scale: number,
 ): Px.Px {
-	return Projection.toScreen(N, N.zero, size, scale)
+	return Projection.toScreen(N, N.zero, size, scale);
 }
 
 export function toScroll<A extends number>(
@@ -17,7 +17,7 @@ export function toScroll<A extends number>(
 	start: A,
 	scale: number,
 ): Px.Px {
-	return Projection.toScreen(N, N.zero, start, scale)
+	return Projection.toScreen(N, N.zero, start, scale);
 }
 
 export function fromScroll<A extends number>(
@@ -25,5 +25,5 @@ export function fromScroll<A extends number>(
 	scroll: Px.Px,
 	scale: number,
 ): A {
-	return Projection.fromScreen(N, N.zero, scroll, scale)
+	return Projection.fromScreen(N, N.zero, scroll, scale);
 }

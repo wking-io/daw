@@ -1,4 +1,4 @@
-import type { SceneNode, Rect, Point } from './types'
+import type { Point, Rect, SceneNode } from "./types";
 
 /**
  * Render a list of scene nodes to a Canvas 2D context.
@@ -9,7 +9,7 @@ export function renderToCanvas(
 	nodes: readonly SceneNode<never>[],
 ): void {
 	for (const node of nodes) {
-		renderNode(ctx, node)
+		renderNode(ctx, node);
 	}
 }
 
@@ -18,18 +18,18 @@ function renderNode(
 	node: SceneNode<never>,
 ): void {
 	switch (node.kind) {
-		case 'rect':
-			renderRect(ctx, node.rect, node.fill, node.stroke)
-			break
-		case 'line':
-			renderLine(ctx, node.points, node.stroke)
-			break
-		case 'text':
-			renderText(ctx, node.position, node.text, node.style)
-			break
-		case 'group':
-			renderGroup(ctx, node.children, node.clip)
-			break
+		case "rect":
+			renderRect(ctx, node.rect, node.fill, node.stroke);
+			break;
+		case "line":
+			renderLine(ctx, node.points, node.stroke);
+			break;
+		case "text":
+			renderText(ctx, node.position, node.text, node.style);
+			break;
+		case "group":
+			renderGroup(ctx, node.children, node.clip);
+			break;
 	}
 }
 
@@ -40,14 +40,14 @@ function renderRect(
 	stroke?: { color: string; width: number },
 ): void {
 	if (fill) {
-		ctx.fillStyle = fill
-		ctx.fillRect(x, y, width, height)
+		ctx.fillStyle = fill;
+		ctx.fillRect(x, y, width, height);
 	}
 
 	if (stroke) {
-		ctx.strokeStyle = stroke.color
-		ctx.lineWidth = stroke.width
-		ctx.strokeRect(x, y, width, height)
+		ctx.strokeStyle = stroke.color;
+		ctx.lineWidth = stroke.width;
+		ctx.strokeRect(x, y, width, height);
 	}
 }
 
@@ -56,18 +56,18 @@ function renderLine(
 	points: readonly Point[],
 	stroke: { color: string; width: number },
 ): void {
-	if (points.length < 2) return
+	if (points.length < 2) return;
 
-	ctx.beginPath()
-	ctx.moveTo(Number(points[0]!.x), Number(points[0]!.y))
+	ctx.beginPath();
+	ctx.moveTo(Number(points[0]!.x), Number(points[0]!.y));
 
 	for (let i = 1; i < points.length; i++) {
-		ctx.lineTo(Number(points[i]!.x), Number(points[i]!.y))
+		ctx.lineTo(Number(points[i]!.x), Number(points[i]!.y));
 	}
 
-	ctx.strokeStyle = stroke.color
-	ctx.lineWidth = stroke.width
-	ctx.stroke()
+	ctx.strokeStyle = stroke.color;
+	ctx.lineWidth = stroke.width;
+	ctx.stroke();
 }
 
 function renderText(
@@ -75,18 +75,18 @@ function renderText(
 	{ x, y }: Point,
 	text: string,
 	style: {
-		font: string
-		color: string
-		align?: CanvasTextAlign
-		baseline?: CanvasTextBaseline
+		font: string;
+		color: string;
+		align?: CanvasTextAlign;
+		baseline?: CanvasTextBaseline;
 	},
 ): void {
-	ctx.font = style.font
-	ctx.fillStyle = style.color
-	if (style.align) ctx.textAlign = style.align
-	if (style.baseline) ctx.textBaseline = style.baseline
+	ctx.font = style.font;
+	ctx.fillStyle = style.color;
+	if (style.align) ctx.textAlign = style.align;
+	if (style.baseline) ctx.textBaseline = style.baseline;
 
-	ctx.fillText(text, x, y)
+	ctx.fillText(text, x, y);
 }
 
 function renderGroup(
@@ -94,17 +94,17 @@ function renderGroup(
 	children: readonly SceneNode<never>[],
 	clip?: Rect,
 ): void {
-	ctx.save()
+	ctx.save();
 
 	if (clip) {
-		ctx.beginPath()
-		ctx.rect(clip.x, clip.y, clip.width, clip.height)
-		ctx.clip()
+		ctx.beginPath();
+		ctx.rect(clip.x, clip.y, clip.width, clip.height);
+		ctx.clip();
 	}
 
 	for (const child of children) {
-		renderNode(ctx, child)
+		renderNode(ctx, child);
 	}
 
-	ctx.restore()
+	ctx.restore();
 }

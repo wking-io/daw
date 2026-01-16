@@ -48,4 +48,3 @@ for (const sidecar of sidecars) {
 }
 
 await $`cargo test --manifest-path src-tauri/Cargo.toml`.env(env);
-

@@ -1,84 +1,357 @@
-import type { Instrument } from "@daw/contract";
-import { Project } from "@daw/contract";
-import * as Registry from "@effect-atom/atom/Registry";
+import type { Instrument, Project } from "@daw/contract";
+import { InstrumentCommands, InstrumentTools } from "@daw/contract";
+import type * as Registry from "@effect-atom/atom/Registry";
 import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Schema } from "effect";
+import {
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { ulid } from "ulid";
+import { encodeCreateInstrumentResultJson } from "../daw/commands";
 import { instrumentsAtom, logsAtom } from "../daw/state";
+import { isTauriRuntime } from "../ports/Platform";
 import { createDawStateClient } from "../rpc/client";
-import { sendAudioDeltasToWorklet, type WorkletPort } from "../audio/worklet-bridge";
+import { useAppServices } from "./AppProviders";
 
 export function AppRoot() {
 	const instruments = useAtomValue(instrumentsAtom);
 	const logs = useAtomValue(logsAtom);
 	const registry = useContext(RegistryContext) as Registry.Registry;
+	const { platform } = useAppServices();
 	const stateClient = useMemo(() => createDawStateClient(), []);
 	const versionRef = useRef(0);
-	const workletPortRef = useRef<WorkletPort | null>(null);
+	const snapshotReadyRef = useRef(false);
+	const snapshotRetryInFlightRef = useRef(false);
+	const gapRecoveryRef = useRef(false);
 
 	const instrumentTypes = useMemo(
-		(): ReadonlyArray<Instrument.InstrumentType> => ["synth", "sampler", "drum"],
+		(): ReadonlyArray<Instrument.InstrumentType> => [
+			"synth",
+			"sampler",
+			"drum",
+		],
 		[],
 	);
 	const [newInstrumentType, setNewInstrumentType] =
 		useState<Instrument.InstrumentType>("synth");
 	const [newInstrumentName, setNewInstrumentName] = useState("Bass");
 	const [isCreating, setIsCreating] = useState(false);
+	const clientId = useMemo(() => {
+		if (typeof window === "undefined") return ulid();
+		const storageKey = "daw.clientId";
+		try {
+			const existing = window.localStorage.getItem(storageKey);
+			if (existing) return existing;
+			const next = ulid();
+			window.localStorage.setItem(storageKey, next);
+			return next;
+		} catch {
+			return ulid();
+		}
+	}, []);
+
+	useEffect(() => {
+		// #region agent log
+		fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				location: "packages/app/src/app/AppRoot.tsx:env",
+				message: "ui.env",
+				data: {
+					origin:
+						typeof window !== "undefined" ? window.location.origin : "unknown",
+					isTauri: isTauriRuntime(),
+					userAgent:
+						typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+				},
+				timestamp: Date.now(),
+				sessionId: "debug-session",
+				runId: "pre-fix",
+				hypothesisId: "H15",
+			}),
+		}).catch(() => {});
+		// #endregion agent log
+	}, []);
 
 	const canCreate = useMemo(
-		() => newInstrumentType.trim().length > 0 && newInstrumentName.trim().length > 0,
+		() =>
+			newInstrumentType.trim().length > 0 &&
+			newInstrumentName.trim().length > 0,
 		[newInstrumentType, newInstrumentName],
 	);
 
-	useEffect(() => {
-		let unsubscribe = () => {};
-		let unsubscribeAudio = () => {};
-		let cancelled = false;
+	const applySubmit = useCallback(
+		(submit: Project.Submit) => {
+			if (submit.op.t !== "instrument.create") return;
+			const instrumentId =
+				submit.op.instrumentId ?? (ulid() as Instrument.InstrumentId);
+			const createdAtMs =
+				typeof submit.op.createdAt === "number"
+					? submit.op.createdAt
+					: Date.now();
+			const instrument: Instrument.Instrument = {
+				id: instrumentId,
+				type: submit.op.type,
+				name: submit.op.name,
+				params: {},
+				createdAt: new Date(createdAtMs),
+			};
+			registry.update(
+				instrumentsAtom,
+				(prev: ReadonlyArray<Instrument.Instrument>) => [...prev, instrument],
+			);
+		},
+		[registry],
+	);
 
-		const applyPatches = (batch: Project.PatchBatch) => {
-			if (batch.version <= versionRef.current) return;
-			versionRef.current = batch.version;
-			for (const patch of batch.patches) {
-				if (patch.t === "instrument.add") {
-					registry.update(instrumentsAtom, (prev: ReadonlyArray<Instrument.Instrument>) => [
-						...prev,
-						patch.instrument,
+	const recoverFromGap = useCallback(
+		async (trigger: string) => {
+			if (gapRecoveryRef.current) return;
+			gapRecoveryRef.current = true;
+			try {
+				const response = await stateClient.getOps(versionRef.current);
+				let expectedVersion = versionRef.current;
+				for (const entry of response.ops) {
+					if (entry.version !== expectedVersion + 1) break;
+					applySubmit(entry.submit);
+					expectedVersion = entry.version;
+					versionRef.current = expectedVersion;
+				}
+
+				const lastEntry = response.ops[response.ops.length - 1];
+				if (!lastEntry || lastEntry.version !== versionRef.current) {
+					const snapshot = await stateClient.getSnapshot();
+					versionRef.current = snapshot.version;
+					registry.update(instrumentsAtom, () => snapshot.doc.instruments);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (state) gap recovery snapshot (${trigger})`,
 					]);
 				}
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+					...l,
+					`← (state) gap recovery error ${message}`,
+				]);
+			} finally {
+				gapRecoveryRef.current = false;
 			}
+		},
+		[applySubmit, registry, stateClient],
+	);
+
+	const applyOpEntry = useCallback(
+		(entry: Project.OpEntry) => {
+			if (entry.version <= versionRef.current) return;
+			if (entry.version !== versionRef.current + 1) {
+				void recoverFromGap(`ws:${entry.version}`);
+				return;
+			}
+			versionRef.current = entry.version;
+			applySubmit(entry.submit);
+		},
+		[applySubmit, recoverFromGap],
+	);
+
+	const applyPatchBatch = useCallback(
+		(batch: Project.PatchBatch) => {
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						location: "packages/app/src/app/AppRoot.tsx:applyPatchBatch",
+						message: "ui.applyPatchBatch.entry",
+						data: {
+							batchVersion: batch.version,
+							patchCount: batch.patches.length,
+							currentVersion: versionRef.current,
+						},
+						timestamp: Date.now(),
+						sessionId: "debug-session",
+						runId: "pre-fix",
+						hypothesisId: "H5",
+					}),
+				},
+			).catch(() => {});
+			// #endregion agent log
+			if (batch.version <= versionRef.current) return;
+			versionRef.current = batch.version;
+			registry.update(
+				instrumentsAtom,
+				(prev: ReadonlyArray<Instrument.Instrument>) => {
+					let next = prev;
+					for (const patch of batch.patches) {
+						if (patch.t === "instrument.add") {
+							next = [...next, patch.instrument];
+						}
+					}
+					return next;
+				},
+			);
+		},
+		[registry],
+	);
+
+	useEffect(() => {
+		// #region agent log
+		fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				location: "packages/app/src/app/AppRoot.tsx:stateEffect",
+				message: "ui.stateEffect.start",
+				data: {},
+				timestamp: Date.now(),
+				sessionId: "debug-session",
+				runId: "pre-fix",
+				hypothesisId: "H9",
+			}),
+		}).catch(() => {});
+		// #endregion agent log
+		let disconnectOps = () => {};
+		let cancelled = false;
+		let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+		let reconnectAttempts = 0;
+
+		const scheduleReconnect = (reason: string) => {
+			if (cancelled || reconnectTimer) return;
+			reconnectAttempts += 1;
+			const delay = Math.min(1000 * reconnectAttempts, 5000);
+			reconnectTimer = setTimeout(() => {
+				reconnectTimer = null;
+				connectOps(versionRef.current);
+			}, delay);
+			registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+				...l,
+				`← (state) ws reconnect in ${delay}ms (${reason})`,
+			]);
+		};
+
+		const connectOps = (fromVersion: number) => {
+			disconnectOps();
+			disconnectOps = stateClient.connectOps({
+				fromVersion,
+				clientId,
+				onOp: applyOpEntry,
+				onPresence: (clients) => {
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (presence) ${clients.length} online`,
+					]);
+				},
+				onLocks: (locks) => {
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (locks) ${locks.length} active`,
+					]);
+				},
+				onError: (error) => {
+					const message =
+						error instanceof Error ? error.message : String(error);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (state) ws error ${message}`,
+					]);
+				},
+				onClose: () => {
+					scheduleReconnect("close");
+				},
+			});
+		};
+
+		const applySnapshot = (snapshot: Project.Snapshot) => {
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						location: "packages/app/src/app/AppRoot.tsx:stateEffect",
+						message: "ui.stateEffect.snapshot.success",
+						data: { version: snapshot.version, cancelled },
+						timestamp: Date.now(),
+						sessionId: "debug-session",
+						runId: "pre-fix",
+						hypothesisId: "H9",
+					}),
+				},
+			).catch(() => {});
+			// #endregion agent log
+			if (cancelled) return;
+			snapshotReadyRef.current = true;
+			versionRef.current = snapshot.version;
+			registry.update(instrumentsAtom, () => snapshot.doc.instruments);
+			reconnectAttempts = 0;
+			connectOps(snapshot.version);
+		};
+
+		const attemptSnapshot = (trigger: string) => {
+			if (snapshotReadyRef.current || snapshotRetryInFlightRef.current) return;
+			snapshotRetryInFlightRef.current = true;
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						location: "packages/app/src/app/AppRoot.tsx:stateEffect",
+						message: "ui.stateEffect.snapshot.retry.start",
+						data: { trigger },
+						timestamp: Date.now(),
+						sessionId: "debug-session",
+						runId: "pre-fix",
+						hypothesisId: "H12",
+					}),
+				},
+			).catch(() => {});
+			// #endregion agent log
+			void stateClient
+				.getSnapshot()
+				.then((snapshot) => {
+					snapshotRetryInFlightRef.current = false;
+					applySnapshot(snapshot);
+				})
+				.catch(() => {
+					snapshotRetryInFlightRef.current = false;
+				});
 		};
 
 		void stateClient
 			.getSnapshot()
-			.then((snapshot) => {
-				if (cancelled) return;
-				versionRef.current = snapshot.version;
-				registry.update(instrumentsAtom, () => snapshot.doc.instruments);
-				unsubscribe = stateClient.subscribePatches({
-					fromVersion: snapshot.version,
-					onBatch: applyPatches,
-					onError: (event) => {
-						registry.update(logsAtom, (l: ReadonlyArray<string>) => [
-							...l,
-							`← (state) patches error ${String(event.type)}`,
-						]);
-					},
-				});
-				unsubscribeAudio = stateClient.subscribeAudioDeltas({
-					fromVersion: snapshot.version,
-					onBatch: (batch) => {
-						if (!workletPortRef.current) return;
-						sendAudioDeltasToWorklet(workletPortRef.current, batch);
-					},
-					onError: (event) => {
-						registry.update(logsAtom, (l: ReadonlyArray<string>) => [
-							...l,
-							`← (state) audio error ${String(event.type)}`,
-						]);
-					},
-				});
-			})
+			.then(applySnapshot)
 			.catch((err) => {
+				// #region agent log
+				fetch(
+					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							location: "packages/app/src/app/AppRoot.tsx:stateEffect",
+							message: "ui.stateEffect.snapshot.error",
+							data: { error: String(err) },
+							timestamp: Date.now(),
+							sessionId: "debug-session",
+							runId: "pre-fix",
+							hypothesisId: "H9",
+						}),
+					},
+				).catch(() => {});
+				// #endregion agent log
+				attemptSnapshot("snapshot.error");
+				scheduleReconnect("snapshot.error");
 				const message = err instanceof Error ? err.message : String(err);
 				registry.update(logsAtom, (l: ReadonlyArray<string>) => [
 					...l,
@@ -88,10 +361,118 @@ export function AppRoot() {
 
 		return () => {
 			cancelled = true;
-			unsubscribe();
-			unsubscribeAudio();
+			disconnectOps();
+			if (reconnectTimer) {
+				clearTimeout(reconnectTimer);
+			}
 		};
-	}, [registry, stateClient]);
+	}, [applyOpEntry, clientId, registry, stateClient]);
+
+	useEffect(() => {
+		const unsubscribe = platform.onCommand((req) => {
+			// #region agent log
+			fetch(
+				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						location: "packages/app/src/app/AppRoot.tsx:onCommand",
+						message: "ui.onCommand.received",
+						data: { name: req.name, requestId: req.requestId },
+						timestamp: Date.now(),
+						sessionId: "debug-session",
+						runId: "pre-fix",
+						hypothesisId: "H6",
+					}),
+				},
+			).catch(() => {});
+			// #endregion agent log
+			if (req.name !== InstrumentTools.CreateName) return;
+			const handle = async () => {
+				let command: InstrumentCommands.CreateCommand;
+				try {
+					command = Schema.decodeUnknownSync(InstrumentCommands.CreateCommand)(
+						req.payload,
+					);
+				} catch (error) {
+					const message =
+						error instanceof Error ? error.message : String(error);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (agent) error ${message}`,
+					]);
+					await platform.respond(
+						req.requestId,
+						encodeCreateInstrumentResultJson({ ok: false, error: message }),
+					);
+					return;
+				}
+
+				registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+					...l,
+					`→ (agent) submit instrument.create ${JSON.stringify({
+						type: command.type,
+						name: command.name.trim(),
+					})}`,
+				]);
+
+				const instrumentId = ulid() as Instrument.InstrumentId;
+				const createdAt = Date.now();
+				const submit: Project.Submit = {
+					opId: ulid(),
+					baseVersion: versionRef.current,
+					actor: "agent",
+					op: {
+						t: "instrument.create",
+						type: command.type,
+						name: command.name.trim(),
+						preset: command.preset,
+						instrumentId,
+						createdAt,
+					},
+				};
+
+				try {
+					const result = await stateClient.submitOp(submit);
+					const created = result.patches.patches.find(
+						(patch) => patch.t === "instrument.add",
+					);
+					if (!created) {
+						throw new Error(
+							"submitOp succeeded but no instrument.add patch returned",
+						);
+					}
+					applyPatchBatch(result.patches);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (agent) ok ${created.instrument.name} (${created.instrument.id})`,
+					]);
+					await platform.respond(
+						req.requestId,
+						encodeCreateInstrumentResultJson({
+							ok: true,
+							instrument: created.instrument,
+						}),
+					);
+				} catch (error) {
+					const message =
+						error instanceof Error ? error.message : String(error);
+					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+						...l,
+						`← (agent) error ${message}`,
+					]);
+					await platform.respond(
+						req.requestId,
+						encodeCreateInstrumentResultJson({ ok: false, error: message }),
+					);
+				}
+			};
+			void handle();
+		});
+
+		return unsubscribe;
+	}, [applyPatchBatch, platform, registry, stateClient]);
 
 	return (
 		<div style={{ padding: "16px", fontFamily: "system-ui, sans-serif" }}>
@@ -141,6 +522,8 @@ export function AppRoot() {
 								})}`,
 							]);
 
+							const instrumentId = ulid() as Instrument.InstrumentId;
+							const createdAt = Date.now();
 							const submit: Project.Submit = {
 								opId: ulid(),
 								baseVersion: versionRef.current,
@@ -149,31 +532,28 @@ export function AppRoot() {
 									t: "instrument.create",
 									type: newInstrumentType,
 									name: newInstrumentName.trim(),
+									instrumentId,
+									createdAt,
 								},
 							};
 
 							void stateClient
 								.submitOp(submit)
 								.then((result) => {
-									versionRef.current = result.version;
-									for (const patch of result.patches.patches) {
-										if (patch.t === "instrument.add") {
-											registry.update(
-												instrumentsAtom,
-												(prev: ReadonlyArray<Instrument.Instrument>) => [
-													...prev,
-													patch.instrument,
-												],
-											);
-											registry.update(logsAtom, (l: ReadonlyArray<string>) => [
-												...l,
-												`← (ui) ok ${patch.instrument.name} (${patch.instrument.id})`,
-											]);
-										}
+									applyPatchBatch(result.patches);
+									const created = result.patches.patches.find(
+										(patch) => patch.t === "instrument.add",
+									);
+									if (created) {
+										registry.update(logsAtom, (l: ReadonlyArray<string>) => [
+											...l,
+											`← (ui) ok ${created.instrument.name} (${created.instrument.id})`,
+										]);
 									}
 								})
 								.catch((err) => {
-									const message = err instanceof Error ? err.message : String(err);
+									const message =
+										err instanceof Error ? err.message : String(err);
 									registry.update(logsAtom, (l: ReadonlyArray<string>) => [
 										...l,
 										`← (ui) error ${message}`,
@@ -186,7 +566,8 @@ export function AppRoot() {
 					</button>
 				</div>
 				<p style={{ margin: "8px 0 0", opacity: 0.7 }}>
-					This submits an op to the Bun sidecar and listens for patches over SSE.
+					This submits an op to the Bun sidecar and listens for ops over a
+					WebSocket.
 				</p>
 			</section>
 

@@ -34,6 +34,25 @@ export const DawStateClientLive = Layer.effect(
 		const config = yield* McpConfig;
 
 		const baseUrl = `http://${config.dawStateHost}:${config.dawStatePort}`;
+		// #region agent log
+		fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				location: "packages/mcp/src/dawIpcClient.ts:DawStateClientLive",
+				message: "mcp.stateClient.config",
+				data: {
+					dawStateHost: config.dawStateHost,
+					dawStatePort: config.dawStatePort,
+					baseUrl,
+				},
+				timestamp: Date.now(),
+				sessionId: "debug-session",
+				runId: "pre-fix",
+				hypothesisId: "H14",
+			}),
+		}).catch(() => {});
+		// #endregion agent log
 
 		return {
 			getSnapshot: () =>

@@ -19,6 +19,7 @@
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
+		"@base-ui/react": "1.1.0",
 		"@daw/contract": "workspace:*",
 		"@effect-atom/atom": "catalog:",
 		"@effect-atom/atom-react": "catalog:",
@@ -35,6 +36,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
+		"@happy-dom/global-registrator": "20.3.0",
 		"@playwright/test": "1.57.0",
 		"@testing-library/jest-dom": "6.9.1",
 		"@testing-library/react": "16.3.0",

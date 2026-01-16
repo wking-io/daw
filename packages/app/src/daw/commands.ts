@@ -1,6 +1,4 @@
-import type {
-	Instrument,
-} from "@daw/contract";
+import type { Instrument } from "@daw/contract";
 import { InstrumentCommands, InstrumentTools } from "@daw/contract";
 import * as Registry from "@effect-atom/atom/Registry";
 import { Effect, Schema } from "effect";
@@ -24,10 +22,10 @@ export const executeCreateInstrument = (
 			params: {},
 			createdAt: new Date(),
 		};
-		registry.update(instrumentsAtom, (prev: ReadonlyArray<Instrument.Instrument>) => [
-			...prev,
-			instrument,
-		]);
+		registry.update(
+			instrumentsAtom,
+			(prev: ReadonlyArray<Instrument.Instrument>) => [...prev, instrument],
+		);
 		return instrument;
 	});
 
@@ -64,19 +62,27 @@ export const callCreateInstrumentTool = (
 
 			const text = await res.text();
 			if (!res.ok) {
-				throw new Error(text.length > 0 ? text : `HTTP ${res.status} ${res.statusText}`);
+				throw new Error(
+					text.length > 0 ? text : `HTTP ${res.status} ${res.statusText}`,
+				);
 			}
 
 			let raw: unknown;
 			try {
 				raw = JSON.parse(text) as unknown;
 			} catch {
-				throw new Error(text.length > 0 ? text : "Non-JSON response from /command");
+				throw new Error(
+					text.length > 0 ? text : "Non-JSON response from /command",
+				);
 			}
 
 			return raw;
 		},
 		catch: (cause) =>
-			cause instanceof Error ? cause : new Error(`Tool call failed: ${String(cause)}`),
-	}).pipe(Effect.flatMap(Schema.decodeUnknown(InstrumentCommands.CreateResult)));
+			cause instanceof Error
+				? cause
+				: new Error(`Tool call failed: ${String(cause)}`),
+	}).pipe(
+		Effect.flatMap(Schema.decodeUnknown(InstrumentCommands.CreateResult)),
+	);
 };

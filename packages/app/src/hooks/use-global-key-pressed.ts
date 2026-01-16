@@ -1,26 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
 export function useGlobalKeyPressed(key: string): boolean {
-	const [isPressed, setIsPressed] = useState(false)
+	const [isPressed, setIsPressed] = useState(false);
 	useEffect(() => {
 		const handleKeyUp = (e: KeyboardEvent) => {
 			if (e.key === key) {
-				setIsPressed(false)
+				setIsPressed(false);
 			}
-		}
+		};
 
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === key) {
-				setIsPressed(true)
+				setIsPressed(true);
 			}
-		}
+		};
 
-		window.addEventListener('keyup', handleKeyUp)
-		window.addEventListener('keydown', handleKeyDown)
+		window.addEventListener("keyup", handleKeyUp);
+		window.addEventListener("keydown", handleKeyDown);
 		return () => {
-			window.removeEventListener('keyup', handleKeyUp)
-			window.removeEventListener('keydown', handleKeyDown)
-		}
-	}, [key])
-	return isPressed
+			window.removeEventListener("keyup", handleKeyUp);
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [key]);
+	return isPressed;
 }

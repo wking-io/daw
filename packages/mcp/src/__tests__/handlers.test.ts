@@ -1,6 +1,6 @@
+import type { Instrument, Project } from "@daw/contract";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { Project } from "@daw/contract";
 import { DawStateClient } from "../dawIpcClient";
 import { handleCreateInstrument } from "../handlers";
 
@@ -9,7 +9,8 @@ describe("mcp tool handlers", () => {
 		const submits: Project.Submit[] = [];
 
 		const stubClient = DawStateClient.of({
-			getSnapshot: () => Effect.succeed({ version: 0, doc: { instruments: [] } }),
+			getSnapshot: () =>
+				Effect.succeed({ version: 0, doc: { instruments: [] } }),
 			submitOp: (req) => {
 				submits.push(req);
 				return Effect.succeed({
@@ -20,11 +21,11 @@ describe("mcp tool handlers", () => {
 							{
 								t: "instrument.add",
 								instrument: {
-									id: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+									id: "01ARZ3NDEKTSV4RRFFQ69G5FAV" as Instrument.InstrumentId,
 									type: "synth",
 									name: "Bass",
 									params: {},
-									createdAt: Date.now(),
+									createdAt: new Date(),
 								},
 							},
 						],
@@ -44,18 +45,23 @@ describe("mcp tool handlers", () => {
 		);
 
 		expect(submits).toHaveLength(1);
-		expect(submits[0]?.op).toEqual({
-			t: "instrument.create",
-			type: "synth",
-			name: "Bass",
-			preset: undefined,
-		});
+		expect(submits[0]?.op).toEqual(
+			expect.objectContaining({
+				t: "instrument.create",
+				type: "synth",
+				name: "Bass",
+				preset: undefined,
+				instrumentId: expect.any(String),
+				createdAt: expect.any(Number),
+			}),
+		);
 		expect(result.ok).toBe(true);
 	});
 
 	it("returns ok:false when the IPC response doesn't match the contract schema", async () => {
 		const stubClient = DawStateClient.of({
-			getSnapshot: () => Effect.succeed({ version: 0, doc: { instruments: [] } }),
+			getSnapshot: () =>
+				Effect.succeed({ version: 0, doc: { instruments: [] } }),
 			submitOp: () =>
 				Effect.succeed({
 					version: 1,
@@ -83,4 +89,3 @@ describe("mcp tool handlers", () => {
 		}
 	});
 });
-
