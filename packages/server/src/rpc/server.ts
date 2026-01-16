@@ -4,7 +4,7 @@ import {
 	HttpServerRequest,
 	HttpServerResponse,
 } from "@effect/platform";
-import { Effect, Layer, Schedule, Stream } from "effect";
+import { Effect, Layer, Schedule, Schema, Stream } from "effect";
 import { DawStore } from "../store/store";
 
 const sseHeaders = {
@@ -14,16 +14,25 @@ const sseHeaders = {
 	"access-control-allow-origin": "*",
 };
 
-const toSse = (event: string) => (data: unknown) =>
-	`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+const encodePatchBatch = Schema.encodeSync(Project.PatchBatch);
+const encodeAudioDeltaBatch = Schema.encodeSync(Project.AudioDeltaBatch);
+
+const toSse =
+	<A>(event: string, encode: (data: A) => unknown) =>
+	(data: A) =>
+		`event: ${event}\ndata: ${JSON.stringify(encode(data))}\n\n`;
 
 const keepAlive = Stream.fromSchedule(Schedule.spaced("15 seconds")).pipe(
 	Stream.as(": keep-alive\n\n"),
 );
 
-const sseResponse = (eventName: string, stream: Stream.Stream<unknown>) =>
+const sseResponse = <A>(
+	eventName: string,
+	stream: Stream.Stream<A>,
+	encode: (data: A) => unknown,
+) =>
 	HttpServerResponse.stream(
-		Stream.merge(stream.pipe(Stream.map(toSse(eventName))), keepAlive).pipe(
+		Stream.merge(stream.pipe(Stream.map(toSse(eventName, encode))), keepAlive).pipe(
 			Stream.encodeText,
 		),
 	).pipe(HttpServerResponse.setHeaders(sseHeaders));
@@ -64,7 +73,7 @@ const DawRoutes = DawRouter.use((router) =>
 				const stream = yield* store.patchStreamFrom(
 					Number.isNaN(fromVersion) ? 0 : fromVersion,
 				);
-				return sseResponse("patches", stream);
+				return sseResponse("patches", stream, encodePatchBatch);
 			}),
 		);
 
@@ -80,7 +89,7 @@ const DawRoutes = DawRouter.use((router) =>
 				const stream = yield* store.audioStreamFrom(
 					Number.isNaN(fromVersion) ? 0 : fromVersion,
 				);
-				return sseResponse("audio-deltas", stream);
+				return sseResponse("audio-deltas", stream, encodeAudioDeltaBatch);
 			}),
 		);
 	}),
