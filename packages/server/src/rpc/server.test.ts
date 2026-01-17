@@ -3,6 +3,7 @@ import type { Project } from "@daw/contract";
 import { HttpApp, HttpRouter, HttpServer } from "@effect/platform";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer } from "effect";
+import { ServerConfigTest } from "../config";
 import { PersistenceLive } from "../persist/sqlite";
 import { DawStoreLive } from "../store/store";
 import { RpcHttpRoutesLive } from "./server";
@@ -11,7 +12,11 @@ const makeLayer = () => {
 	const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
 	const persistenceLayer = PersistenceLive.pipe(Layer.provide(sqlLayer));
 	const storeLayer = DawStoreLive.pipe(Layer.provide(persistenceLayer));
-	const routesLayer = RpcHttpRoutesLive.pipe(Layer.provide(storeLayer));
+	const configLayer = ServerConfigTest();
+	const routesLayer = RpcHttpRoutesLive.pipe(
+		Layer.provide(storeLayer),
+		Layer.provide(configLayer),
+	);
 	return Layer.mergeAll(
 		HttpRouter.Default.Live,
 		routesLayer,

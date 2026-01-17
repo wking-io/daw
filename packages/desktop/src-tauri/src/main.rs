@@ -24,8 +24,8 @@ struct ServerInfoState(Arc<Mutex<ServerInfo>>);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ServerInfo {
-	base_url: String,
-	token: String,
+    base_url: String,
+    token: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,14 +64,9 @@ async fn respond_daw_command(
 }
 
 #[tauri::command]
-async fn get_server_info(
-	state: tauri::State<'_, ServerInfoState>,
-) -> Result<ServerInfo, String> {
-	let info = state
-		.0
-		.lock()
-		.map_err(|_| "poisoned mutex".to_string())?;
-	Ok(info.clone())
+async fn get_server_info(state: tauri::State<'_, ServerInfoState>) -> Result<ServerInfo, String> {
+    let info = state.0.lock().map_err(|_| "poisoned mutex".to_string())?;
+    Ok(info.clone())
 }
 
 fn ipc_port() -> u16 {
@@ -152,38 +147,35 @@ mod tests {
 
 fn main() {
     let pending = PendingRequests(Arc::new(Mutex::new(HashMap::new())));
-	let server_info = ServerInfoState(Arc::new(Mutex::new(ServerInfo {
-		base_url: String::new(),
-		token: String::new(),
-	})));
+    let server_info = ServerInfoState(Arc::new(Mutex::new(ServerInfo {
+        base_url: String::new(),
+        token: String::new(),
+    })));
 
     tauri::Builder::default()
         .manage(pending.clone())
-		.manage(server_info.clone())
-		.invoke_handler(tauri::generate_handler![
-			respond_daw_command,
-			get_server_info
-		])
+        .manage(server_info.clone())
+        .invoke_handler(tauri::generate_handler![
+            respond_daw_command,
+            get_server_info
+        ])
         .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
             let handle = app.handle().clone();
             let pending = pending.clone();
-			let server_info = server_info.clone();
+            let server_info = server_info.clone();
 
             // Spawn the MCP server sidecar (packaged via bundle.externalBin).
             // The sidecar hosts MCP over Streamable HTTP at http://127.0.0.1:${DAW_MCP_PORT}/mcp
             let mcp_port = mcp_port();
             let ipc_port_num = ipc_port();
             let state_port = state_port();
-			let state_token = Uuid::new_v4().to_string();
-			{
-				let mut info = server_info
-					.0
-					.lock()
-					.expect("poisoned mutex");
-				info.base_url = format!("http://127.0.0.1:{state_port}");
-				info.token = state_token.clone();
-			}
+            let state_token = Uuid::new_v4().to_string();
+            {
+                let mut info = server_info.0.lock().expect("poisoned mutex");
+                info.base_url = format!("http://127.0.0.1:{state_port}");
+                info.token = state_token.clone();
+            }
             let sidecar = app
                 .shell()
                 .sidecar("daw-mcp")
@@ -220,11 +212,12 @@ fn main() {
                 .shell()
                 .sidecar("daw-server")
                 .expect("failed to create daw-server sidecar command")
-				.env("DAW_STATE_PORT", format!("{state_port}"))
-				.env("DAW_STATE_TOKEN", state_token);
+                .env("DAW_STATE_PORT", format!("{state_port}"))
+                .env("DAW_STATE_TOKEN", state_token);
 
-            let (mut state_rx, state_child) =
-                statecar.spawn().expect("failed to spawn daw-server sidecar");
+            let (mut state_rx, state_child) = statecar
+                .spawn()
+                .expect("failed to spawn daw-server sidecar");
 
             tauri::async_runtime::spawn(async move {
                 while let Some(event) = state_rx.recv().await {
