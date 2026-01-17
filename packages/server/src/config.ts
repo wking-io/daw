@@ -5,6 +5,7 @@ import { getDefaultDBLocation } from "./persist/get-default-db-location";
 export interface ServerConfigService {
 	readonly statePort: number;
 	readonly stateDbPath: string;
+	readonly stateAuthToken: string;
 }
 
 export class ServerConfig extends Context.Tag("daw/ServerConfig")<
@@ -17,6 +18,10 @@ const ServerConfigSchema = Config.all({
 	stateDbPath: Config.string("DAW_STATE_DB").pipe(
 		Config.map((value) => path.resolve(value)),
 		Config.withDefault(getDefaultDBLocation()),
+	),
+	stateAuthToken: Config.string("DAW_STATE_TOKEN").pipe(
+		Config.withDefault(""),
+		Config.map((value) => value.trim()),
 	),
 });
 
@@ -36,6 +41,9 @@ export const ServerConfigTest = (
 
 	if (overrides.stateDbPath !== undefined) {
 		entries.set("DAW_STATE_DB", overrides.stateDbPath);
+	}
+	if (overrides.stateAuthToken !== undefined) {
+		entries.set("DAW_STATE_TOKEN", overrides.stateAuthToken);
 	}
 
 	return Layer.effect(

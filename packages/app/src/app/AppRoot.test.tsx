@@ -22,6 +22,10 @@ type OpHandler = (entry: {
 let opHandler: OpHandler = () => {};
 
 const mockClient = {
+	getHealth: vi.fn(async () => ({
+		healthy: true,
+		version: "test",
+	})),
 	getSnapshot: vi.fn(async () => ({
 		version: 0,
 		doc: { instruments: [] },

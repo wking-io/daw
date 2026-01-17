@@ -14,6 +14,7 @@ import {
 import { ulid } from "ulid";
 import { encodeCreateInstrumentResultJson } from "../daw/commands";
 import { instrumentsAtom, logsAtom } from "../daw/state";
+import type { ServerInfo } from "../ports/Platform";
 import { isTauriRuntime } from "../ports/Platform";
 import { createDawStateClient } from "../rpc/client";
 import { useAppServices } from "./AppProviders";
@@ -23,7 +24,15 @@ export function AppRoot() {
 	const logs = useAtomValue(logsAtom);
 	const registry = useContext(RegistryContext) as Registry.Registry;
 	const { platform } = useAppServices();
-	const stateClient = useMemo(() => createDawStateClient(), []);
+	const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
+	const [serverReady, setServerReady] = useState(false);
+	const stateClient = useMemo(() => {
+		if (!serverInfo) return null;
+		return createDawStateClient({
+			baseUrl: serverInfo.baseUrl,
+			token: serverInfo.token,
+		});
+	}, [serverInfo]);
 	const versionRef = useRef(0);
 	const snapshotReadyRef = useRef(false);
 	const snapshotRetryInFlightRef = useRef(false);
@@ -56,6 +65,28 @@ export function AppRoot() {
 	}, []);
 
 	useEffect(() => {
+		let cancelled = false;
+		const loadServerInfo = async () => {
+			try {
+				if (platform.getServerInfo) {
+					const info = await platform.getServerInfo();
+					if (!cancelled) setServerInfo(info);
+				} else {
+					setServerInfo({});
+				}
+			} catch {
+				if (!cancelled) setServerInfo({});
+			}
+		};
+		loadServerInfo();
+		return () => {
+			cancelled = true;
+		};
+	}, [platform]);
+
+	useEffect(() => {
+		const client = stateClient;
+		if (!client || !serverReady) return;
 		// #region agent log
 		fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
 			method: "POST",
@@ -78,6 +109,34 @@ export function AppRoot() {
 		}).catch(() => {});
 		// #endregion agent log
 	}, []);
+
+	useEffect(() => {
+		const client = stateClient;
+		if (!client) return;
+		let cancelled = false;
+		setServerReady(false);
+		const waitForHealth = async () => {
+			let attempt = 0;
+			while (!cancelled) {
+				try {
+					const health = await client.getHealth();
+					if (health.healthy) {
+						setServerReady(true);
+						return;
+					}
+				} catch {
+					// Ignore and retry.
+				}
+				attempt += 1;
+				const delay = Math.min(1000 * attempt, 5000);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		};
+		waitForHealth();
+		return () => {
+			cancelled = true;
+		};
+	}, [stateClient]);
 
 	const canCreate = useMemo(
 		() =>
@@ -112,10 +171,12 @@ export function AppRoot() {
 
 	const recoverFromGap = useCallback(
 		async (trigger: string) => {
+			const client = stateClient;
+			if (!client) return;
 			if (gapRecoveryRef.current) return;
 			gapRecoveryRef.current = true;
 			try {
-				const response = await stateClient.getOps(versionRef.current);
+				const response = await client.getOps(versionRef.current);
 				let expectedVersion = versionRef.current;
 				for (const entry of response.ops) {
 					if (entry.version !== expectedVersion + 1) break;
@@ -126,7 +187,7 @@ export function AppRoot() {
 
 				const lastEntry = response.ops[response.ops.length - 1];
 				if (!lastEntry || lastEntry.version !== versionRef.current) {
-					const snapshot = await stateClient.getSnapshot();
+					const snapshot = await client.getSnapshot();
 					versionRef.current = snapshot.version;
 					registry.update(instrumentsAtom, () => snapshot.doc.instruments);
 					registry.update(logsAtom, (l: ReadonlyArray<string>) => [
@@ -203,6 +264,8 @@ export function AppRoot() {
 	);
 
 	useEffect(() => {
+		const client = stateClient;
+		if (!client || !serverReady) return;
 		// #region agent log
 		fetch("http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc", {
 			method: "POST",
@@ -239,7 +302,7 @@ export function AppRoot() {
 
 		const connectOps = (fromVersion: number) => {
 			disconnectOps();
-			disconnectOps = stateClient.connectOps({
+			disconnectOps = client.connectOps({
 				fromVersion,
 				clientId,
 				onOp: applyOpEntry,
@@ -317,7 +380,7 @@ export function AppRoot() {
 				},
 			).catch(() => {});
 			// #endregion agent log
-			void stateClient
+			void client
 				.getSnapshot()
 				.then((snapshot) => {
 					snapshotRetryInFlightRef.current = false;
@@ -328,7 +391,7 @@ export function AppRoot() {
 				});
 		};
 
-		void stateClient
+		void client
 			.getSnapshot()
 			.then(applySnapshot)
 			.catch((err) => {
@@ -366,9 +429,11 @@ export function AppRoot() {
 				clearTimeout(reconnectTimer);
 			}
 		};
-	}, [applyOpEntry, clientId, registry, stateClient]);
+	}, [applyOpEntry, clientId, registry, serverReady, stateClient]);
 
 	useEffect(() => {
+		const client = stateClient;
+		if (!client || !serverReady) return;
 		const unsubscribe = platform.onCommand((req) => {
 			// #region agent log
 			fetch(
@@ -434,7 +499,7 @@ export function AppRoot() {
 				};
 
 				try {
-					const result = await stateClient.submitOp(submit);
+					const result = await client.submitOp(submit);
 					const created = result.patches.patches.find(
 						(patch) => patch.t === "instrument.add",
 					);
@@ -472,7 +537,16 @@ export function AppRoot() {
 		});
 
 		return unsubscribe;
-	}, [applyPatchBatch, platform, registry, stateClient]);
+	}, [applyPatchBatch, platform, registry, serverReady, stateClient]);
+
+	if (!serverReady) {
+		return (
+			<div style={{ padding: "16px", fontFamily: "system-ui, sans-serif" }}>
+				<h2>DAW</h2>
+				<p>Starting server...</p>
+			</div>
+		);
+	}
 
 	return (
 		<div style={{ padding: "16px", fontFamily: "system-ui, sans-serif" }}>
@@ -537,7 +611,9 @@ export function AppRoot() {
 								},
 							};
 
-							void stateClient
+							const client = stateClient;
+							if (!client) return;
+							void client
 								.submitOp(submit)
 								.then((result) => {
 									applyPatchBatch(result.patches);

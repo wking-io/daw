@@ -5,6 +5,7 @@ import {
 	HttpServerResponse,
 } from "@effect/platform";
 import { Effect, Layer, Ref, Schema, Stream } from "effect";
+import { ServerConfig } from "../config";
 import { DawStore } from "../store/store";
 
 type WsClient = {
@@ -28,10 +29,26 @@ class DawRouter extends HttpRouter.Tag("DawRouter")<DawRouter>() {}
 const DawRoutes = DawRouter.use((router) =>
 	Effect.gen(function* () {
 		const store = yield* DawStore;
+		const config = yield* ServerConfig;
+		const authToken = config.stateAuthToken;
 		const wsState = yield* Ref.make<WsState>({
 			clients: new Map(),
 			locks: new Map(),
 		});
+
+		const isAuthorized = (
+			request: HttpServerRequest.HttpServerRequest,
+			url?: URL,
+		) => {
+			if (!authToken) return true;
+			const authHeader = request.headers["authorization"];
+			if (authHeader === `Bearer ${authToken}`) return true;
+			if (url) {
+				const token = url.searchParams.get("token");
+				if (token === authToken) return true;
+			}
+			return false;
+		};
 
 		const broadcast = (payload: unknown) =>
 			Effect.flatMap(Ref.get(wsState), (state) =>
@@ -99,8 +116,24 @@ const DawRoutes = DawRouter.use((router) =>
 				return [true, { ...state, locks }] as const;
 			});
 		yield* router.get(
+			"/health",
+			Effect.gen(function* () {
+				const request = yield* HttpServerRequest.HttpServerRequest;
+				if (!isAuthorized(request)) {
+					return HttpServerResponse.text("Unauthorized", { status: 401 });
+				}
+				const version = process.env.DAW_SERVER_VERSION ?? "dev";
+				return yield* HttpServerResponse.json({ healthy: true, version });
+			}),
+		);
+
+		yield* router.get(
 			"/snapshot",
 			Effect.gen(function* () {
+				const request = yield* HttpServerRequest.HttpServerRequest;
+				if (!isAuthorized(request)) {
+					return HttpServerResponse.text("Unauthorized", { status: 401 });
+				}
 				const snapshot = yield* store.getSnapshot;
 				return yield* HttpServerResponse.schemaJson(Project.Snapshot)(snapshot);
 			}),
@@ -109,6 +142,10 @@ const DawRoutes = DawRouter.use((router) =>
 		yield* router.post(
 			"/submitOp",
 			Effect.gen(function* () {
+				const request = yield* HttpServerRequest.HttpServerRequest;
+				if (!isAuthorized(request)) {
+					return HttpServerResponse.text("Unauthorized", { status: 401 });
+				}
 				const submit = yield* HttpServerRequest.schemaBodyJson(Project.Submit);
 				const result = yield* store.submitOp(submit);
 				return yield* HttpServerResponse.schemaJson(Project.SubmitResult)(
@@ -123,6 +160,9 @@ const DawRoutes = DawRouter.use((router) =>
 				const request = yield* HttpServerRequest.HttpServerRequest;
 				const baseUrl = `http://${request.headers["host"] ?? "127.0.0.1"}`;
 				const url = new URL(request.url, baseUrl);
+				if (!isAuthorized(request, url)) {
+					return HttpServerResponse.text("Unauthorized", { status: 401 });
+				}
 				const fromVersion = Number.parseInt(
 					url.searchParams.get("fromVersion") ?? "0",
 					10,
@@ -144,6 +184,9 @@ const DawRoutes = DawRouter.use((router) =>
 				const request = yield* HttpServerRequest.HttpServerRequest;
 				const baseUrl = `http://${request.headers["host"] ?? "127.0.0.1"}`;
 				const url = new URL(request.url, baseUrl);
+				if (!isAuthorized(request, url)) {
+					return HttpServerResponse.text("Unauthorized", { status: 401 });
+				}
 				const fromVersion = Number.parseInt(
 					url.searchParams.get("fromVersion") ?? "0",
 					10,

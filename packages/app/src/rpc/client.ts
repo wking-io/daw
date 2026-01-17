@@ -4,9 +4,12 @@ import { Schema } from "effect";
 export interface DawStateClientOptions {
 	host?: string;
 	port?: number;
+	baseUrl?: string;
+	token?: string;
 }
 
 export interface DawStateClient {
+	getHealth: () => Promise<{ healthy: boolean; version: string }>;
 	getSnapshot: () => Promise<Project.Snapshot>;
 	submitOp: (submit: Project.Submit) => Promise<Project.SubmitResult>;
 	getOps: (fromVersion: number) => Promise<Project.OpsResponse>;
@@ -38,16 +41,34 @@ const defaultPort = Number.parseInt(
 );
 
 const resolveBaseUrl = (options?: DawStateClientOptions) => {
+	if (options?.baseUrl) return options.baseUrl;
 	const host = options?.host ?? "127.0.0.1";
 	const port = options?.port ?? defaultPort;
 	return `http://${host}:${port}`;
 };
 
+const makeAuthHeaders = (token?: string): Record<string, string> =>
+	token ? { authorization: `Bearer ${token}` } : {};
+
 export const createDawStateClient = (
 	options?: DawStateClientOptions,
 ): DawStateClient => {
 	const baseUrl = resolveBaseUrl(options);
+	const token = options?.token;
+	const authHeaders = makeAuthHeaders(token);
 	return {
+		getHealth: async () => {
+			const res = await fetch(`${baseUrl}/health`, {
+				headers: authHeaders,
+			});
+			if (!res.ok) {
+				const text = await res.text();
+				throw new Error(
+					text.length > 0 ? text : `health failed: ${res.status}`,
+				);
+			}
+			return res.json() as Promise<{ healthy: boolean; version: string }>;
+		},
 		getSnapshot: async () => {
 			// #region agent log
 			fetch(
@@ -69,7 +90,7 @@ export const createDawStateClient = (
 			// #endregion agent log
 			let res: Response;
 			try {
-				res = await fetch(`${baseUrl}/snapshot`);
+				res = await fetch(`${baseUrl}/snapshot`, { headers: authHeaders });
 			} catch (error) {
 				// #region agent log
 				fetch(
@@ -136,7 +157,7 @@ export const createDawStateClient = (
 		submitOp: async (submit) => {
 			const res = await fetch(`${baseUrl}/submitOp`, {
 				method: "POST",
-				headers: { "content-type": "application/json" },
+				headers: { "content-type": "application/json", ...authHeaders },
 				body: JSON.stringify(submit),
 			});
 			if (!res.ok) {
@@ -151,6 +172,9 @@ export const createDawStateClient = (
 		getOps: async (fromVersion) => {
 			const res = await fetch(
 				`${baseUrl}/ops?fromVersion=${encodeURIComponent(String(fromVersion))}`,
+				{
+					headers: authHeaders,
+				},
 			);
 			if (!res.ok) {
 				const text = await res.text();
@@ -168,9 +192,15 @@ export const createDawStateClient = (
 			onError,
 			onClose,
 		}) => {
-			const wsUrl = `${baseUrl.replace("http", "ws")}/ws?fromVersion=${encodeURIComponent(
-				String(fromVersion),
-			)}`;
+			const url = new URL(
+				`${baseUrl.replace("http", "ws")}/ws?fromVersion=${encodeURIComponent(
+					String(fromVersion),
+				)}`,
+			);
+			if (token) {
+				url.searchParams.set("token", token);
+			}
+			const wsUrl = url.toString();
 			let socket: WebSocket | null = new WebSocket(wsUrl);
 			const close = () => {
 				if (!socket) return;

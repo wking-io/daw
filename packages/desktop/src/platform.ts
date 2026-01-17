@@ -2,6 +2,7 @@ import {
 	type DawCommandRequest,
 	isTauriRuntime,
 	type Platform,
+	type ServerInfo,
 } from "@daw/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -36,5 +37,13 @@ export const TauriPlatform: Platform = {
 			requestId,
 			resultJson,
 		});
+	},
+	getServerInfo: async (): Promise<ServerInfo> => {
+		if (!isTauriRuntime()) {
+			throw new Error(
+				"Tauri runtime not available (getServerInfo called in a normal browser tab)",
+			);
+		}
+		return invoke<ServerInfo>("get_server_info");
 	},
 };

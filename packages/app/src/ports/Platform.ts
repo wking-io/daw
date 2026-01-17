@@ -4,6 +4,11 @@ export interface DawCommandRequest {
 	payload: unknown;
 }
 
+export interface ServerInfo {
+	baseUrl?: string;
+	token?: string;
+}
+
 export function isTauriRuntime(): boolean {
 	// Tauri injects internal APIs into the webview; this is absent in a normal browser.
 	// `withGlobalTauri: true` exposes `window.__TAURI__`, but the internal bridge is
@@ -28,9 +33,15 @@ export interface Platform {
 	 * UI->Host response channel.
 	 */
 	respond: (requestId: string, resultJson: string) => Promise<void>;
+
+	/**
+	 * Resolve the active server endpoint + auth details (if any).
+	 */
+	getServerInfo?: () => Promise<ServerInfo>;
 }
 
 export const NoopPlatform: Platform = {
 	onCommand: () => () => {},
 	respond: async () => {},
+	getServerInfo: async () => ({}),
 };
