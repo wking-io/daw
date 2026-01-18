@@ -1,6 +1,6 @@
+import type { SSE } from "@daw/contract";
 import { describe, expect, it, vi } from "vitest";
 import { createEventCoalescer, getSSEEventKey } from "./sse";
-import type { SSE } from "@daw/contract";
 
 describe("createEventCoalescer", () => {
 	it("batches events and flushes them", async () => {

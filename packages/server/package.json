@@ -17,7 +17,6 @@
 		"@daw/contract": "workspace:*",
 		"@effect/platform": "catalog:",
 		"@effect/platform-bun": "catalog:",
-		"@effect/rpc": "catalog:",
 		"@effect/sql": "catalog:",
 		"@effect/sql-sqlite-bun": "catalog:",
 		"effect": "catalog:",

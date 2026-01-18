@@ -14,7 +14,14 @@ export interface SSEClientOptions {
  * This allows attaching auth headers (unlike native EventSource).
  */
 export function createSSEClient(options: SSEClientOptions): () => void {
-	const { baseUrl, token, fromVersion = 0, onEvent, onError, onClose } = options;
+	const {
+		baseUrl,
+		token,
+		fromVersion = 0,
+		onEvent,
+		onError,
+		onClose,
+	} = options;
 	const controller = new AbortController();
 
 	const url = new URL(`${baseUrl}/event`);
@@ -103,7 +110,7 @@ export interface CoalescingOptions<T> {
 
 export function createEventCoalescer<T>(options: CoalescingOptions<T>) {
 	const { getKey, onFlush, intervalMs = 16 } = options;
-	
+
 	let queue: Array<T | undefined> = [];
 	const coalesced = new Map<string, number>();
 	let timer: ReturnType<typeof setTimeout> | undefined;

@@ -1,3 +1,4 @@
+export * from "./api";
 export * as InstrumentCommands from "./instrument/commands";
 export * as Instrument from "./instrument/domain";
 export * as InstrumentTools from "./instrument/tools";

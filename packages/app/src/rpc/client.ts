@@ -1,5 +1,11 @@
 import { Project, type SSE } from "@daw/contract";
-import { Schema } from "effect";
+import {
+	FetchHttpClient,
+	HttpClient,
+	HttpClientRequest,
+	HttpClientResponse,
+} from "@effect/platform";
+import { Effect, Schema } from "effect";
 import { createSSEClient } from "../utils/sse";
 
 export interface DawStateClientOptions {
@@ -37,9 +43,14 @@ export interface DawStateClient {
 	}) => () => void;
 }
 
-const decodeSnapshot = Schema.decodeUnknownSync(Project.Snapshot);
-const decodeSubmitResult = Schema.decodeUnknownSync(Project.SubmitResult);
-const decodeOpsResponse = Schema.decodeUnknownSync(Project.OpsResponse);
+/**
+ * Health check response schema
+ */
+const HealthResponse = Schema.Struct({
+	healthy: Schema.Boolean,
+	version: Schema.String,
+});
+
 const decodeOpEntry = Schema.decodeUnknownSync(Project.OpEntry);
 
 const defaultPort = Number.parseInt(
@@ -54,8 +65,12 @@ const resolveBaseUrl = (options?: DawStateClientOptions) => {
 	return `http://${host}:${port}`;
 };
 
-const makeAuthHeaders = (token?: string): Record<string, string> =>
-	token ? { authorization: `Bearer ${token}` } : {};
+const makeAuthHeaders = (
+	token?: string,
+): Record<string, string> | undefined => {
+	if (!token) return undefined;
+	return { authorization: `Bearer ${token}` };
+};
 
 export const createDawStateClient = (
 	options?: DawStateClientOptions,
@@ -63,133 +78,70 @@ export const createDawStateClient = (
 	const baseUrl = resolveBaseUrl(options);
 	const token = options?.token;
 	const authHeaders = makeAuthHeaders(token);
+
+	const runEffect = <A, E>(
+		effect: Effect.Effect<A, E, HttpClient.HttpClient>,
+	) => Effect.runPromise(Effect.provide(effect, FetchHttpClient.layer));
+
 	return {
-		getHealth: async () => {
-			const res = await fetch(`${baseUrl}/health`, {
-				headers: authHeaders,
-			});
-			if (!res.ok) {
-				const text = await res.text();
-				throw new Error(
-					text.length > 0 ? text : `health failed: ${res.status}`,
-				);
-			}
-			return res.json() as Promise<{ healthy: boolean; version: string }>;
-		},
-		getSnapshot: async () => {
-			// #region agent log
-			fetch(
-				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						location: "packages/app/src/rpc/client.ts:getSnapshot",
-						message: "ui.rpc.getSnapshot.start",
-						data: { baseUrl },
-						timestamp: Date.now(),
-						sessionId: "debug-session",
-						runId: "pre-fix",
-						hypothesisId: "H7",
-					}),
-				},
-			).catch(() => {});
-			// #endregion agent log
-			let res: Response;
-			try {
-				res = await fetch(`${baseUrl}/snapshot`, { headers: authHeaders });
-			} catch (error) {
-				// #region agent log
-				fetch(
-					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							location: "packages/app/src/rpc/client.ts:getSnapshot",
-							message: "ui.rpc.getSnapshot.fetchError",
-							data: { baseUrl, error: String(error) },
-							timestamp: Date.now(),
-							sessionId: "debug-session",
-							runId: "pre-fix",
-							hypothesisId: "H7",
+		getHealth: () =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const response = yield* client.get(`${baseUrl}/health`, {
+						headers: authHeaders,
+					});
+					return yield* HttpClientResponse.schemaBodyJson(HealthResponse)(
+						response,
+					);
+				}),
+			),
+
+		getSnapshot: () =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const response = yield* client.get(`${baseUrl}/snapshot`, {
+						headers: authHeaders,
+					});
+					return yield* HttpClientResponse.schemaBodyJson(Project.Snapshot)(
+						response,
+					);
+				}),
+			),
+
+		submitOp: (submit) =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const encodeBody = Schema.encodeSync(Project.Submit);
+					const request = HttpClientRequest.post(`${baseUrl}/submitOp`).pipe(
+						HttpClientRequest.setHeaders({
+							...authHeaders,
 						}),
-					},
-				).catch(() => {});
-				// #endregion agent log
-				throw error;
-			}
-			if (!res.ok) {
-				// #region agent log
-				fetch(
-					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							location: "packages/app/src/rpc/client.ts:getSnapshot",
-							message: "ui.rpc.getSnapshot.httpError",
-							data: { baseUrl, status: res.status, statusText: res.statusText },
-							timestamp: Date.now(),
-							sessionId: "debug-session",
-							runId: "pre-fix",
-							hypothesisId: "H7",
-						}),
-					},
-				).catch(() => {});
-				// #endregion agent log
-				throw new Error(`snapshot failed: ${res.status} ${res.statusText}`);
-			}
-			const json = await res.json();
-			// #region agent log
-			fetch(
-				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						location: "packages/app/src/rpc/client.ts:getSnapshot",
-						message: "ui.rpc.getSnapshot.success",
-						data: { baseUrl },
-						timestamp: Date.now(),
-						sessionId: "debug-session",
-						runId: "pre-fix",
-						hypothesisId: "H7",
-					}),
-				},
-			).catch(() => {});
-			// #endregion agent log
-			return decodeSnapshot(json);
-		},
-		submitOp: async (submit) => {
-			const res = await fetch(`${baseUrl}/submitOp`, {
-				method: "POST",
-				headers: { "content-type": "application/json", ...authHeaders },
-				body: JSON.stringify(submit),
-			});
-			if (!res.ok) {
-				const text = await res.text();
-				throw new Error(
-					text.length > 0 ? text : `submit failed: ${res.status}`,
-				);
-			}
-			const json = await res.json();
-			return decodeSubmitResult(json);
-		},
-		getOps: async (fromVersion) => {
-			const res = await fetch(
-				`${baseUrl}/ops?fromVersion=${encodeURIComponent(String(fromVersion))}`,
-				{
-					headers: authHeaders,
-				},
-			);
-			if (!res.ok) {
-				const text = await res.text();
-				throw new Error(text.length > 0 ? text : `ops failed: ${res.status}`);
-			}
-			const json = await res.json();
-			return decodeOpsResponse(json);
-		},
+						HttpClientRequest.bodyUnsafeJson(encodeBody(submit)),
+					);
+					const response = yield* client.execute(request);
+					return yield* HttpClientResponse.schemaBodyJson(Project.SubmitResult)(
+						response,
+					);
+				}),
+			),
+
+		getOps: (fromVersion) =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const response = yield* client.get(
+						`${baseUrl}/ops?fromVersion=${encodeURIComponent(String(fromVersion))}`,
+						{ headers: authHeaders },
+					);
+					return yield* HttpClientResponse.schemaBodyJson(Project.OpsResponse)(
+						response,
+					);
+				}),
+			),
+
 		connectOps: ({
 			fromVersion,
 			clientId,
@@ -261,6 +213,7 @@ export const createDawStateClient = (
 
 			return close;
 		},
+
 		connectSSE: ({ fromVersion, onEvent, onError, onClose }) => {
 			return createSSEClient({
 				baseUrl,

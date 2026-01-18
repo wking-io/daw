@@ -1,14 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import type { Project } from "@daw/contract";
-import { FetchHttpClient } from "@effect/platform";
-import { RpcClient, RpcSerialization } from "@effect/rpc";
-import { ProjectRpcs } from "@server/rpc/requests";
-import { Chunk, Effect, Fiber, Layer, Stream } from "effect";
+import { Project } from "@daw/contract";
+import { Schema } from "effect";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 
 const serverRoot = new URL("..", import.meta.url).pathname;
+
+const decodeSnapshot = Schema.decodeUnknownSync(Project.Snapshot);
+const decodeSubmitResult = Schema.decodeUnknownSync(Project.SubmitResult);
 
 const readStreamText = async (
 	stream: ReadableStream | number | undefined | null,
@@ -43,12 +43,7 @@ const waitForServer = async (
 	throw new Error("Timed out waiting for server to start");
 };
 
-const makeClientLayer = (baseUrl: string) =>
-	RpcClient.layerProtocolHttp({ url: `${baseUrl}/rpc` }).pipe(
-		Layer.provide([FetchHttpClient.layer, RpcSerialization.layerNdjson]),
-	);
-
-describe("RPC e2e", () => {
+describe("HTTP e2e", () => {
 	let child: ReturnType<typeof Bun.spawn> | null = null;
 	let baseUrl = "";
 	let dbDir = "";
@@ -82,92 +77,73 @@ describe("RPC e2e", () => {
 		}
 	});
 
-	it("GetSnapshot returns initial state", async () => {
-		const program = Effect.gen(function* () {
-			const client = yield* RpcClient.make(ProjectRpcs);
-			return yield* client.GetSnapshot();
-		}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
-
-		const snapshot = await Effect.runPromise(program);
+	it("GET /snapshot returns initial state", async () => {
+		const res = await fetch(`${baseUrl}/snapshot`);
+		expect(res.ok).toBe(true);
+		const json = await res.json();
+		const snapshot = decodeSnapshot(json);
 		expect(snapshot.version).toBe(0);
 		expect(snapshot.doc.instruments).toHaveLength(0);
 	}, 20000);
 
-	it("SubmitOp creates instruments", async () => {
-		const program = Effect.gen(function* () {
-			const client = yield* RpcClient.make(ProjectRpcs);
-			const snapshot = yield* client.GetSnapshot();
-			const submit: Project.Submit = {
-				opId: "e2e-op-1",
-				baseVersion: snapshot.version,
-				actor: "ui",
-				op: {
-					t: "instrument.create",
-					type: "synth",
-					name: "E2E Lead",
-				},
-			};
-			return yield* client.SubmitOp(submit);
-		}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
+	it("POST /submitOp creates instruments", async () => {
+		const snapshotRes = await fetch(`${baseUrl}/snapshot`);
+		const snapshot = decodeSnapshot(await snapshotRes.json());
 
-		const result = await Effect.runPromise(program);
+		const submit: Project.Submit = {
+			opId: "e2e-op-1",
+			baseVersion: snapshot.version,
+			actor: "ui",
+			op: {
+				t: "instrument.create",
+				type: "synth",
+				name: "E2E Lead",
+			},
+		};
+
+		const res = await fetch(`${baseUrl}/submitOp`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(submit),
+		});
+		expect(res.ok).toBe(true);
+		const result = decodeSubmitResult(await res.json());
 		expect(result.version).toBe(1);
 		expect(result.patches.patches[0]?.t).toBe("instrument.add");
 	}, 20000);
 
-	it("PatchStream streams new patches", async () => {
-		const program = Effect.gen(function* () {
-			const client = yield* RpcClient.make(ProjectRpcs);
-			const snapshot = yield* client.GetSnapshot();
-			const stream = client.PatchStream({ fromVersion: snapshot.version });
-			const fiber = yield* Stream.take(stream, 1).pipe(
-				Stream.runCollect,
-				Effect.fork,
-			);
-			yield* Effect.yieldNow();
-			yield* client.SubmitOp({
-				opId: "e2e-op-2",
-				baseVersion: snapshot.version,
-				actor: "ui",
-				op: {
-					t: "instrument.create",
-					type: "drum",
-					name: "E2E Kit",
-				},
-			});
-			return yield* Fiber.join(fiber);
-		}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
-
-		const patchesChunk = await Effect.runPromise(program);
-		const patches = Chunk.toArray(patchesChunk);
-		expect(patches[0]?.patches[0]?.t).toBe("instrument.add");
+	it("GET /ops returns ops after version", async () => {
+		const res = await fetch(`${baseUrl}/ops?fromVersion=0`);
+		expect(res.ok).toBe(true);
+		const json = (await res.json()) as Project.OpsResponse;
+		expect(json.fromVersion).toBe(0);
+		expect(Array.isArray(json.ops)).toBe(true);
 	}, 20000);
 
-	it("AudioDeltaStream streams audio deltas", async () => {
-		const program = Effect.gen(function* () {
-			const client = yield* RpcClient.make(ProjectRpcs);
-			const snapshot = yield* client.GetSnapshot();
-			const stream = client.AudioDeltaStream({ fromVersion: snapshot.version });
-			const fiber = yield* Stream.take(stream, 1).pipe(
-				Stream.runCollect,
-				Effect.fork,
-			);
-			yield* Effect.yieldNow();
-			yield* client.SubmitOp({
-				opId: "e2e-op-3",
-				baseVersion: snapshot.version,
-				actor: "ui",
-				op: {
-					t: "instrument.create",
-					type: "sampler",
-					name: "E2E Sampler",
-				},
-			});
-			return yield* Fiber.join(fiber);
-		}).pipe(Effect.scoped, Effect.provide(makeClientLayer(baseUrl)));
+	it("GET /health returns healthy status", async () => {
+		const res = await fetch(`${baseUrl}/health`);
+		expect(res.ok).toBe(true);
+		const json = (await res.json()) as { healthy: boolean; version: string };
+		expect(json.healthy).toBe(true);
+		expect(typeof json.version).toBe("string");
+	}, 20000);
 
-		const deltasChunk = await Effect.runPromise(program);
-		const deltas = Chunk.toArray(deltasChunk);
-		expect(deltas[0]?.version).toBeGreaterThan(0);
+	it("GET /event returns SSE stream", async () => {
+		const res = await fetch(`${baseUrl}/event?fromVersion=0`);
+		expect(res.ok).toBe(true);
+		expect(res.headers.get("content-type")).toBe("text/event-stream");
+
+		const reader = res.body?.getReader();
+		expect(reader).toBeDefined();
+
+		// Read first chunk (should be server.connected event)
+		const { value, done } = await reader!.read();
+		expect(done).toBe(false);
+
+		const text = new TextDecoder().decode(value);
+		expect(text).toContain("data:");
+		expect(text).toContain("server.connected");
+
+		await reader!.cancel();
 	}, 20000);
 });

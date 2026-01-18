@@ -25,7 +25,6 @@
 		"@effect-atom/atom-react": "catalog:",
 		"@effect/experimental": "catalog:",
 		"@effect/platform": "catalog:",
-		"@effect/rpc": "catalog:",
 		"clsx": "2.1.1",
 		"effect": "catalog:",
 		"react": "catalog:",

@@ -22,7 +22,6 @@
         "@effect-atom/atom-react": "catalog:",
         "@effect/experimental": "catalog:",
         "@effect/platform": "catalog:",
-        "@effect/rpc": "catalog:",
         "clsx": "2.1.1",
         "effect": "catalog:",
         "react": "catalog:",
@@ -53,6 +52,7 @@
       "name": "@daw/contract",
       "version": "0.0.0",
       "dependencies": {
+        "@effect/platform": "catalog:",
         "effect": "catalog:",
       },
       "devDependencies": {
@@ -109,7 +109,6 @@
         "@daw/contract": "workspace:*",
         "@effect/platform": "catalog:",
         "@effect/platform-bun": "catalog:",
-        "@effect/rpc": "catalog:",
         "@effect/sql": "catalog:",
         "@effect/sql-sqlite-bun": "catalog:",
         "effect": "catalog:",
