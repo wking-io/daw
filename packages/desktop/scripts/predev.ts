@@ -4,6 +4,11 @@ import { $ } from "bun";
 
 import { copyBinaryToSidecarFolder, getCurrentSidecar } from "./utils";
 
+// Clean up any orphan processes from previous dev sessions before starting.
+// This prevents "port already in use" errors when restarting dev:desktop.
+console.log("[predev] Cleaning up orphan processes...");
+await $`bun run --cwd ../.. cleanup:orphans`.quiet().nothrow();
+
 const RUST_TARGET =
 	process.env.TAURI_ENV_TARGET_TRIPLE ??
 	process.env.RUST_TARGET ??

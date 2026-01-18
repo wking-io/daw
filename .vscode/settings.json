@@ -28,6 +28,8 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "cSpell.words": [
+    "pgrep",
+    "pids",
     "Tauri",
     "unlisten"
   ]

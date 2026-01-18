@@ -30,8 +30,8 @@ const parsePort = (key: string, fallback: number): number => {
 };
 
 const ports = {
-	ipc: parsePort("DAW_IPC_PORT", 43123),
 	mcp: parsePort("DAW_MCP_PORT", 43124),
+	state: parsePort("DAW_STATE_PORT", 43125),
 	vite: parsePort("DAW_DEV_PORT", 1420),
 } as const;
 
@@ -48,11 +48,19 @@ const run = async (cmd: string, cmdArgs: ReadonlyArray<string>) => {
 	return { stdout, stderr, exitCode };
 };
 
-const uniq = <T>(xs: ReadonlyArray<T>): ReadonlyArray<T> => Array.from(new Set(xs));
+const uniq = <T>(xs: ReadonlyArray<T>): ReadonlyArray<T> =>
+	Array.from(new Set(xs));
 
-const pidsListeningOnPort = async (port: number): Promise<ReadonlyArray<number>> => {
+const pidsListeningOnPort = async (
+	port: number,
+): Promise<ReadonlyArray<number>> => {
 	// macOS: lsof -t prints just the PID(s)
-	const { stdout } = await run("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"]);
+	const { stdout } = await run("lsof", [
+		"-nP",
+		`-iTCP:${port}`,
+		"-sTCP:LISTEN",
+		"-t",
+	]);
 	return uniq(
 		stdout
 			.split("\n")
@@ -63,7 +71,9 @@ const pidsListeningOnPort = async (port: number): Promise<ReadonlyArray<number>>
 	);
 };
 
-const pidsMatchingPattern = async (pattern: string): Promise<ReadonlyArray<number>> => {
+const pidsMatchingPattern = async (
+	pattern: string,
+): Promise<ReadonlyArray<number>> => {
 	// pgrep -f is convenient for "full command line" matching on macOS.
 	// If pgrep finds nothing, it exits non-zero, so ignore exit code.
 	const { stdout } = await run("pgrep", ["-f", pattern]);
@@ -101,7 +111,8 @@ const looksLikeThisRepo = (command: string, cwd: string): boolean => {
 	const haystack = `${command}\n${cwd}`;
 	// Strong signals: binary names
 	if (/\bdaw-mcp\b/.test(haystack)) return true;
-	if (/\bdaw_desktop\b/.test(haystack)) return true;
+	if (/\bdaw-server\b/.test(haystack)) return true;
+	if (/\bdaw-desktop\b/.test(haystack)) return true;
 	// Repo path involvement
 	if (haystack.includes(repoRoot)) return true;
 	return false;
@@ -123,8 +134,8 @@ const isAlive = async (pid: number): Promise<boolean> => {
 
 const main = async () => {
 	const byPort = await Promise.all([
-		pidsListeningOnPort(ports.ipc),
 		pidsListeningOnPort(ports.mcp),
+		pidsListeningOnPort(ports.state),
 		pidsListeningOnPort(ports.vite),
 	]);
 	const portPids = uniq(byPort.flat());
@@ -132,13 +143,18 @@ const main = async () => {
 	const patternPids = uniq(
 		[
 			...(await pidsMatchingPattern("\\bdaw-mcp\\b")),
-			...(await pidsMatchingPattern("\\bdaw_desktop\\b")),
+			...(await pidsMatchingPattern("\\bdaw-server\\b")),
+			...(await pidsMatchingPattern("\\bdaw-desktop\\b")),
 			// Vite / bun processes started from this repo sometimes get orphaned too.
-			...(await pidsMatchingPattern(`${repoRoot.replaceAll("/", "\\/")}.*\\bvite\\b`)),
+			...(await pidsMatchingPattern(
+				`${repoRoot.replaceAll("/", "\\/")}.*\\bvite\\b`,
+			)),
 		].flat(),
 	);
 
-	const candidates = uniq([...portPids, ...patternPids]).filter((pid) => pid !== process.pid);
+	const candidates = uniq([...portPids, ...patternPids]).filter(
+		(pid) => pid !== process.pid,
+	);
 	if (candidates.length === 0) {
 		console.log("No DAW dev orphans found.");
 		return;
@@ -146,7 +162,10 @@ const main = async () => {
 
 	const inspected = await Promise.all(
 		candidates.map(async (pid) => {
-			const [command, cwd] = await Promise.all([procCommand(pid), procCwd(pid)]);
+			const [command, cwd] = await Promise.all([
+				procCommand(pid),
+				procCwd(pid),
+			]);
 			return { pid, command, cwd, ok: looksLikeThisRepo(command, cwd) };
 		}),
 	);
@@ -157,7 +176,9 @@ const main = async () => {
 	if (skipped.length > 0) {
 		console.log("Skipping non-DAW processes (safety check):");
 		for (const p of skipped) {
-			console.log(`- pid=${p.pid} cmd=${p.command || "<unknown>"} cwd=${p.cwd || "<unknown>"}`);
+			console.log(
+				`- pid=${p.pid} cmd=${p.command || "<unknown>"} cwd=${p.cwd || "<unknown>"}`,
+			);
 		}
 	}
 
@@ -170,7 +191,9 @@ const main = async () => {
 		`${dryRun ? "[dry-run] " : ""}Killing ${targets.length} DAW dev orphan(s):`,
 	);
 	for (const p of targets) {
-		console.log(`- pid=${p.pid} cmd=${p.command || "<unknown>"} cwd=${p.cwd || "<unknown>"}`);
+		console.log(
+			`- pid=${p.pid} cmd=${p.command || "<unknown>"} cwd=${p.cwd || "<unknown>"}`,
+		);
 	}
 
 	// Graceful termination first
@@ -186,7 +209,9 @@ const main = async () => {
 	}
 
 	if (stillAlive.length > 0) {
-		console.log(`${dryRun ? "[dry-run] " : ""}Force killing ${stillAlive.length} still alive:`);
+		console.log(
+			`${dryRun ? "[dry-run] " : ""}Force killing ${stillAlive.length} still alive:`,
+		);
 		for (const p of stillAlive) {
 			console.log(`- pid=${p.pid}`);
 			await tryKill(p.pid, "SIGKILL");
@@ -195,7 +220,7 @@ const main = async () => {
 
 	console.log("Done.");
 	console.log(
-		`Ports checked: IPC=${ports.ipc} MCP=${ports.mcp} Vite=${ports.vite} (override via DAW_IPC_PORT/DAW_MCP_PORT/DAW_DEV_PORT)`,
+		`Ports checked: MCP=${ports.mcp} STATE=${ports.state} Vite=${ports.vite} (override via DAW_MCP_PORT/DAW_STATE_PORT/DAW_DEV_PORT)`,
 	);
 };
 
