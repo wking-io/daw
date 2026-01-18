@@ -1,5 +1,6 @@
-import { Project } from "@daw/contract";
+import { Project, type SSE } from "@daw/contract";
 import { Schema } from "effect";
+import { createSSEClient } from "../utils/sse";
 
 export interface DawStateClientOptions {
 	host?: string;
@@ -26,6 +27,12 @@ export interface DawStateClient {
 			}>,
 		) => void;
 		onError?: (error: Event | Error) => void;
+		onClose?: () => void;
+	}) => () => void;
+	connectSSE: (options: {
+		fromVersion: number;
+		onEvent: (event: SSE.SSEEvent) => void;
+		onError?: (error: Error) => void;
 		onClose?: () => void;
 	}) => () => void;
 }
@@ -253,6 +260,16 @@ export const createDawStateClient = (
 			};
 
 			return close;
+		},
+		connectSSE: ({ fromVersion, onEvent, onError, onClose }) => {
+			return createSSEClient({
+				baseUrl,
+				token,
+				fromVersion,
+				onEvent,
+				onError,
+				onClose,
+			});
 		},
 	};
 };

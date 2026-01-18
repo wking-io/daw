@@ -43,6 +43,9 @@ const mockClient = {
 		opHandler = onOp;
 		return () => {};
 	}),
+	connectSSE: vi.fn(() => {
+		return () => {};
+	}),
 };
 
 vi.mock("../rpc/client", () => ({
@@ -51,6 +54,8 @@ vi.mock("../rpc/client", () => ({
 
 describe("AppRoot", () => {
 	it("renders and handles daw.instrument.create commands", async () => {
+		// Reset mocks
+		mockClient.connectOps.mockClear();
 		opHandler = () => {};
 
 		render(
@@ -60,7 +65,9 @@ describe("AppRoot", () => {
 		);
 
 		expect(screen.getByText("DAW")).toBeInTheDocument();
-		await waitFor(() => expect(opHandler).toBeTypeOf("function"));
+
+		// Wait for connectOps to be called (means snapshot is loaded and WS is connected)
+		await waitFor(() => expect(mockClient.connectOps).toHaveBeenCalled());
 
 		opHandler({
 			version: 1,

@@ -1,12 +1,15 @@
-import { Project } from "@daw/contract";
+import { Project, type SSE } from "@daw/contract";
 import {
 	HttpRouter,
 	HttpServerRequest,
 	HttpServerResponse,
 } from "@effect/platform";
-import { Effect, Layer, Ref, Schema, Stream } from "effect";
+import { Duration, Effect, Layer, Ref, Schema, Stream } from "effect";
 import { ServerConfig } from "../config";
 import { DawStore } from "../store/store";
+import { formatSSE } from "../utils/sse";
+
+const HEARTBEAT_INTERVAL_MS = 30000;
 
 type WsClient = {
 	id: string;
@@ -296,6 +299,93 @@ const DawRoutes = DawRouter.use((router) =>
 				);
 				yield* Effect.forkDaemon(lifecycle);
 				return HttpServerResponse.empty();
+			}),
+		);
+
+		// SSE event stream endpoint
+		yield* router.get(
+			"/event",
+			Effect.gen(function* () {
+				const request = yield* HttpServerRequest.HttpServerRequest;
+				const baseUrl = `http://${request.headers["host"] ?? "127.0.0.1"}`;
+				const url = new URL(request.url, baseUrl);
+				if (!isAuthorized(request, url)) {
+					return HttpServerResponse.text("Unauthorized", { status: 401 });
+				}
+				const fromVersion = Number.parseInt(
+					url.searchParams.get("fromVersion") ?? "0",
+					10,
+				);
+				const normalizedFromVersion = Number.isNaN(fromVersion)
+					? 0
+					: fromVersion;
+
+				const snapshot = yield* store.getSnapshot;
+				const encodeOpEntry = Schema.encodeSync(Project.OpEntry);
+				const encodePatchBatch = Schema.encodeSync(Project.PatchBatch);
+
+				// Create connected event
+				const connectedEvent: SSE.ServerConnectedEvent = {
+					t: "server.connected",
+					serverVersion: snapshot.version,
+				};
+
+				// Create heartbeat stream (each emission is delayed by HEARTBEAT_INTERVAL_MS)
+				const heartbeatStream = Stream.repeatEffect(
+					Effect.delay(
+						Effect.sync(
+							(): SSE.ServerHeartbeatEvent => ({
+								t: "server.heartbeat",
+								timestamp: Date.now(),
+							}),
+						),
+						Duration.millis(HEARTBEAT_INTERVAL_MS),
+					),
+				);
+
+				// Get op stream and map to SSE events
+				const opStream = yield* store.opStreamFrom(normalizedFromVersion);
+				const opEventStream = opStream.pipe(
+					Stream.map(
+						(entry): SSE.OpEvent => ({
+							t: "op",
+							entry: encodeOpEntry(entry) as Project.OpEntry,
+						}),
+					),
+				);
+
+				// Get patch stream and map to SSE events
+				const patchStream = yield* store.patchStreamFrom(normalizedFromVersion);
+				const patchEventStream = patchStream.pipe(
+					Stream.map(
+						(batch): SSE.PatchEvent => ({
+							t: "patch",
+							batch: encodePatchBatch(batch) as unknown as Project.PatchBatch,
+						}),
+					),
+				);
+
+				// Combine all event streams
+				const combinedStream = Stream.merge(
+					Stream.merge(opEventStream, patchEventStream),
+					heartbeatStream,
+				);
+
+				// Prepend connected event and format as SSE
+				const sseStream = Stream.concat(
+					Stream.make(connectedEvent as SSE.SSEEvent),
+					combinedStream,
+				).pipe(
+					Stream.map((event) => new TextEncoder().encode(formatSSE(event))),
+				);
+
+				return HttpServerResponse.stream(sseStream, {
+					contentType: "text/event-stream",
+					headers: {
+						"cache-control": "no-cache",
+						connection: "keep-alive",
+					},
+				});
 			}),
 		);
 	}),

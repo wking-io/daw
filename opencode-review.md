@@ -38,6 +38,8 @@ Effect/React implementation
 
 ### 2) SSE event stream with heartbeat + "connected" event
 
+STATUS: DONE
+
 OpenCode uses SSE for a global event stream and emits a heartbeat every 30s to avoid idle disconnects (WKWebView). It sends a `server.connected` event on connect.
 
 Recommendation
@@ -50,7 +52,16 @@ Effect/React implementation
 - Server: add a `Stream`-backed SSE response using `HttpServerResponse.stream` and a periodic `Stream.interval` heartbeat.
 - React: create a small SSE client using `fetch` + `ReadableStream` so you can attach auth headers; parse events and forward to a global emitter.
 
+Implementation details:
+
+- Server: `packages/server/src/rpc/server.ts` - `/event` SSE endpoint with 30s heartbeat
+- Contract: `packages/contract/src/sse.ts` - SSE event type schemas
+- Client: `packages/app/src/utils/sse.ts` - SSE client + event coalescer utility
+- Client: `packages/app/src/rpc/client.ts` - `connectSSE` method added to state client
+
 ### 3) Event coalescing to reduce UI thrash
+
+STATUS: DONE
 
 OpenCode coalesces high-frequency events by key and batches emission on a short timer.
 
@@ -63,6 +74,11 @@ Effect/React implementation
 
 - React: add a small utility in `packages/app/src/utils` that batches events by key with a 16ms timer and allows last-write-wins semantics.
 - Use in the store update path, not in render logic.
+
+Implementation details:
+
+- `packages/app/src/utils/sse.ts` - `createEventCoalescer` utility with configurable key function and batch interval
+- `packages/app/src/utils/sse.ts` - `getSSEEventKey` helper for coalescing heartbeat/presence/locks events (ops/patches are not coalesced)
 
 ### 4) Per-directory / per-project server scoping
 
