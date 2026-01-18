@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { OpEntry, PatchBatch } from "./project";
+import { OperationEntry, PatchBatch } from "./project";
 
 /**
  * SSE Event Types
@@ -19,11 +19,11 @@ export const ServerHeartbeatEvent = Schema.Struct({
 });
 export type ServerHeartbeatEvent = typeof ServerHeartbeatEvent.Type;
 
-export const OpEvent = Schema.Struct({
-	t: Schema.Literal("op"),
-	entry: OpEntry,
+export const OperationEvent = Schema.Struct({
+	t: Schema.Literal("operation"),
+	entry: OperationEntry,
 });
-export type OpEvent = typeof OpEvent.Type;
+export type OperationEvent = typeof OperationEvent.Type;
 
 export const PatchEvent = Schema.Struct({
 	t: Schema.Literal("patch"),
@@ -37,7 +37,7 @@ export const PresenceEvent = Schema.Struct({
 });
 export type PresenceEvent = typeof PresenceEvent.Type;
 
-export const LockEvent = Schema.Struct({
+export const LocksEvent = Schema.Struct({
 	t: Schema.Literal("locks"),
 	locks: Schema.Array(
 		Schema.Struct({
@@ -47,14 +47,14 @@ export const LockEvent = Schema.Struct({
 		}),
 	),
 });
-export type LockEvent = typeof LockEvent.Type;
+export type LocksEvent = typeof LocksEvent.Type;
 
-export const SSEEvent = Schema.Union(
+export const Event = Schema.Union(
 	ServerConnectedEvent,
 	ServerHeartbeatEvent,
-	OpEvent,
+	OperationEvent,
 	PatchEvent,
 	PresenceEvent,
-	LockEvent,
+	LocksEvent,
 );
-export type SSEEvent = typeof SSEEvent.Type;
+export type Event = typeof Event.Type;

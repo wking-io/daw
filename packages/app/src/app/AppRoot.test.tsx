@@ -1,10 +1,10 @@
-import type { Instrument, SSE } from "@daw/contract";
+import type { Events, Instrument } from "@daw/contract";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "./AppProviders";
 import { AppRoot } from "./AppRoot";
 
-type SSEEventHandler = (event: SSE.SSEEvent) => void;
+type SSEEventHandler = (event: Events.Event) => void;
 
 let sseEventHandler: SSEEventHandler = () => {};
 const mockCleanup = vi.fn();
@@ -27,7 +27,7 @@ const mockSubmitOp = vi.fn(async () => ({
 
 const mockGetOps = vi.fn(async () => ({
 	fromVersion: 0,
-	ops: [],
+	operations: [],
 }));
 
 const mockConnectSSE = vi.fn(
@@ -96,9 +96,9 @@ describe("AppRoot", () => {
 			{ timeout: 3000 },
 		);
 
-		// Simulate an op event via SSE
+		// Simulate an operation event via SSE
 		sseEventHandler({
-			t: "op",
+			t: "operation",
 			entry: {
 				version: 1,
 				submit: {

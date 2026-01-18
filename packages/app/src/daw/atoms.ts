@@ -1,4 +1,4 @@
-import type { Instrument, Project, SSE } from "@daw/contract";
+import type { Events, Instrument, Project } from "@daw/contract";
 import * as Atom from "@effect-atom/atom/Atom";
 import type * as Registry from "@effect-atom/atom/Registry";
 
@@ -101,7 +101,7 @@ export const applySubmit = (
  */
 export const handleSSEEvent = (
 	registry: Registry.Registry,
-	event: SSE.SSEEvent,
+	event: Events.Event,
 	versionRef: { current: number },
 	onGapDetected?: (trigger: string) => void,
 ) => {
@@ -118,12 +118,12 @@ export const handleSSEEvent = (
 			// Heartbeats are just for keeping the connection alive, no state update needed
 			break;
 
-		case "op": {
+		case "operation": {
 			const entry = event.entry;
 			if (entry.version <= versionRef.current) return;
 			if (entry.version !== versionRef.current + 1) {
 				// Gap detected, need recovery
-				onGapDetected?.(`sse:op:${entry.version}`);
+				onGapDetected?.(`sse:operation:${entry.version}`);
 				return;
 			}
 			versionRef.current = entry.version;

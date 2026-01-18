@@ -1,4 +1,4 @@
-import { Api, Project } from "@daw/contract";
+import { api, Project } from "@daw/contract";
 import { FetchHttpClient } from "@effect/platform";
 import { AtomHttpApi } from "@effect-atom/atom-react";
 import { Schema } from "effect";
@@ -33,7 +33,7 @@ const resolveBaseUrl = (options?: {
  * ```
  */
 export class DawClient extends AtomHttpApi.Tag<DawClient>()("DawClient", {
-	api: Api,
+	api: api,
 	httpClient: FetchHttpClient.layer,
 	baseUrl: resolveBaseUrl(),
 }) {}
@@ -47,9 +47,9 @@ export const ReactivityKeys = {
 } as const;
 
 /**
- * Helper to decode an op entry from SSE
+ * Helper to decode an operation entry from SSE
  */
-export const decodeOpEntry = Schema.decodeUnknownSync(Project.OpEntry);
+export const decodeOpEntry = Schema.decodeUnknownSync(Project.OperationEntry);
 
 /**
  * Helper to decode a patch batch from SSE

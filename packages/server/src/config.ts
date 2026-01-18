@@ -3,9 +3,10 @@ import path from "path";
 import { getDefaultDBLocation } from "./persist/get-default-db-location";
 
 export interface ServerConfigService {
-	readonly statePort: number;
-	readonly stateDbPath: string;
-	readonly stateAuthToken: string;
+	readonly version: string;
+	readonly port: number;
+	readonly db: string;
+	readonly authToken: string;
 }
 
 export class ServerConfig extends Context.Tag("daw/ServerConfig")<
@@ -14,12 +15,13 @@ export class ServerConfig extends Context.Tag("daw/ServerConfig")<
 >() {}
 
 const ServerConfigSchema = Config.all({
-	statePort: Config.port("DAW_STATE_PORT").pipe(Config.withDefault(43125)),
-	stateDbPath: Config.string("DAW_STATE_DB").pipe(
+	version: Config.string("DAW_SERVER_VERSION").pipe(Config.withDefault("dev")),
+	port: Config.port("DAW_STATE_PORT").pipe(Config.withDefault(43125)),
+	db: Config.string("DAW_STATE_DB").pipe(
 		Config.map((value) => path.resolve(value)),
 		Config.withDefault(getDefaultDBLocation()),
 	),
-	stateAuthToken: Config.string("DAW_STATE_TOKEN").pipe(
+	authToken: Config.string("DAW_STATE_TOKEN").pipe(
 		Config.withDefault(""),
 		Config.map((value) => value.trim()),
 	),
@@ -35,15 +37,19 @@ export const ServerConfigTest = (
 ) => {
 	const entries = new Map<string, string>();
 
-	if (overrides.statePort !== undefined) {
-		entries.set("DAW_STATE_PORT", String(overrides.statePort));
+	if (overrides.version !== undefined) {
+		entries.set("DAW_SERVER_VERSION", overrides.version);
 	}
 
-	if (overrides.stateDbPath !== undefined) {
-		entries.set("DAW_STATE_DB", overrides.stateDbPath);
+	if (overrides.port !== undefined) {
+		entries.set("DAW_STATE_PORT", String(overrides.port));
 	}
-	if (overrides.stateAuthToken !== undefined) {
-		entries.set("DAW_STATE_TOKEN", overrides.stateAuthToken);
+
+	if (overrides.db !== undefined) {
+		entries.set("DAW_STATE_DB", overrides.db);
+	}
+	if (overrides.authToken !== undefined) {
+		entries.set("DAW_STATE_TOKEN", overrides.authToken);
 	}
 
 	return Layer.effect(

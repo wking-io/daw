@@ -1,10 +1,10 @@
-import type { SSE } from "@daw/contract";
+import type { Events } from "@daw/contract";
 
 export interface SSEClientOptions {
 	baseUrl: string;
 	token?: string;
 	fromVersion?: number;
-	onEvent: (event: SSE.SSEEvent) => void;
+	onEvent: (event: Events.Event) => void;
 	onError?: (error: Error) => void;
 	onClose?: () => void;
 }
@@ -24,7 +24,7 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 	} = options;
 	const controller = new AbortController();
 
-	const url = new URL(`${baseUrl}/event`);
+	const url = new URL(`${baseUrl}/api/events`);
 	url.searchParams.set("fromVersion", String(fromVersion));
 	if (token) {
 		url.searchParams.set("token", token);
@@ -69,7 +69,7 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 					if (line.startsWith("data: ")) {
 						const data = line.slice(6);
 						try {
-							const event = JSON.parse(data) as SSE.SSEEvent;
+							const event = JSON.parse(data) as Events.Event;
 							onEvent(event);
 						} catch {
 							// Ignore parse errors
@@ -163,7 +163,7 @@ export function createEventCoalescer<T>(options: CoalescingOptions<T>) {
  * SSE event key generator for coalescing.
  * Returns a key for events that should be coalesced.
  */
-export function getSSEEventKey(event: SSE.SSEEvent): string | undefined {
+export function getSSEEventKey(event: Events.Event): string | undefined {
 	switch (event.t) {
 		case "server.heartbeat":
 			return "heartbeat";
@@ -171,7 +171,7 @@ export function getSSEEventKey(event: SSE.SSEEvent): string | undefined {
 			return "presence";
 		case "locks":
 			return "locks";
-		case "op":
+		case "operation":
 			// Don't coalesce ops - each one matters
 			return undefined;
 		case "patch":

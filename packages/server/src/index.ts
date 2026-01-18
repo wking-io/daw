@@ -1,4 +1,9 @@
-import { HttpMiddleware, HttpRouter, HttpServer } from "@effect/platform";
+import {
+	HttpApiBuilder,
+	HttpMiddleware,
+	HttpRouter,
+	HttpServer,
+} from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer } from "effect";
@@ -6,20 +11,20 @@ import { mkdirSync } from "fs";
 import path from "path";
 import type { ServerConfigService } from "./config";
 import { ServerConfig, ServerConfigLive } from "./config";
+import { ApiLive } from "./http/server";
 import { PersistenceLive } from "./persist/sqlite";
-import { HttpRoutesLive } from "./rpc/server";
 import { DawStoreLive } from "./store/store";
 
 const makeHttpLive = (config: ServerConfigService) =>
-	HttpRouter.Default.serve(HttpMiddleware.cors()).pipe(
+	HttpApiBuilder.serve(HttpMiddleware.cors()).pipe(
 		HttpServer.withLogAddress,
-		Layer.provide(HttpRoutesLive),
+		Layer.provide(ApiLive),
 		Layer.provide(DawStoreLive),
 		Layer.provide(PersistenceLive),
-		Layer.provide(SqliteClient.layer({ filename: config.stateDbPath })),
+		Layer.provide(SqliteClient.layer({ filename: config.db })),
 		Layer.provide(
 			BunHttpServer.layer({
-				port: config.statePort,
+				port: config.port,
 				// Disable idle timeout for SSE connections (default is 10s)
 				idleTimeout: 0,
 			}),
@@ -28,7 +33,7 @@ const makeHttpLive = (config: ServerConfigService) =>
 
 const Main = Effect.gen(function* () {
 	const config = yield* ServerConfig;
-	mkdirSync(path.dirname(config.stateDbPath), { recursive: true });
+	mkdirSync(path.dirname(config.db), { recursive: true });
 
 	yield* Layer.launch(makeHttpLive(config)).pipe(Effect.scoped);
 }).pipe(Effect.provide(ServerConfigLive));

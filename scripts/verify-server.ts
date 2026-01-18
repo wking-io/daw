@@ -3,24 +3,23 @@
 const port = Number(process.env.DAW_STATE_PORT ?? "43125");
 const baseUrl = process.env.DAW_STATE_URL ?? `http://127.0.0.1:${port}`;
 const token = process.env.DAW_STATE_TOKEN ?? "";
-const resolveWsBaseUrl = () => {
-	if (process.env.DAW_STATE_WS_URL) return process.env.DAW_STATE_WS_URL;
-	const url = new URL(baseUrl);
-	url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-	url.pathname = "";
-	url.search = "";
-	url.hash = "";
-	return url.toString().replace(/\/$/, "");
-};
-const wsBaseUrl = resolveWsBaseUrl();
 const authHeaders = token ? { authorization: `Bearer ${token}` } : {};
 
-const waitForSnapshot = async () => {
+const waitForHealth = async () => {
 	for (let attempt = 0; attempt < 25; attempt += 1) {
 		try {
-			const res = await fetch(`${baseUrl}/snapshot`);
+			const res = await fetch(`${baseUrl}/api/health`, {
+				headers: authHeaders,
+			});
 			if (res.ok) {
-				return (await res.json()) as { version: number };
+				const json = (await res.json()) as {
+					healthy: boolean;
+					version: string;
+				};
+				if (json.healthy) {
+					console.log(`[health] version=${json.version}`);
+					return json;
+				}
 			}
 		} catch {
 			// ignore while server boots
@@ -28,6 +27,16 @@ const waitForSnapshot = async () => {
 		await Bun.sleep(200);
 	}
 	throw new Error("State server did not become ready");
+};
+
+const getSnapshot = async () => {
+	const res = await fetch(`${baseUrl}/api/project/snapshot`, {
+		headers: authHeaders,
+	});
+	if (!res.ok) {
+		throw new Error(`snapshot failed: ${res.status}`);
+	}
+	return (await res.json()) as { version: number };
 };
 
 const submitCreateInstrument = async (baseVersion: number) => {
@@ -44,13 +53,13 @@ const submitCreateInstrument = async (baseVersion: number) => {
 			createdAt: now,
 		},
 	};
-	const res = await fetch(`${baseUrl}/submitOp`, {
+	const res = await fetch(`${baseUrl}/api/project/operations`, {
 		method: "POST",
-		headers: { "content-type": "application/json" },
+		headers: { "content-type": "application/json", ...authHeaders },
 		body: JSON.stringify(submit),
 	});
 	if (!res.ok) {
-		throw new Error(`submitOp failed: ${res.status}`);
+		throw new Error(`operations (POST) failed: ${res.status}`);
 	}
 	return res.json();
 };
@@ -72,122 +81,12 @@ type OpEntry = {
 	};
 };
 
-const waitForWsOp = async (fromVersion: number) => {
-	const originUrl = new URL(baseUrl);
-	const defaultWsUrl = new URL("/ws", originUrl);
-	defaultWsUrl.protocol = defaultWsUrl.protocol === "https:" ? "wss:" : "ws:";
-	defaultWsUrl.searchParams.set("fromVersion", String(fromVersion));
-
-	const fallbackWsUrl = new URL(defaultWsUrl.toString());
-	if (fallbackWsUrl.hostname === "127.0.0.1") {
-		fallbackWsUrl.hostname = "localhost";
-	}
-
-	const wsUrls = [
-		`${wsBaseUrl}/ws?fromVersion=${encodeURIComponent(String(fromVersion))}`,
-		defaultWsUrl.toString(),
-		fallbackWsUrl.toString(),
-	].filter((value, index, list) => list.indexOf(value) === index);
-
-	let lastError: Error | null = null;
-	for (const wsUrl of wsUrls) {
-		try {
-			return await waitForWsOpAtUrl(wsUrl, fromVersion);
-		} catch (error) {
-			lastError = error instanceof Error ? error : new Error(String(error));
-			console.warn(`[ws] failed to connect to ${wsUrl}: ${lastError.message}`);
-		}
-	}
-	throw lastError ?? new Error("WebSocket failed");
-};
-
-const waitForWsOpAtUrl = async (wsUrl: string, fromVersion: number) => {
-	const deadline = Date.now() + 8000;
-	const { ready, waitForOp, close } = openWs(wsUrl, fromVersion, deadline);
-	await ready;
-	await submitCreateInstrument(fromVersion);
-	try {
-		return await waitForOp;
-	} finally {
-		close();
-	}
-};
-
-const openWs = (
-	wsUrl: string,
-	fromVersion: number,
-	deadline: number,
-): {
-	ready: Promise<void>;
-	waitForOp: Promise<OpEntry>;
-	close: () => void;
-} => {
-	let socket: WebSocket | null = new WebSocket(wsUrl);
-	const close = () => {
-		socket?.close();
-		socket = null;
-	};
-	const timer = setInterval(() => {
-		if (Date.now() > deadline) {
-			clearInterval(timer);
-			close();
-		}
-	}, 250);
-
-	const ready = new Promise<void>((resolve, reject) => {
-		socket?.addEventListener("open", () => {
-			socket?.send(
-				JSON.stringify({
-					t: "hello",
-					clientId: crypto.randomUUID(),
-					lastSeq: fromVersion,
-				}),
-			);
-			resolve();
-		});
-		socket?.addEventListener("error", () =>
-			reject(new Error("WebSocket error")),
-		);
-	});
-
-	const waitForOp = new Promise<OpEntry>((resolve, reject) => {
-		socket?.addEventListener("message", (event) => {
-			let payload: { t?: string } & Record<string, unknown>;
-			try {
-				payload = JSON.parse(String(event.data)) as typeof payload;
-			} catch {
-				return;
-			}
-			if (payload.t === "op" && payload.entry) {
-				clearInterval(timer);
-				resolve(payload.entry as OpEntry);
-			}
-		});
-
-		socket?.addEventListener("error", () => {
-			clearInterval(timer);
-			reject(new Error("WebSocket error"));
-		});
-
-		socket?.addEventListener("close", (event) => {
-			if (Date.now() <= deadline) {
-				clearInterval(timer);
-				reject(
-					new Error(
-						`WebSocket closed early (${event.code}) ${event.reason ?? ""}`,
-					),
-				);
-			}
-		});
-	});
-	return { ready, waitForOp, close };
-};
-
 // SSE Event types
 type SSEEvent =
 	| { t: "server.connected"; serverVersion: number }
 	| { t: "server.heartbeat"; timestamp: number }
 	| { t: "op"; entry: OpEntry }
+	| { t: "operation"; entry: OpEntry }
 	| { t: "patch"; batch: { version: number; patches: unknown[] } }
 	| { t: "presence"; clients: string[] }
 	| { t: "locks"; locks: unknown[] };
@@ -207,7 +106,7 @@ type SseTestResult = {
 };
 
 const createSseStream = (fromVersion: number) => {
-	const url = new URL(`${baseUrl}/event`);
+	const url = new URL(`${baseUrl}/api/events`);
 	url.searchParams.set("fromVersion", String(fromVersion));
 	if (token) {
 		url.searchParams.set("token", token);
@@ -336,6 +235,7 @@ const verifySseOverTime = async (
 					break;
 
 				case "op":
+				case "operation":
 					if (event.entry.version > fromVersion) {
 						result.ops.push(event.entry);
 						currentVersion = Math.max(currentVersion, event.entry.version);
@@ -413,19 +313,18 @@ const verifySseResults = (result: SseTestResult, opCount: number) => {
 };
 
 const run = async () => {
-	const snapshot = await waitForSnapshot();
-	console.log(`[snapshot] version=${snapshot.version}`);
+	// Verify health endpoint
+	await waitForHealth();
 
-	// Verify WebSocket
-	const wsEntry = await waitForWsOp(snapshot.version);
-	console.log("[ok] received ws op:", wsEntry);
+	// Verify snapshot endpoint
+	const snapshot = await getSnapshot();
+	console.log(`[snapshot] version=${snapshot.version}`);
 
 	// Verify SSE events over time
 	console.log(
 		`\n[sse] starting SSE verification (opCount=${SSE_OP_COUNT}, waitForHeartbeat=${SSE_WAIT_HEARTBEAT})`,
 	);
-	const currentVersion = wsEntry.version;
-	const sseResult = await verifySseOverTime(currentVersion, {
+	const sseResult = await verifySseOverTime(snapshot.version, {
 		opCount: SSE_OP_COUNT,
 		waitForHeartbeat: SSE_WAIT_HEARTBEAT,
 	});
@@ -446,7 +345,7 @@ const run = async () => {
 		throw new Error("Expected heartbeat but none received");
 	}
 
-	console.log("\n[ok] all SSE verifications passed");
+	console.log("\n[ok] all verifications passed");
 };
 
 run().catch((error) => {

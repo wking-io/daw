@@ -61,7 +61,7 @@ const resolvePort = async () => {
 };
 
 const probeSnapshot = async (port: number) => {
-	const url = `http://127.0.0.1:${port}/snapshot`;
+	const url = `http://127.0.0.1:${port}/api/project/snapshot`;
 	try {
 		const res = await fetch(url, { signal: AbortSignal.timeout(300) });
 		return { ok: res.ok, status: res.status };

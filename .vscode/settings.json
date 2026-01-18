@@ -28,6 +28,7 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "cSpell.words": [
+    "coalescer",
     "pgrep",
     "pids",
     "Tauri",

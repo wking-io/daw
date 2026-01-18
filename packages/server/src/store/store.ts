@@ -17,7 +17,7 @@ export interface StoreState {
 	version: Project.ProjectVersion;
 	patchLog: ReadonlyArray<Project.PatchBatch>;
 	audioLog: ReadonlyArray<Project.AudioDeltaBatch>;
-	opLog: ReadonlyArray<Project.OpEntry>;
+	opLog: ReadonlyArray<Project.OperationEntry>;
 	undoStack: ReadonlyArray<Project.Submit>;
 	redoStack: ReadonlyArray<Project.Submit>;
 }
@@ -33,10 +33,10 @@ export interface DawStoreService {
 	) => Effect.Effect<Stream.Stream<Project.AudioDeltaBatch>>;
 	opStreamFrom: (
 		fromVersion: number,
-	) => Effect.Effect<Stream.Stream<Project.OpEntry>>;
+	) => Effect.Effect<Stream.Stream<Project.OperationEntry>>;
 	getOpsAfter: (
 		fromVersion: number,
-	) => Effect.Effect<ReadonlyArray<Project.OpEntry>>;
+	) => Effect.Effect<ReadonlyArray<Project.OperationEntry>>;
 }
 
 export class DawStore extends Context.Tag("daw/DawStore")<
@@ -67,7 +67,7 @@ const makeInitialState = (
 	let version = snapshot?.version ?? 0;
 	const patchLog: Array<Project.PatchBatch> = [];
 	const audioLog: Array<Project.AudioDeltaBatch> = [];
-	const opLog: Array<Project.OpEntry> = [];
+	const opLog: Array<Project.OperationEntry> = [];
 	for (const event of events) {
 		version = event.version;
 		const normalizedSubmit = normalizeSubmit(event.submit);
@@ -110,7 +110,7 @@ const DawStoreLiveEffect = Effect.gen(function* () {
 		Option.Option<Project.AudioDeltaBatch>
 	>(Option.none());
 	const latestOpRef = yield* SubscriptionRef.make<
-		Option.Option<Project.OpEntry>
+		Option.Option<Project.OperationEntry>
 	>(Option.none());
 
 	const getSnapshot = SubscriptionRef.get(stateRef).pipe(
@@ -119,46 +119,10 @@ const DawStoreLiveEffect = Effect.gen(function* () {
 
 	const patchStreamFrom = (fromVersion: number) =>
 		Effect.gen(function* () {
-			// #region agent log
-			fetch(
-				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						location: "packages/server/src/store/store.ts:patchStreamFrom",
-						message: "server.patchStreamFrom.entry",
-						data: { fromVersion },
-						timestamp: Date.now(),
-						sessionId: "debug-session",
-						runId: "pre-fix",
-						hypothesisId: "H23",
-					}),
-				},
-			).catch(() => {});
-			// #endregion agent log
 			const state = yield* SubscriptionRef.get(stateRef);
 			const initialBatches = state.patchLog.filter(
 				(batch) => batch.version > fromVersion,
 			);
-			// #region agent log
-			fetch(
-				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						location: "packages/server/src/store/store.ts:patchStreamFrom",
-						message: "server.patchStreamFrom.initial",
-						data: { initialCount: initialBatches.length, fromVersion },
-						timestamp: Date.now(),
-						sessionId: "debug-session",
-						runId: "pre-fix",
-						hypothesisId: "H23",
-					}),
-				},
-			).catch(() => {});
-			// #endregion agent log
 			const updates = latestPatchRef.changes.pipe(
 				Stream.filterMap((value) => value),
 				Stream.filter((batch) => batch.version > fromVersion),
@@ -168,46 +132,10 @@ const DawStoreLiveEffect = Effect.gen(function* () {
 
 	const audioStreamFrom = (fromVersion: number) =>
 		Effect.gen(function* () {
-			// #region agent log
-			fetch(
-				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						location: "packages/server/src/store/store.ts:audioStreamFrom",
-						message: "server.audioStreamFrom.entry",
-						data: { fromVersion },
-						timestamp: Date.now(),
-						sessionId: "debug-session",
-						runId: "pre-fix",
-						hypothesisId: "H24",
-					}),
-				},
-			).catch(() => {});
-			// #endregion agent log
 			const state = yield* SubscriptionRef.get(stateRef);
 			const initialBatches = state.audioLog.filter(
 				(batch) => batch.version > fromVersion,
 			);
-			// #region agent log
-			fetch(
-				"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						location: "packages/server/src/store/store.ts:audioStreamFrom",
-						message: "server.audioStreamFrom.initial",
-						data: { initialCount: initialBatches.length, fromVersion },
-						timestamp: Date.now(),
-						sessionId: "debug-session",
-						runId: "pre-fix",
-						hypothesisId: "H24",
-					}),
-				},
-			).catch(() => {});
-			// #endregion agent log
 			const updates = latestAudioRef.changes.pipe(
 				Stream.filterMap((value) => value),
 				Stream.filter((batch) => batch.version > fromVersion),
@@ -238,29 +166,6 @@ const DawStoreLiveEffect = Effect.gen(function* () {
 	const submitOp = (submit: Project.Submit) =>
 		SubscriptionRef.modifyEffect(stateRef, (state) =>
 			Effect.gen(function* () {
-				// #region agent log
-				fetch(
-					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							location: "packages/server/src/store/store.ts:submitOp",
-							message: "server.submitOp.entry",
-							data: {
-								stateVersion: state.version,
-								opType: submit.op.t,
-								actor: submit.actor,
-								baseVersion: submit.baseVersion,
-							},
-							timestamp: Date.now(),
-							sessionId: "debug-session",
-							runId: "pre-fix",
-							hypothesisId: "H3",
-						}),
-					},
-				).catch(() => {});
-				// #endregion agent log
 				const normalizedSubmit = normalizeSubmit(submit);
 				const nextVersion = state.version + 1;
 				const applied = applyOp(state.doc, nextVersion, normalizedSubmit.op);
@@ -309,7 +214,7 @@ const DawStoreLiveEffect = Effect.gen(function* () {
 					},
 				).catch(() => {});
 				// #endregion agent log
-				const opEntry: Project.OpEntry = {
+				const opEntry: Project.OperationEntry = {
 					version: nextVersion,
 					submit: normalizedSubmit,
 				};

@@ -1,4 +1,4 @@
-import type { Instrument, Project, SSE } from "@daw/contract";
+import type { Events, Instrument, Project } from "@daw/contract";
 import type * as Atom from "@effect-atom/atom/Atom";
 import type * as Registry from "@effect-atom/atom/Registry";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -140,7 +140,7 @@ describe("atoms", () => {
 	describe("handleSSEEvent", () => {
 		it("handles server.connected event", () => {
 			const versionRef = { current: 0 };
-			const event: SSE.SSEEvent = {
+			const event: Events.Event = {
 				t: "server.connected",
 				serverVersion: 10,
 			};
@@ -155,7 +155,7 @@ describe("atoms", () => {
 
 		it("handles presence event", () => {
 			const versionRef = { current: 0 };
-			const event: SSE.SSEEvent = {
+			const event: Events.Event = {
 				t: "presence",
 				clients: ["client-1", "client-2"],
 			};
@@ -170,7 +170,7 @@ describe("atoms", () => {
 			const locks = [
 				{ resource: "track-1", clientId: "client-1", acquiredAt: Date.now() },
 			];
-			const event: SSE.SSEEvent = {
+			const event: Events.Event = {
 				t: "locks",
 				locks,
 			};
@@ -180,10 +180,10 @@ describe("atoms", () => {
 			expect(registry.get(locksAtom)).toEqual(locks);
 		});
 
-		it("handles op event and updates version", () => {
+		it("handles operation event and updates version", () => {
 			const versionRef = { current: 0 };
-			const event: SSE.SSEEvent = {
-				t: "op",
+			const event: Events.Event = {
+				t: "operation",
 				entry: {
 					version: 1,
 					submit: {
@@ -215,8 +215,8 @@ describe("atoms", () => {
 				gapTrigger = trigger;
 			};
 
-			const event: SSE.SSEEvent = {
-				t: "op",
+			const event: Events.Event = {
+				t: "operation",
 				entry: {
 					version: 5, // Gap: expected 1, got 5
 					submit: {
@@ -236,7 +236,7 @@ describe("atoms", () => {
 
 			handleSSEEvent(registry, event, versionRef, onGapDetected);
 
-			expect(gapTrigger).toBe("sse:op:5");
+			expect(gapTrigger).toBe("sse:operation:5");
 			expect(versionRef.current).toBe(0); // Version unchanged due to gap
 		});
 
@@ -250,7 +250,7 @@ describe("atoms", () => {
 				createdAt: new Date(),
 			};
 
-			const event: SSE.SSEEvent = {
+			const event: Events.Event = {
 				t: "patch",
 				batch: {
 					version: 1,

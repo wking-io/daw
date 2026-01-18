@@ -9,7 +9,7 @@ export const ProjectDoc = Schema.Struct({
 });
 export type ProjectDoc = typeof ProjectDoc.Type;
 
-export const OpInstrumentCreate = Schema.Struct({
+export const InstrumentCreateOperation = Schema.Struct({
 	t: Schema.Literal("instrument.create"),
 	type: InstrumentType,
 	name: Schema.String,
@@ -17,17 +17,18 @@ export const OpInstrumentCreate = Schema.Struct({
 	instrumentId: Schema.optional(InstrumentId),
 	createdAt: Schema.optional(Schema.Number),
 });
-export type OpInstrumentCreate = typeof OpInstrumentCreate.Type;
+export type InstrumentCreateOperation = typeof InstrumentCreateOperation.Type;
 
-export const Op = Schema.Union(OpInstrumentCreate);
-export type Op = typeof Op.Type;
+export const Operation = Schema.Union(InstrumentCreateOperation);
+export type Operation = typeof Operation.Type;
 
 export const Submit = Schema.Struct({
 	opId: Schema.String,
 	baseVersion: ProjectVersion,
 	actor: Schema.Literal("ui", "agent"),
-	op: Op,
+	op: Operation,
 });
+
 export type Submit = typeof Submit.Type;
 
 export const PatchInstrumentAdd = Schema.Struct({
@@ -71,14 +72,14 @@ export const Snapshot = Schema.Struct({
 });
 export type Snapshot = typeof Snapshot.Type;
 
-export const OpEntry = Schema.Struct({
+export const OperationEntry = Schema.Struct({
 	version: ProjectVersion,
 	submit: Submit,
 });
-export type OpEntry = typeof OpEntry.Type;
+export type OperationEntry = typeof OperationEntry.Type;
 
-export const OpsResponse = Schema.Struct({
+export const OperationsResponse = Schema.Struct({
 	fromVersion: ProjectVersion,
-	ops: Schema.Array(OpEntry),
+	operations: Schema.Array(OperationEntry),
 });
-export type OpsResponse = typeof OpsResponse.Type;
+export type OperationsResponse = typeof OperationsResponse.Type;

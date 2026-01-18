@@ -1,4 +1,4 @@
-import type { Instrument, Project, SSE } from "@daw/contract";
+import type { Events, Instrument, Project } from "@daw/contract";
 import { InstrumentCommands, InstrumentTools } from "@daw/contract";
 import type * as Registry from "@effect-atom/atom/Registry";
 import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
@@ -130,7 +130,7 @@ export function AppRoot() {
 			try {
 				const response = await stateClient.getOps(versionRef.current);
 				let expectedVersion = versionRef.current;
-				for (const entry of response.ops) {
+				for (const entry of response.operations) {
 					if (entry.version !== expectedVersion + 1) break;
 					applySubmit(
 						registry,
@@ -141,7 +141,7 @@ export function AppRoot() {
 					versionRef.current = expectedVersion;
 				}
 
-				const lastEntry = response.ops[response.ops.length - 1];
+				const lastEntry = response.operations[response.operations.length - 1];
 				if (!lastEntry || lastEntry.version !== versionRef.current) {
 					const snapshot = await stateClient.getSnapshot();
 					versionRef.current = snapshot.version;
@@ -183,7 +183,7 @@ export function AppRoot() {
 
 			disconnectSSE = stateClient.connectSSE({
 				fromVersion,
-				onEvent: (event: SSE.SSEEvent) => {
+				onEvent: (event: Events.Event) => {
 					handleSSEEvent(registry, event, versionRef, recoverFromGap);
 				},
 				onError: (error) => {

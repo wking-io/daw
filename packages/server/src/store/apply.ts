@@ -14,7 +14,7 @@ export const emptyDoc: Project.ProjectDoc = {
 export function applyOp(
 	doc: Project.ProjectDoc,
 	version: Project.ProjectVersion,
-	op: Project.Op,
+	op: Project.Operation,
 ): ApplyResult {
 	switch (op.t) {
 		case "instrument.create": {

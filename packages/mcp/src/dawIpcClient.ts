@@ -56,13 +56,13 @@ export const DawStateClientLive = Layer.effect(
 
 		return {
 			getSnapshot: () =>
-				HttpClientRequest.get(`${baseUrl}/snapshot`).pipe(
+				HttpClientRequest.get(`${baseUrl}/api/project/snapshot`).pipe(
 					client.execute,
 					Effect.flatMap((res) => res.json),
 					Effect.flatMap(Schema.decodeUnknown(Project.Snapshot)),
 				),
 			submitOp: (req) =>
-				HttpClientRequest.post(`${baseUrl}/submitOp`).pipe(
+				HttpClientRequest.post(`${baseUrl}/api/project/operations`).pipe(
 					HttpClientRequest.setHeader("content-type", "application/json"),
 					HttpClientRequest.bodyUnsafeJson(req),
 					client.execute,

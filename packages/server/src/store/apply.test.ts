@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import type { Project } from "@daw/contract";
+import { Project } from "@daw/contract";
 import { applyOp, emptyDoc } from "./apply";
 
 describe("applyOp", () => {
 	it("creates an instrument and emits a patch", () => {
-		const op: Project.Op = {
+		const op = Project.InstrumentCreateOperation.make({
 			t: "instrument.create",
 			type: "synth",
 			name: "Bass",
-		};
+		});
 
 		const result = applyOp(emptyDoc, 1, op);
 

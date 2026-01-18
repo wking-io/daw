@@ -33,7 +33,7 @@ const waitForServer = async (
 			throw new Error(`Server exited early: ${child.exitCode}\n${stderr}`);
 		}
 		try {
-			const res = await fetch(`${baseUrl}/snapshot`);
+			const res = await fetch(`${baseUrl}/api/project/snapshot`);
 			if (res.ok) return;
 		} catch {
 			// ignore until ready
@@ -77,8 +77,8 @@ describe("HTTP e2e", () => {
 		}
 	});
 
-	it("GET /snapshot returns initial state", async () => {
-		const res = await fetch(`${baseUrl}/snapshot`);
+	it("GET /api/project/snapshot returns initial state", async () => {
+		const res = await fetch(`${baseUrl}/api/project/snapshot`);
 		expect(res.ok).toBe(true);
 		const json = await res.json();
 		const snapshot = decodeSnapshot(json);
@@ -86,8 +86,8 @@ describe("HTTP e2e", () => {
 		expect(snapshot.doc.instruments).toHaveLength(0);
 	}, 20000);
 
-	it("POST /submitOp creates instruments", async () => {
-		const snapshotRes = await fetch(`${baseUrl}/snapshot`);
+	it("POST /api/project/operations creates instruments", async () => {
+		const snapshotRes = await fetch(`${baseUrl}/api/project/snapshot`);
 		const snapshot = decodeSnapshot(await snapshotRes.json());
 
 		const submit: Project.Submit = {
@@ -101,7 +101,7 @@ describe("HTTP e2e", () => {
 			},
 		};
 
-		const res = await fetch(`${baseUrl}/submitOp`, {
+		const res = await fetch(`${baseUrl}/api/project/operations`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify(submit),
@@ -112,24 +112,24 @@ describe("HTTP e2e", () => {
 		expect(result.patches.patches[0]?.t).toBe("instrument.add");
 	}, 20000);
 
-	it("GET /ops returns ops after version", async () => {
-		const res = await fetch(`${baseUrl}/ops?fromVersion=0`);
+	it("GET /api/project/operations returns ops after version", async () => {
+		const res = await fetch(`${baseUrl}/api/project/operations?fromVersion=0`);
 		expect(res.ok).toBe(true);
-		const json = (await res.json()) as Project.OpsResponse;
+		const json = (await res.json()) as Project.OperationsResponse;
 		expect(json.fromVersion).toBe(0);
-		expect(Array.isArray(json.ops)).toBe(true);
+		expect(Array.isArray(json.operations)).toBe(true);
 	}, 20000);
 
-	it("GET /health returns healthy status", async () => {
-		const res = await fetch(`${baseUrl}/health`);
+	it("GET /api/health returns healthy status", async () => {
+		const res = await fetch(`${baseUrl}/api/health`);
 		expect(res.ok).toBe(true);
 		const json = (await res.json()) as { healthy: boolean; version: string };
 		expect(json.healthy).toBe(true);
 		expect(typeof json.version).toBe("string");
 	}, 20000);
 
-	it("GET /event returns SSE stream", async () => {
-		const res = await fetch(`${baseUrl}/event?fromVersion=0`);
+	it("GET /api/events returns SSE stream", async () => {
+		const res = await fetch(`${baseUrl}/api/events?fromVersion=0`);
 		expect(res.ok).toBe(true);
 		expect(res.headers.get("content-type")).toBe("text/event-stream");
 

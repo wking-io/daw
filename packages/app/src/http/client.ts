@@ -1,4 +1,4 @@
-import { Project, type SSE } from "@daw/contract";
+import { type Events, Project } from "@daw/contract";
 import {
 	FetchHttpClient,
 	HttpClient,
@@ -19,10 +19,10 @@ export interface DawStateClient {
 	getHealth: () => Promise<{ healthy: boolean; version: string }>;
 	getSnapshot: () => Promise<Project.Snapshot>;
 	submitOp: (submit: Project.Submit) => Promise<Project.SubmitResult>;
-	getOps: (fromVersion: number) => Promise<Project.OpsResponse>;
+	getOps: (fromVersion: number) => Promise<Project.OperationsResponse>;
 	connectSSE: (options: {
 		fromVersion: number;
-		onEvent: (event: SSE.SSEEvent) => void;
+		onEvent: (event: Events.Event) => void;
 		onError?: (error: Error) => void;
 		onClose?: () => void;
 	}) => () => void;
@@ -78,7 +78,7 @@ export const createDawStateClient = (
 			runEffect(
 				Effect.gen(function* () {
 					const client = yield* HttpClient.HttpClient;
-					const response = yield* client.get(`${baseUrl}/health`, {
+					const response = yield* client.get(`${baseUrl}/api/health`, {
 						headers: authHeaders,
 					});
 					return yield* HttpClientResponse.schemaBodyJson(HealthResponse)(
@@ -91,9 +91,12 @@ export const createDawStateClient = (
 			runEffect(
 				Effect.gen(function* () {
 					const client = yield* HttpClient.HttpClient;
-					const response = yield* client.get(`${baseUrl}/snapshot`, {
-						headers: authHeaders,
-					});
+					const response = yield* client.get(
+						`${baseUrl}/api/project/snapshot`,
+						{
+							headers: authHeaders,
+						},
+					);
 					return yield* HttpClientResponse.schemaBodyJson(Project.Snapshot)(
 						response,
 					);
@@ -105,7 +108,9 @@ export const createDawStateClient = (
 				Effect.gen(function* () {
 					const client = yield* HttpClient.HttpClient;
 					const encodeBody = Schema.encodeSync(Project.Submit);
-					const request = HttpClientRequest.post(`${baseUrl}/submitOp`).pipe(
+					const request = HttpClientRequest.post(
+						`${baseUrl}/api/project/operations`,
+					).pipe(
 						HttpClientRequest.setHeaders({
 							...authHeaders,
 						}),
@@ -123,12 +128,12 @@ export const createDawStateClient = (
 				Effect.gen(function* () {
 					const client = yield* HttpClient.HttpClient;
 					const response = yield* client.get(
-						`${baseUrl}/ops?fromVersion=${encodeURIComponent(String(fromVersion))}`,
+						`${baseUrl}/api/project/operations?fromVersion=${encodeURIComponent(String(fromVersion))}`,
 						{ headers: authHeaders },
 					);
-					return yield* HttpClientResponse.schemaBodyJson(Project.OpsResponse)(
-						response,
-					);
+					return yield* HttpClientResponse.schemaBodyJson(
+						Project.OperationsResponse,
+					)(response);
 				}),
 			),
 
