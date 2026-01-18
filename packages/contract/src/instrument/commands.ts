@@ -13,14 +13,20 @@ export type CreateCommand = typeof CreateCommand.Type;
  *
  * This is intentionally JSON-serializable and stable across IPC/MCP boundaries.
  */
+export const CreateResultSuccess = Schema.Struct({
+	ok: Schema.Literal(true),
+	instrument: Instrument,
+});
+export type CreateResultSuccess = typeof CreateResultSuccess.Type;
+
+export const CreateResultError = Schema.Struct({
+	ok: Schema.Literal(false),
+	error: Schema.String,
+});
+export type CreateResultError = typeof CreateResultError.Type;
+
 export const CreateResult = Schema.Union(
-	Schema.Struct({
-		ok: Schema.Literal(true),
-		instrument: Instrument,
-	}),
-	Schema.Struct({
-		ok: Schema.Literal(false),
-		error: Schema.String,
-	}),
+	CreateResultSuccess,
+	CreateResultError,
 );
 export type CreateResult = typeof CreateResult.Type;

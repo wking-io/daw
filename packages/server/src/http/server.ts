@@ -53,7 +53,7 @@ const AuthorizationLive = Layer.effect(
 
 const projectGroupLive = HttpApiBuilder.group(api, "project", (handlers) =>
 	handlers
-		.handle("snapshot", () =>
+		.handle("getSnapshot", () =>
 			Effect.gen(function* () {
 				const store = yield* DawStore;
 				const snapshot = yield* store.getSnapshot;

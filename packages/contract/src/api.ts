@@ -36,7 +36,9 @@ export class Authorization extends HttpApiMiddleware.Tag<Authorization>()(
 
 const projectGroup = HttpApiGroup.make("project")
 	.add(
-		HttpApiEndpoint.get("snapshot", "/snapshot").addSuccess(Project.Snapshot),
+		HttpApiEndpoint.get("getSnapshot", "/snapshot").addSuccess(
+			Project.Snapshot,
+		),
 	)
 	.add(
 		HttpApiEndpoint.post("postOperations", "/operations")

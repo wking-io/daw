@@ -1,91 +1,61 @@
-import type { Instrument, Project } from "@daw/contract";
+import type { Instrument } from "@daw/contract";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { DawStateClient } from "../dawIpcClient";
-import { handleCreateInstrument } from "../handlers";
+import { handleCreateInstrument } from "../instruments/handlers";
+import {
+	InstrumentNotCreatedError,
+	InstrumentRepository,
+} from "../instruments/repo";
 
 describe("mcp tool handlers", () => {
-	it("submits instrument.create via DawStateClient and decodes success", async () => {
-		const submits: Project.Submit[] = [];
+	it("submits instrument.create via InstrumentRepository and decodes success", async () => {
+		const createCalls: Array<{ type: string; name: string }> = [];
 
-		const stubClient = DawStateClient.of({
-			getSnapshot: () =>
-				Effect.succeed({ version: 0, doc: { instruments: [] } }),
-			submitOp: (req) => {
-				submits.push(req);
+		const stubRepo = InstrumentRepository.of({
+			create: (params) => {
+				createCalls.push({ type: params.type, name: params.name });
 				return Effect.succeed({
-					version: 1,
-					patches: {
-						version: 1,
-						patches: [
-							{
-								t: "instrument.add",
-								instrument: {
-									id: "01ARZ3NDEKTSV4RRFFQ69G5FAV" as Instrument.InstrumentId,
-									type: "synth",
-									name: "Bass",
-									params: {},
-									createdAt: new Date(),
-								},
-							},
-						],
-					},
-					audioDeltas: {
-						version: 1,
-						deltas: [],
-					},
+					id: "01ARZ3NDEKTSV4RRFFQ69G5FAV" as Instrument.InstrumentId,
+					type: params.type,
+					name: params.name,
+					params: {},
+					createdAt: new Date(),
 				});
 			},
 		});
 
 		const result = await Effect.runPromise(
 			handleCreateInstrument({ type: "synth", name: "Bass" }).pipe(
-				Effect.provideService(DawStateClient, stubClient),
+				Effect.provideService(InstrumentRepository, stubRepo),
 			),
 		);
 
-		expect(submits).toHaveLength(1);
-		expect(submits[0]?.op).toEqual(
-			expect.objectContaining({
-				t: "instrument.create",
-				type: "synth",
-				name: "Bass",
-				preset: undefined,
-				instrumentId: expect.any(String),
-				createdAt: expect.any(Number),
-			}),
-		);
+		expect(createCalls).toHaveLength(1);
+		expect(createCalls[0]).toEqual({
+			type: "synth",
+			name: "Bass",
+		});
 		expect(result.ok).toBe(true);
 	});
 
-	it("returns ok:false when the IPC response doesn't match the contract schema", async () => {
-		const stubClient = DawStateClient.of({
-			getSnapshot: () =>
-				Effect.succeed({ version: 0, doc: { instruments: [] } }),
-			submitOp: () =>
-				Effect.succeed({
-					version: 1,
-					patches: {
-						version: 1,
-						patches: [],
-					},
-					audioDeltas: {
-						version: 1,
-						deltas: [],
-					},
-				}),
+	it("returns ok:false when repository fails with InstrumentNotCreatedError", async () => {
+		const stubRepo = InstrumentRepository.of({
+			create: () =>
+				Effect.fail(
+					new InstrumentNotCreatedError({ message: "No patch returned" }),
+				),
 		});
 
 		const result = await Effect.runPromise(
 			handleCreateInstrument({ type: "synth", name: "Bass" }).pipe(
-				Effect.provideService(DawStateClient, stubClient),
+				Effect.provideService(InstrumentRepository, stubRepo),
 			),
 		);
 
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBeTypeOf("string");
-			expect(result.error.length).toBeGreaterThan(0);
+			expect(result.error).toContain("No patch returned");
 		}
 	});
 });

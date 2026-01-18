@@ -1,11 +1,10 @@
 import { McpServer } from "@effect/ai";
-import { HttpRouter } from "@effect/platform";
+import { FetchHttpClient, HttpRouter } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
-import type { McpConfigService } from "./config";
 import { McpConfig, McpConfigLive } from "./config";
-import { DawStateClientLive } from "./dawIpcClient";
-import { handleCreateInstrument } from "./handlers";
+import { handleCreateInstrument } from "./instruments/handlers";
+import { InstrumentRepositoryLive } from "./instruments/repo";
 import { DawToolkit } from "./toolkit";
 
 const ToolHandlersLive = DawToolkit.toLayer({
@@ -16,10 +15,10 @@ const RegisterToolsLive = Layer.effectDiscard(
 	McpServer.registerToolkit(DawToolkit),
 ).pipe(Layer.provide(ToolHandlersLive));
 
-const makeMcpLive = (config: McpConfigService) =>
-	Layer.mergeAll(
+const Main = Effect.gen(function* () {
+	const config = yield* McpConfig;
+	const program = Layer.mergeAll(
 		RegisterToolsLive,
-		// Expose the HTTP routes
 		HttpRouter.Default.serve(),
 	).pipe(
 		Layer.provide(
@@ -29,13 +28,11 @@ const makeMcpLive = (config: McpConfigService) =>
 				path: "/mcp",
 			}),
 		),
-		Layer.provide(BunHttpServer.layer({ port: config.mcpPort })),
-		Layer.provide(DawStateClientLive),
+		Layer.provide(BunHttpServer.layer({ port: config.port })),
+		Layer.provide(InstrumentRepositoryLive),
+		Layer.provide(FetchHttpClient.layer),
 	);
-
-const Main = Effect.gen(function* () {
-	const config = yield* McpConfig;
-	yield* Layer.launch(makeMcpLive(config)).pipe(Effect.scoped);
+	yield* Layer.launch(program).pipe(Effect.scoped);
 }).pipe(Effect.provide(McpConfigLive));
 
 BunRuntime.runMain(Main);

@@ -100,7 +100,7 @@ async fn wait_for_health(base_url: &str, token: &str, timeout: Duration) -> bool
         Err(_) => return false,
     };
 
-    let url = format!("{}/health", base_url);
+    let url = format!("{}/api/health", base_url);
     let start = std::time::Instant::now();
 
     while start.elapsed() < timeout {
@@ -260,7 +260,8 @@ fn main() {
                 .sidecar("daw-mcp")
                 .expect("failed to create daw-mcp sidecar command")
                 .env("DAW_MCP_PORT", format!("{}", final_mcp_port))
-                .env("DAW_STATE_PORT", format!("{}", final_state_port));
+                .env("DAW_STATE_PORT", format!("{}", final_state_port))
+                .env("DAW_STATE_TOKEN", state_token.clone());
 
             // Wait for state server to be healthy, then spawn MCP
             let state_base_url_clone = state_base_url.clone();
