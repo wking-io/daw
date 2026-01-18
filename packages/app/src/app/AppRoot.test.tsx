@@ -1,63 +1,83 @@
+import type { Instrument, SSE } from "@daw/contract";
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppProviders } from "./AppProviders";
 import { AppRoot } from "./AppRoot";
 
-type OpHandler = (entry: {
-	version: number;
-	submit: {
-		opId: string;
-		baseVersion: number;
-		actor: "ui" | "agent";
-		op: {
-			t: "instrument.create";
-			type: string;
-			name: string;
-			instrumentId: string;
-			createdAt: number;
-		};
-	};
-}) => void;
+type SSEEventHandler = (event: SSE.SSEEvent) => void;
 
-let opHandler: OpHandler = () => {};
+let sseEventHandler: SSEEventHandler = () => {};
+const mockCleanup = vi.fn();
 
-const mockClient = {
-	getHealth: vi.fn(async () => ({
-		healthy: true,
-		version: "test",
-	})),
-	getSnapshot: vi.fn(async () => ({
-		version: 0,
-		doc: { instruments: [] },
-	})),
-	submitOp: vi.fn(async () => ({
-		version: 0,
-		patches: { version: 0, patches: [] },
-		audioDeltas: { version: 0, deltas: [] },
-	})),
-	getOps: vi.fn(async () => ({
-		fromVersion: 0,
-		ops: [],
-	})),
-	connectOps: vi.fn(({ onOp }: { onOp: OpHandler }) => {
-		opHandler = onOp;
-		return () => {};
-	}),
-	connectSSE: vi.fn(() => {
-		return () => {};
-	}),
-};
+const mockGetHealth = vi.fn(async () => ({
+	healthy: true,
+	version: "test",
+}));
 
-vi.mock("../rpc/client", () => ({
-	createDawStateClient: vi.fn(() => mockClient),
+const mockGetSnapshot = vi.fn(async () => ({
+	version: 0,
+	doc: { instruments: [] },
+}));
+
+const mockSubmitOp = vi.fn(async () => ({
+	version: 1,
+	patches: { version: 1, patches: [] },
+	audioDeltas: { version: 1, deltas: [] },
+}));
+
+const mockGetOps = vi.fn(async () => ({
+	fromVersion: 0,
+	ops: [],
+}));
+
+const mockConnectSSE = vi.fn(
+	({
+		onEvent,
+	}: {
+		fromVersion: number;
+		onEvent: SSEEventHandler;
+		onError?: (error: Error) => void;
+		onClose?: () => void;
+	}) => {
+		sseEventHandler = onEvent;
+		// Simulate connection event
+		queueMicrotask(() => {
+			onEvent({
+				t: "server.connected",
+				serverVersion: 0,
+			});
+		});
+		return mockCleanup;
+	},
+);
+
+// Mock the http client
+vi.mock("../http/client", () => ({
+	createDawStateClient: vi.fn(() => ({
+		getHealth: mockGetHealth,
+		getSnapshot: mockGetSnapshot,
+		submitOp: mockSubmitOp,
+		getOps: mockGetOps,
+		connectSSE: mockConnectSSE,
+	})),
 }));
 
 describe("AppRoot", () => {
-	it("renders and handles daw.instrument.create commands", async () => {
-		// Reset mocks
-		mockClient.connectOps.mockClear();
-		opHandler = () => {};
+	beforeEach(() => {
+		sseEventHandler = () => {};
+		mockCleanup.mockClear();
+		mockGetHealth.mockClear();
+		mockGetSnapshot.mockClear();
+		mockSubmitOp.mockClear();
+		mockGetOps.mockClear();
+		mockConnectSSE.mockClear();
+	});
 
+	afterEach(() => {
+		vi.clearAllTimers();
+	});
+
+	it("renders and handles daw.instrument.create commands via SSE", async () => {
 		render(
 			<AppProviders>
 				<AppRoot />
@@ -66,21 +86,32 @@ describe("AppRoot", () => {
 
 		expect(screen.getByText("DAW")).toBeInTheDocument();
 
-		// Wait for connectOps to be called (means snapshot is loaded and WS is connected)
-		await waitFor(() => expect(mockClient.connectOps).toHaveBeenCalled());
+		// Wait for server to be ready and SSE to connect
+		await waitFor(
+			() => {
+				expect(
+					screen.queryByText("Starting server..."),
+				).not.toBeInTheDocument();
+			},
+			{ timeout: 3000 },
+		);
 
-		opHandler({
-			version: 1,
-			submit: {
-				opId: "op-1",
-				baseVersion: 0,
-				actor: "ui",
-				op: {
-					t: "instrument.create",
-					type: "synth",
-					name: "Bass",
-					instrumentId: "inst-1",
-					createdAt: Date.now(),
+		// Simulate an op event via SSE
+		sseEventHandler({
+			t: "op",
+			entry: {
+				version: 1,
+				submit: {
+					opId: "op-1",
+					baseVersion: 0,
+					actor: "ui",
+					op: {
+						t: "instrument.create",
+						type: "synth",
+						name: "Bass",
+						instrumentId: "inst-1" as Instrument.InstrumentId,
+						createdAt: Date.now(),
+					},
 				},
 			},
 		});

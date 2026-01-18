@@ -3,7 +3,7 @@ import { InstrumentCommands, InstrumentTools } from "@daw/contract";
 import * as Registry from "@effect-atom/atom/Registry";
 import { Effect, Schema } from "effect";
 import { ulid } from "ulid";
-import { instrumentsAtom } from "./state";
+import { instrumentsAtom } from "./atoms";
 
 export interface DawToolCallOptions {
 	readonly host?: string;

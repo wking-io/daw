@@ -20,21 +20,6 @@ export interface DawStateClient {
 	getSnapshot: () => Promise<Project.Snapshot>;
 	submitOp: (submit: Project.Submit) => Promise<Project.SubmitResult>;
 	getOps: (fromVersion: number) => Promise<Project.OpsResponse>;
-	connectOps: (options: {
-		fromVersion: number;
-		clientId: string;
-		onOp: (entry: Project.OpEntry) => void;
-		onPresence?: (clients: ReadonlyArray<string>) => void;
-		onLocks?: (
-			locks: ReadonlyArray<{
-				resource: string;
-				clientId: string;
-				acquiredAt: number;
-			}>,
-		) => void;
-		onError?: (error: Event | Error) => void;
-		onClose?: () => void;
-	}) => () => void;
 	connectSSE: (options: {
 		fromVersion: number;
 		onEvent: (event: SSE.SSEEvent) => void;
@@ -50,8 +35,6 @@ const HealthResponse = Schema.Struct({
 	healthy: Schema.Boolean,
 	version: Schema.String,
 });
-
-const decodeOpEntry = Schema.decodeUnknownSync(Project.OpEntry);
 
 const defaultPort = Number.parseInt(
 	import.meta.env.VITE_DAW_STATE_PORT ?? "43125",
@@ -72,6 +55,13 @@ const makeAuthHeaders = (
 	return { authorization: `Bearer ${token}` };
 };
 
+/**
+ * Create a DAW state client for HTTP + SSE communication.
+ *
+ * This client provides:
+ * - HTTP endpoints for snapshot, submitOp, ops
+ * - SSE streaming for real-time updates (replaces WebSocket)
+ */
 export const createDawStateClient = (
 	options?: DawStateClientOptions,
 ): DawStateClient => {
@@ -141,78 +131,6 @@ export const createDawStateClient = (
 					);
 				}),
 			),
-
-		connectOps: ({
-			fromVersion,
-			clientId,
-			onOp,
-			onPresence,
-			onLocks,
-			onError,
-			onClose,
-		}) => {
-			const url = new URL(
-				`${baseUrl.replace("http", "ws")}/ws?fromVersion=${encodeURIComponent(
-					String(fromVersion),
-				)}`,
-			);
-			if (token) {
-				url.searchParams.set("token", token);
-			}
-			const wsUrl = url.toString();
-			let socket: WebSocket | null = new WebSocket(wsUrl);
-			const close = () => {
-				if (!socket) return;
-				if (
-					socket.readyState === WebSocket.CONNECTING ||
-					socket.readyState === WebSocket.OPEN
-				) {
-					socket.close();
-				}
-				socket = null;
-			};
-
-			socket.onopen = () => {
-				socket?.send(
-					JSON.stringify({
-						t: "hello",
-						clientId,
-						lastSeq: fromVersion,
-					}),
-				);
-			};
-			socket.onmessage = (event) => {
-				let message: { t?: string } & Record<string, unknown>;
-				try {
-					message = JSON.parse(String(event.data)) as typeof message;
-				} catch {
-					return;
-				}
-				if (message.t === "op" && message.entry) {
-					onOp(decodeOpEntry(message.entry));
-				}
-				if (message.t === "presence" && Array.isArray(message.clients)) {
-					onPresence?.(message.clients as ReadonlyArray<string>);
-				}
-				if (message.t === "locks" && Array.isArray(message.locks)) {
-					onLocks?.(
-						message.locks as ReadonlyArray<{
-							resource: string;
-							clientId: string;
-							acquiredAt: number;
-						}>,
-					);
-				}
-			};
-			socket.onerror = () => {
-				onError?.(new Error("WebSocket error"));
-			};
-			socket.onclose = () => {
-				onClose?.();
-			};
-
-			return close;
-		},
 
 		connectSSE: ({ fromVersion, onEvent, onError, onClose }) => {
 			return createSSEClient({

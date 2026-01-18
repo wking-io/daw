@@ -1,9 +1,14 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
 import { createContext, type PropsWithChildren, useContext } from "react";
-import { NoopPlatform, type Platform } from "../ports/Platform";
+import {
+	NoopPlatform,
+	type Platform,
+	type ServerInfo,
+} from "../ports/Platform";
 
 export interface AppServices {
 	platform: Platform;
+	serverInfo: ServerInfo | null;
 }
 
 const AppServicesContext = createContext<AppServices | null>(null);
@@ -17,13 +22,16 @@ export function useAppServices(): AppServices {
 export function AppProviders(
 	props: PropsWithChildren<{
 		platform?: Platform;
+		serverInfo?: ServerInfo;
 	}>,
 ) {
 	const platform = props.platform ?? NoopPlatform;
 
 	return (
 		<RegistryProvider>
-			<AppServicesContext.Provider value={{ platform }}>
+			<AppServicesContext.Provider
+				value={{ platform, serverInfo: props.serverInfo ?? null }}
+			>
 				{props.children}
 			</AppServicesContext.Provider>
 		</RegistryProvider>
