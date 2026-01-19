@@ -1,8 +1,6 @@
 import type { Events, Instrument, Project } from "@daw/contract";
-import { InstrumentCommands, InstrumentTools } from "@daw/contract";
 import type * as Registry from "@effect-atom/atom/Registry";
 import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
-import { Schema } from "effect";
 import {
 	useCallback,
 	useContext,
@@ -24,7 +22,6 @@ import {
 	sseConnectedAtom,
 	versionAtom,
 } from "../daw/atoms";
-import { encodeCreateInstrumentResultJson } from "../daw/commands";
 import { createDawStateClient, type DawStateClient } from "../http/client";
 import type { ServerInfo } from "../ports/Platform";
 import { useAppServices } from "./AppProviders";
@@ -171,7 +168,10 @@ export function AppRoot() {
 				reconnectTimer = null;
 				connectSSE(versionRef.current);
 			}, delay);
-			addLogWithRegistry(registry, `← (sse) reconnect in ${delay}ms (${reason})`);
+			addLogWithRegistry(
+				registry,
+				`← (sse) reconnect in ${delay}ms (${reason})`,
+			);
 		};
 
 		const connectSSE = (fromVersion: number) => {
@@ -181,7 +181,12 @@ export function AppRoot() {
 			disconnectSSE = stateClient.connectSSE({
 				fromVersion,
 				onEvent: (event: Events.Event) => {
-					handleSSEEventWithRegistry(registry, event, versionRef, recoverFromGap);
+					handleSSEEventWithRegistry(
+						registry,
+						event,
+						versionRef,
+						recoverFromGap,
+					);
 				},
 				onError: (error) => {
 					addLogWithRegistry(registry, `← (sse) error ${error.message}`);
@@ -224,94 +229,6 @@ export function AppRoot() {
 			}
 		};
 	}, [stateClient, serverReady, recoverFromGap, registry]);
-
-	// Handle platform commands (from desktop IPC)
-	useEffect(() => {
-		if (!stateClient || !serverReady) return;
-		const unsubscribe = platform.onCommand((req) => {
-			if (req.name !== InstrumentTools.CreateName) return;
-			const handle = async () => {
-				let command: InstrumentCommands.CreateCommand;
-				try {
-					command = Schema.decodeUnknownSync(InstrumentCommands.CreateCommand)(
-						req.payload,
-					);
-				} catch (error) {
-					const message =
-						error instanceof Error ? error.message : String(error);
-					addLogWithRegistry(registry, `← (agent) error ${message}`);
-					await platform.respond(
-						req.requestId,
-						encodeCreateInstrumentResultJson({ ok: false, error: message }),
-					);
-					return;
-				}
-
-				addLogWithRegistry(
-					registry,
-					`→ (agent) submit instrument.create ${JSON.stringify({
-						type: command.type,
-						name: command.name.trim(),
-					})}`,
-				);
-
-				const instrumentId = ulid() as Instrument.InstrumentId;
-				const createdAt = Date.now();
-				const submit: Project.Submit = {
-					opId: ulid(),
-					baseVersion: versionRef.current,
-					actor: "agent",
-					op: {
-						t: "instrument.create",
-						type: command.type,
-						name: command.name.trim(),
-						preset: command.preset,
-						instrumentId,
-						createdAt,
-					},
-				};
-
-				try {
-					const result = await stateClient.submitOp(submit);
-					const created = result.patches.patches.find(
-						(patch) => patch.t === "instrument.add",
-					);
-					if (!created) {
-						throw new Error(
-							"submitOp succeeded but no instrument.add patch returned",
-						);
-					}
-					versionRef.current = applyPatchBatchWithRegistry(
-						registry,
-						result.patches,
-						versionRef.current,
-					);
-					addLogWithRegistry(
-						registry,
-						`← (agent) ok ${created.instrument.name} (${created.instrument.id})`,
-					);
-					await platform.respond(
-						req.requestId,
-						encodeCreateInstrumentResultJson({
-							ok: true,
-							instrument: created.instrument,
-						}),
-					);
-				} catch (error) {
-					const message =
-						error instanceof Error ? error.message : String(error);
-					addLogWithRegistry(registry, `← (agent) error ${message}`);
-					await platform.respond(
-						req.requestId,
-						encodeCreateInstrumentResultJson({ ok: false, error: message }),
-					);
-				}
-			};
-			void handle();
-		});
-
-		return unsubscribe;
-	}, [stateClient, serverReady, platform, registry]);
 
 	// Handle UI create button
 	const handleCreate = async () => {
