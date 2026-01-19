@@ -1,4 +1,4 @@
-import type { Instrument, Project } from "@daw/contract";
+import type { Events, Instrument, Project } from "@daw/contract";
 import { InstrumentCommands, InstrumentTools } from "@daw/contract";
 import type * as Registry from "@effect-atom/atom/Registry";
 import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
@@ -17,13 +17,11 @@ import {
 	applyPatchBatchWithRegistry,
 	applySnapshotWithRegistry,
 	applySubmitWithRegistry,
-	gapRecoveryCallbackAtom,
+	handleSSEEventWithRegistry,
 	instrumentsAtom,
 	logsAtom,
 	serverReadyAtom,
 	sseConnectedAtom,
-	sseCoordinatorAtom,
-	sseEventsAtom,
 	versionAtom,
 } from "../daw/atoms";
 import { encodeCreateInstrumentResultJson } from "../daw/commands";
@@ -41,9 +39,6 @@ export function AppRoot() {
 	const { platform } = useAppServices();
 	const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
 	const versionRef = useRef(0);
-
-	// Mount the coordinator atom to start processing SSE events
-	useAtomValue(sseCoordinatorAtom);
 
 	const instrumentTypes = useMemo(
 		(): ReadonlyArray<Instrument.InstrumentType> => [
@@ -160,17 +155,10 @@ export function AppRoot() {
 		[stateClient, registry],
 	);
 
-	// Set the gap recovery callback
-	useEffect(() => {
-		registry.set(gapRecoveryCallbackAtom, recoverFromGap);
-		return () => {
-			registry.set(gapRecoveryCallbackAtom, null);
-		};
-	}, [recoverFromGap, registry]);
-
-	// SSE connection effect - now uses the atom-based approach
+	// SSE connection effect - uses callback-based approach
 	useEffect(() => {
 		if (!stateClient || !serverReady) return;
+		let disconnectSSE = () => {};
 		let cancelled = false;
 		let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 		let reconnectAttempts = 0;
@@ -187,12 +175,22 @@ export function AppRoot() {
 		};
 
 		const connectSSE = (fromVersion: number) => {
+			disconnectSSE();
 			registry.set(sseConnectedAtom, false);
 
-			// Trigger the SSE connection by setting the config on the events atom
-			registry.set(sseEventsAtom, {
-				client: stateClient,
+			disconnectSSE = stateClient.connectSSE({
 				fromVersion,
+				onEvent: (event: Events.Event) => {
+					handleSSEEventWithRegistry(registry, event, versionRef, recoverFromGap);
+				},
+				onError: (error) => {
+					addLogWithRegistry(registry, `← (sse) error ${error.message}`);
+					scheduleReconnect("error");
+				},
+				onClose: () => {
+					registry.set(sseConnectedAtom, false);
+					scheduleReconnect("close");
+				},
 			});
 			reconnectAttempts = 0;
 		};
@@ -220,11 +218,12 @@ export function AppRoot() {
 
 		return () => {
 			cancelled = true;
+			disconnectSSE();
 			if (reconnectTimer) {
 				clearTimeout(reconnectTimer);
 			}
 		};
-	}, [stateClient, serverReady, registry]);
+	}, [stateClient, serverReady, recoverFromGap, registry]);
 
 	// Handle platform commands (from desktop IPC)
 	useEffect(() => {

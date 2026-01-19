@@ -1,19 +1,16 @@
 import type { Events, Instrument, Project } from "@daw/contract";
-import * as Atom from "@effect-atom/atom/Atom";
 import * as Registry from "@effect-atom/atom/Registry";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
 	addLogWithRegistry,
 	applyPatchBatchWithRegistry,
 	applySnapshotWithRegistry,
 	applySubmitWithRegistry,
-	gapRecoveryCallbackAtom,
+	handleSSEEventWithRegistry,
 	instrumentsAtom,
 	logsAtom,
 	presenceAtom,
 	sseConnectedAtom,
-	sseCoordinatorAtom,
-	sseEventsAtom,
 	versionAtom,
 } from "./atoms";
 
@@ -120,6 +117,92 @@ describe("atoms", () => {
 		});
 	});
 
+	describe("handleSSEEventWithRegistry", () => {
+		it("handles server.connected event", () => {
+			const versionRef = { current: 0 };
+			const event: Events.ServerConnectedEvent = {
+				t: "server.connected",
+				serverVersion: 5,
+			};
+
+			handleSSEEventWithRegistry(registry, event, versionRef);
+
+			expect(registry.get(sseConnectedAtom)).toBe(true);
+			expect(registry.get(logsAtom)).toContainEqual(
+				expect.stringContaining("connected"),
+			);
+		});
+
+		it("handles operation event and updates state", () => {
+			const versionRef = { current: 0 };
+			const event: Events.OperationEvent = {
+				t: "operation",
+				entry: {
+					version: 1,
+					submit: {
+						opId: "op-1",
+						baseVersion: 0,
+						actor: "ui",
+						op: {
+							t: "instrument.create",
+							type: "synth",
+							name: "Lead",
+							instrumentId: "inst-1" as Instrument.InstrumentId,
+							createdAt: Date.now(),
+						},
+					},
+				},
+			};
+
+			handleSSEEventWithRegistry(registry, event, versionRef);
+
+			expect(versionRef.current).toBe(1);
+			expect(registry.get(versionAtom)).toBe(1);
+			expect(registry.get(instrumentsAtom)).toHaveLength(1);
+			expect(registry.get(instrumentsAtom)[0]?.name).toBe("Lead");
+		});
+
+		it("calls gap recovery on version mismatch", () => {
+			const versionRef = { current: 0 };
+			const onGapDetected = vi.fn();
+			const event: Events.OperationEvent = {
+				t: "operation",
+				entry: {
+					version: 5, // Gap: expected 1
+					submit: {
+						opId: "op-1",
+						baseVersion: 4,
+						actor: "ui",
+						op: {
+							t: "instrument.create",
+							type: "synth",
+							name: "Lead",
+							instrumentId: "inst-1" as Instrument.InstrumentId,
+							createdAt: Date.now(),
+						},
+					},
+				},
+			};
+
+			handleSSEEventWithRegistry(registry, event, versionRef, onGapDetected);
+
+			expect(onGapDetected).toHaveBeenCalledWith("sse:operation:5");
+			expect(registry.get(instrumentsAtom)).toHaveLength(0); // Not applied
+		});
+
+		it("handles presence event", () => {
+			const versionRef = { current: 0 };
+			const event: Events.PresenceEvent = {
+				t: "presence",
+				clients: ["client-1", "client-2"],
+			};
+
+			handleSSEEventWithRegistry(registry, event, versionRef);
+
+			expect(registry.get(presenceAtom)).toEqual(["client-1", "client-2"]);
+		});
+	});
+
 	describe("atoms initial state", () => {
 		it("instrumentsAtom starts empty", () => {
 			expect(registry.get(instrumentsAtom)).toEqual([]);
@@ -140,9 +223,8 @@ describe("atoms", () => {
 		it("presenceAtom starts empty", () => {
 			expect(registry.get(presenceAtom)).toEqual([]);
 		});
-
-		it("gapRecoveryCallbackAtom starts null", () => {
-			expect(registry.get(gapRecoveryCallbackAtom)).toBe(null);
-		});
 	});
 });
+
+// Need to import vi for the mock
+import { vi } from "vitest";
