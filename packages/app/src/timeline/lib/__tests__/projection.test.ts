@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import * as Projection from "./projection";
-import * as Px from "./px";
-import * as Range from "./range";
+import * as Projection from "../projection";
+import * as Px from "../px";
+import * as Range from "../range";
 
 describe("timeline/lib/projection", () => {
 	it("scaleFor maps view width to viewport width", () => {

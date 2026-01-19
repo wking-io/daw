@@ -2,7 +2,6 @@
 import type { Numeric } from "./numeric";
 import * as Projection from "./projection";
 import type * as Px from "./px";
-import type * as Timeline from "./timeline";
 
 export function width<A extends number>(
 	N: Numeric<A>,

@@ -37,24 +37,11 @@ export const PresenceEvent = Schema.Struct({
 });
 export type PresenceEvent = typeof PresenceEvent.Type;
 
-export const LocksEvent = Schema.Struct({
-	t: Schema.Literal("locks"),
-	locks: Schema.Array(
-		Schema.Struct({
-			resource: Schema.String,
-			clientId: Schema.String,
-			acquiredAt: Schema.Number,
-		}),
-	),
-});
-export type LocksEvent = typeof LocksEvent.Type;
-
 export const Event = Schema.Union(
 	ServerConnectedEvent,
 	ServerHeartbeatEvent,
 	OperationEvent,
 	PatchEvent,
 	PresenceEvent,
-	LocksEvent,
 );
 export type Event = typeof Event.Type;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clamp } from "./math";
+import { clamp } from "../math";
 
 describe("timeline/lib/math", () => {
 	it("clamps within inclusive [min, max]", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import * as Px from "./px";
+import * as Px from "../px";
 
 describe("timeline/lib/px", () => {
 	it("brands and performs arithmetic", () => {

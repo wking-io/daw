@@ -104,14 +104,6 @@ describe("getSSEEventKey", () => {
 		expect(getSSEEventKey(event)).toBe("presence");
 	});
 
-	it("returns key for locks events", () => {
-		const event: Events.LocksEvent = {
-			t: "locks",
-			locks: [],
-		};
-		expect(getSSEEventKey(event)).toBe("locks");
-	});
-
 	it("returns undefined for operation events (not coalesced)", () => {
 		const event: Events.OperationEvent = {
 			t: "operation",

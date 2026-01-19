@@ -9,8 +9,6 @@ export type Timeline<A extends number> = {
 	min: A;
 };
 
-// ----- Well-formedness ------------------------------------------------------
-
 export function isValid<A extends number>(
 	N: Numeric<A>,
 	t: Timeline<A>,
@@ -35,9 +33,6 @@ export function isValid<A extends number>(
 	return true;
 }
 
-// ----- Normalization --------------------------------------------------------
-// Canonical repair: clamp size, then clamp start.
-
 export function normalize<A extends number>(
 	N: Numeric<A>,
 	t: Timeline<A>,
@@ -53,7 +48,6 @@ export function normalize<A extends number>(
 	return { size, min, view: { start, size: viewSize } };
 }
 
-// Equivalence up to normalization
 export function eq<A extends number>(
 	N: Numeric<A>,
 	a: Timeline<A>,
@@ -69,8 +63,6 @@ export function eq<A extends number>(
 	);
 }
 
-// ----- Ops (closed over norm domain) ----------------------------------------
-
 export function panBy<A extends number>(
 	N: Numeric<A>,
 	t: Timeline<A>,
@@ -81,7 +73,6 @@ export function panBy<A extends number>(
 	return normalize(N, { ...tt, view });
 }
 
-// Zoom factor: > 0. Convention: size' = size / factor (factor>1 zooms in)
 export function zoomAt<A extends number>(
 	N: Numeric<A>,
 	t: Timeline<A>,
@@ -111,7 +102,6 @@ export function zoomAt<A extends number>(
 	return normalize(N, { ...tt, view: S.make(N, nextStart, nextSize) });
 }
 
-// Resize left/right by deltas in content units (positive means move edge right)
 export function resizeLeftBy<A extends number>(
 	N: Numeric<A>,
 	t: Timeline<A>,
@@ -139,21 +129,4 @@ export function resizeRightBy<A extends number>(
 	// Keep left edge fixed; size -> size+delta
 	const nextSize = N.add(v.size, delta);
 	return normalize(N, { ...tt, view: S.withSize(v, nextSize) });
-}
-
-// Handy derived: view as Range if you need start/end
-export function viewRange<A extends number>(
-	N: Numeric<A>,
-	t: Timeline<A>,
-): R.Range<A> {
-	const tt = normalize(N, t);
-	return S.toRange(N, tt.view);
-}
-
-export function fullRange<A extends number>(
-	N: Numeric<A>,
-	t: Timeline<A>,
-): R.Range<A> {
-	const tt = normalize(N, t);
-	return R.make(N, N.zero, tt.size);
 }

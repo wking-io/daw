@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import * as Numeric from "./numeric";
+import * as Numeric from "../numeric";
 
 describe("timeline/lib/numeric", () => {
 	it("basic arithmetic", () => {

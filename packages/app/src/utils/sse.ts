@@ -169,8 +169,6 @@ export function getSSEEventKey(event: Events.Event): string | undefined {
 			return "heartbeat";
 		case "presence":
 			return "presence";
-		case "locks":
-			return "locks";
 		case "operation":
 			// Don't coalesce ops - each one matters
 			return undefined;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import * as Numeric from "./numeric";
-import * as Range from "./range";
+import * as Numeric from "../numeric";
+import * as Range from "../range";
 
 describe("timeline/lib/range", () => {
 	it("make uses Numeric.make for start/end", () => {

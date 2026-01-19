@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import * as Px from "./px";
-import * as Range from "./range";
-import * as Scroll from "./scroll";
-import type * as Timeline from "./timeline";
+import * as Px from "../px";
+import * as Range from "../range";
+import * as Scroll from "../scroll";
+import type * as Timeline from "../timeline";
 
 describe("timeline/lib/scroll", () => {
 	it("width returns full range width in screen px at given scale", () => {

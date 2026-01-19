@@ -1,4 +1,4 @@
-import type { Events, Instrument, Project } from "@daw/contract";
+import type { Instrument, Project } from "@daw/contract";
 import { InstrumentCommands, InstrumentTools } from "@daw/contract";
 import type * as Registry from "@effect-atom/atom/Registry";
 import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
@@ -13,15 +13,17 @@ import {
 } from "react";
 import { ulid } from "ulid";
 import {
-	addLog,
-	applyPatchBatch,
-	applySnapshot,
-	applySubmit,
-	handleSSEEvent,
+	addLogWithRegistry,
+	applyPatchBatchWithRegistry,
+	applySnapshotWithRegistry,
+	applySubmitWithRegistry,
+	gapRecoveryCallbackAtom,
 	instrumentsAtom,
 	logsAtom,
 	serverReadyAtom,
 	sseConnectedAtom,
+	sseCoordinatorAtom,
+	sseEventsAtom,
 	versionAtom,
 } from "../daw/atoms";
 import { encodeCreateInstrumentResultJson } from "../daw/commands";
@@ -39,8 +41,9 @@ export function AppRoot() {
 	const { platform } = useAppServices();
 	const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
 	const versionRef = useRef(0);
-	const snapshotReadyRef = useRef(false);
-	const gapRecoveryRef = useRef(false);
+
+	// Mount the coordinator atom to start processing SSE events
+	useAtomValue(sseCoordinatorAtom);
 
 	const instrumentTypes = useMemo(
 		(): ReadonlyArray<Instrument.InstrumentType> => [
@@ -89,7 +92,7 @@ export function AppRoot() {
 	useEffect(() => {
 		if (!stateClient) return;
 		let cancelled = false;
-		registry.update(serverReadyAtom, () => false);
+		registry.set(serverReadyAtom, false);
 
 		const waitForHealth = async () => {
 			let attempt = 0;
@@ -97,7 +100,7 @@ export function AppRoot() {
 				try {
 					const health = await stateClient.getHealth();
 					if (health.healthy) {
-						registry.update(serverReadyAtom, () => true);
+						registry.set(serverReadyAtom, true);
 						return;
 					}
 				} catch {
@@ -125,14 +128,12 @@ export function AppRoot() {
 	const recoverFromGap = useCallback(
 		async (trigger: string) => {
 			if (!stateClient) return;
-			if (gapRecoveryRef.current) return;
-			gapRecoveryRef.current = true;
 			try {
 				const response = await stateClient.getOps(versionRef.current);
 				let expectedVersion = versionRef.current;
 				for (const entry of response.operations) {
 					if (entry.version !== expectedVersion + 1) break;
-					applySubmit(
+					applySubmitWithRegistry(
 						registry,
 						entry.submit,
 						entry.submit.op.instrumentId as Instrument.InstrumentId,
@@ -145,23 +146,31 @@ export function AppRoot() {
 				if (!lastEntry || lastEntry.version !== versionRef.current) {
 					const snapshot = await stateClient.getSnapshot();
 					versionRef.current = snapshot.version;
-					applySnapshot(registry, snapshot);
-					addLog(registry, `← (state) gap recovery snapshot (${trigger})`);
+					applySnapshotWithRegistry(registry, snapshot);
+					addLogWithRegistry(
+						registry,
+						`← (state) gap recovery snapshot (${trigger})`,
+					);
 				}
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				addLog(registry, `← (state) gap recovery error ${message}`);
-			} finally {
-				gapRecoveryRef.current = false;
+				addLogWithRegistry(registry, `← (state) gap recovery error ${message}`);
 			}
 		},
 		[stateClient, registry],
 	);
 
-	// SSE connection effect - replaces WebSocket
+	// Set the gap recovery callback
+	useEffect(() => {
+		registry.set(gapRecoveryCallbackAtom, recoverFromGap);
+		return () => {
+			registry.set(gapRecoveryCallbackAtom, null);
+		};
+	}, [recoverFromGap, registry]);
+
+	// SSE connection effect - now uses the atom-based approach
 	useEffect(() => {
 		if (!stateClient || !serverReady) return;
-		let disconnectSSE = () => {};
 		let cancelled = false;
 		let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 		let reconnectAttempts = 0;
@@ -174,26 +183,16 @@ export function AppRoot() {
 				reconnectTimer = null;
 				connectSSE(versionRef.current);
 			}, delay);
-			addLog(registry, `← (sse) reconnect in ${delay}ms (${reason})`);
+			addLogWithRegistry(registry, `← (sse) reconnect in ${delay}ms (${reason})`);
 		};
 
 		const connectSSE = (fromVersion: number) => {
-			disconnectSSE();
-			registry.update(sseConnectedAtom, () => false);
+			registry.set(sseConnectedAtom, false);
 
-			disconnectSSE = stateClient.connectSSE({
+			// Trigger the SSE connection by setting the config on the events atom
+			registry.set(sseEventsAtom, {
+				client: stateClient,
 				fromVersion,
-				onEvent: (event: Events.Event) => {
-					handleSSEEvent(registry, event, versionRef, recoverFromGap);
-				},
-				onError: (error) => {
-					addLog(registry, `← (sse) error ${error.message}`);
-					scheduleReconnect("error");
-				},
-				onClose: () => {
-					registry.update(sseConnectedAtom, () => false);
-					scheduleReconnect("close");
-				},
 			});
 			reconnectAttempts = 0;
 		};
@@ -202,10 +201,9 @@ export function AppRoot() {
 			try {
 				const snapshot = await stateClient.getSnapshot();
 				if (cancelled) return;
-				snapshotReadyRef.current = true;
 				versionRef.current = snapshot.version;
-				applySnapshot(registry, snapshot);
-				addLog(
+				applySnapshotWithRegistry(registry, snapshot);
+				addLogWithRegistry(
 					registry,
 					`← (state) snapshot v${snapshot.version} with ${snapshot.doc.instruments.length} instruments`,
 				);
@@ -213,7 +211,7 @@ export function AppRoot() {
 			} catch (err) {
 				if (cancelled) return;
 				const message = err instanceof Error ? err.message : String(err);
-				addLog(registry, `← (state) snapshot error ${message}`);
+				addLogWithRegistry(registry, `← (state) snapshot error ${message}`);
 				scheduleReconnect("snapshot.error");
 			}
 		};
@@ -222,12 +220,11 @@ export function AppRoot() {
 
 		return () => {
 			cancelled = true;
-			disconnectSSE();
 			if (reconnectTimer) {
 				clearTimeout(reconnectTimer);
 			}
 		};
-	}, [stateClient, serverReady, recoverFromGap, registry]);
+	}, [stateClient, serverReady, registry]);
 
 	// Handle platform commands (from desktop IPC)
 	useEffect(() => {
@@ -243,7 +240,7 @@ export function AppRoot() {
 				} catch (error) {
 					const message =
 						error instanceof Error ? error.message : String(error);
-					addLog(registry, `← (agent) error ${message}`);
+					addLogWithRegistry(registry, `← (agent) error ${message}`);
 					await platform.respond(
 						req.requestId,
 						encodeCreateInstrumentResultJson({ ok: false, error: message }),
@@ -251,7 +248,7 @@ export function AppRoot() {
 					return;
 				}
 
-				addLog(
+				addLogWithRegistry(
 					registry,
 					`→ (agent) submit instrument.create ${JSON.stringify({
 						type: command.type,
@@ -285,12 +282,12 @@ export function AppRoot() {
 							"submitOp succeeded but no instrument.add patch returned",
 						);
 					}
-					versionRef.current = applyPatchBatch(
+					versionRef.current = applyPatchBatchWithRegistry(
 						registry,
 						result.patches,
 						versionRef.current,
 					);
-					addLog(
+					addLogWithRegistry(
 						registry,
 						`← (agent) ok ${created.instrument.name} (${created.instrument.id})`,
 					);
@@ -304,7 +301,7 @@ export function AppRoot() {
 				} catch (error) {
 					const message =
 						error instanceof Error ? error.message : String(error);
-					addLog(registry, `← (agent) error ${message}`);
+					addLogWithRegistry(registry, `← (agent) error ${message}`);
 					await platform.respond(
 						req.requestId,
 						encodeCreateInstrumentResultJson({ ok: false, error: message }),
@@ -322,7 +319,7 @@ export function AppRoot() {
 		if (!canCreate || !stateClient) return;
 		setIsCreating(true);
 
-		addLog(
+		addLogWithRegistry(
 			registry,
 			`→ (ui) submit instrument.create ${JSON.stringify({
 				type: newInstrumentType,
@@ -347,7 +344,7 @@ export function AppRoot() {
 
 		try {
 			const result = await stateClient.submitOp(submit);
-			versionRef.current = applyPatchBatch(
+			versionRef.current = applyPatchBatchWithRegistry(
 				registry,
 				result.patches,
 				versionRef.current,
@@ -356,14 +353,14 @@ export function AppRoot() {
 				(patch) => patch.t === "instrument.add",
 			);
 			if (created) {
-				addLog(
+				addLogWithRegistry(
 					registry,
 					`← (ui) ok ${created.instrument.name} (${created.instrument.id})`,
 				);
 			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			addLog(registry, `← (ui) error ${message}`);
+			addLogWithRegistry(registry, `← (ui) error ${message}`);
 		} finally {
 			setIsCreating(false);
 		}

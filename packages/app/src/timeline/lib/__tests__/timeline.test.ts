@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import * as Px from "./px";
-import * as Span from "./span";
-import * as Timeline from "./timeline";
+import * as Px from "../px";
+import * as Span from "../span";
+import * as Timeline from "../timeline";
 
 const N = Px.Numeric;
 
@@ -293,40 +293,6 @@ describe("timeline/lib/timeline", () => {
 			const resized = Timeline.resizeRightBy(N, t, Px.Px(200));
 			expect(resized.view.size).toBe(Px.Px(100));
 			// After normalization, view will be adjusted
-		});
-	});
-
-	describe("viewRange", () => {
-		it("converts view Span to Range", () => {
-			const t = makeTimeline(100, 10, 20, 5);
-			const range = Timeline.viewRange(N, t);
-			expect(range.start).toBe(Px.Px(10));
-			expect(range.end).toBe(Px.Px(30));
-		});
-
-		it("normalizes before converting", () => {
-			// Invalid timeline: start=90, size=20 exceeds bounds
-			const t = makeTimeline(100, 90, 20, 5);
-			const range = Timeline.viewRange(N, t);
-			// After normalization: start=80, size=20, end=100
-			expect(range.start).toBe(Px.Px(80));
-			expect(range.end).toBe(Px.Px(100));
-		});
-	});
-
-	describe("fullRange", () => {
-		it("returns range from 0 to size", () => {
-			const t = makeTimeline(100, 10, 20, 5);
-			const range = Timeline.fullRange(N, t);
-			expect(range.start).toBe(Px.Px(0));
-			expect(range.end).toBe(Px.Px(100));
-		});
-
-		it("normalizes size before creating range", () => {
-			const t = makeTimeline(-50, 0, 10, 5);
-			const range = Timeline.fullRange(N, t);
-			expect(range.start).toBe(Px.Px(0));
-			expect(range.end).toBe(Px.Px(0));
 		});
 	});
 });
