@@ -1,6 +1,6 @@
 import {
+	Api,
 	Authorization,
-	api,
 	Events,
 	HealthResponse,
 	Project,
@@ -25,7 +25,7 @@ import { formatSSE } from "../utils/sse";
 
 const HEARTBEAT_INTERVAL_MS = 30000;
 
-const healthGroupLive = HttpApiBuilder.group(api, "health", (handlers) =>
+const healthGroupLive = HttpApiBuilder.group(Api, "health", (handlers) =>
 	handlers.handle("health", () =>
 		Effect.gen(function* () {
 			const config = yield* ServerConfig;
@@ -51,7 +51,7 @@ const AuthorizationLive = Layer.effect(
 	}),
 );
 
-const projectGroupLive = HttpApiBuilder.group(api, "project", (handlers) =>
+const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 	handlers
 		.handle("getSnapshot", () =>
 			Effect.gen(function* () {
@@ -79,7 +79,7 @@ const projectGroupLive = HttpApiBuilder.group(api, "project", (handlers) =>
 		),
 ).pipe(Layer.provide(AuthorizationLive));
 
-const eventsGroupLive = HttpApiBuilder.group(api, "events", (handlers) =>
+const eventsGroupLive = HttpApiBuilder.group(Api, "events", (handlers) =>
 	handlers.handle("events", ({ urlParams }) =>
 		Effect.gen(function* () {
 			const store = yield* DawStore;
@@ -145,7 +145,7 @@ const eventsGroupLive = HttpApiBuilder.group(api, "events", (handlers) =>
 	),
 ).pipe(Layer.provide(AuthorizationLive));
 
-export const ApiLive = HttpApiBuilder.api(api).pipe(
+export const ApiLive = HttpApiBuilder.api(Api).pipe(
 	Layer.provide(healthGroupLive),
 	Layer.provide(projectGroupLive),
 	Layer.provide(eventsGroupLive),

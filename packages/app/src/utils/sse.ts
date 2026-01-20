@@ -167,8 +167,6 @@ export function getSSEEventKey(event: Events.Event): string | undefined {
 	switch (event.t) {
 		case "server.heartbeat":
 			return "heartbeat";
-		case "presence":
-			return "presence";
 		case "operation":
 			// Don't coalesce ops - each one matters
 			return undefined;

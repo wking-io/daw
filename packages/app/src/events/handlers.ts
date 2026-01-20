@@ -1,30 +1,11 @@
+import * as Instruments from "@app/instruments";
+import * as Logs from "@app/logs/handlers";
 import type { Events, Instrument, Project } from "@daw/contract";
-import * as Atom from "@effect-atom/atom/Atom";
-import type * as Registry from "@effect-atom/atom/Registry";
+import { Atom, type Registry } from "@effect-atom/atom-react";
+import { connectedAtom } from "./atoms";
 
-// =============================================================================
-// State Atoms
-// =============================================================================
-
-/** Current list of instruments */
-export const instrumentsAtom = Atom.make<ReadonlyArray<Instrument.Instrument>>(
-	[],
-);
-
-/** Command/event log for debugging */
-export const logsAtom = Atom.make<ReadonlyArray<string>>([]);
-
-/** Current project version for optimistic updates and gap detection */
+/** Current project version */
 export const versionAtom = Atom.make<number>(0);
-
-/** Server health status */
-export const serverReadyAtom = Atom.make<boolean>(false);
-
-/** SSE connection status */
-export const sseConnectedAtom = Atom.make<boolean>(false);
-
-/** Connected clients (from presence events) */
-export const presenceAtom = Atom.make<ReadonlyArray<string>>([]);
 
 // =============================================================================
 // SSE Event Handler
@@ -41,16 +22,15 @@ export function handleSSEEventWithRegistry(
 	onGapDetected?: (trigger: string) => void,
 ): void {
 	switch (event.t) {
-		case "server.connected":
-			registry.set(sseConnectedAtom, true);
-			registry.update(logsAtom, (prev) => [
-				...prev,
-				`← (sse) connected, server version: ${event.serverVersion}`,
-			]);
+		case "server.heartbeat":
 			break;
 
-		case "server.heartbeat":
-			// Heartbeats are just for keeping the connection alive, no state update needed
+		case "server.connected":
+			registry.set(connectedAtom, true);
+			Logs.push(
+				registry,
+				`← (sse) connected, server version: ${event.serverVersion}`,
+			);
 			break;
 
 		case "operation": {
@@ -86,14 +66,6 @@ export function handleSSEEventWithRegistry(
 			);
 			break;
 		}
-
-		case "presence":
-			registry.set(presenceAtom, event.clients);
-			registry.update(logsAtom, (prev) => [
-				...prev,
-				`← (presence) ${event.clients.length} online`,
-			]);
-			break;
 	}
 }
 
@@ -108,7 +80,7 @@ export function applySnapshotWithRegistry(
 	registry: Registry.Registry,
 	snapshot: Project.Snapshot,
 ): void {
-	registry.set(instrumentsAtom, snapshot.doc.instruments);
+	registry.set(Instruments.atom, snapshot.doc.instruments);
 	registry.set(versionAtom, snapshot.version);
 }
 
@@ -123,7 +95,7 @@ export function applyPatchBatchWithRegistry(
 	if (batch.version <= currentVersion) return currentVersion;
 
 	registry.update(
-		instrumentsAtom,
+		Instruments.atom,
 		(prev: ReadonlyArray<Instrument.Instrument>) => {
 			let next = prev;
 			for (const patch of batch.patches) {
@@ -161,20 +133,7 @@ export function applySubmitWithRegistry(
 	};
 
 	registry.update(
-		instrumentsAtom,
+		Instruments.atom,
 		(prev: ReadonlyArray<Instrument.Instrument>) => [...prev, instrument],
 	);
-}
-
-/**
- * Add a log entry using the registry directly
- */
-export function addLogWithRegistry(
-	registry: Registry.Registry,
-	message: string,
-): void {
-	registry.update(logsAtom, (prev: ReadonlyArray<string>) => [
-		...prev,
-		message,
-	]);
 }

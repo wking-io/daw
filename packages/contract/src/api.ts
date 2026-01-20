@@ -79,7 +79,7 @@ const eventsGroup = HttpApiGroup.make("events")
 	.middleware(Authorization)
 	.prefix("/events");
 
-export const api = HttpApi.make("api")
+export const Api = HttpApi.make("api")
 	.add(healthGroup)
 	.add(projectGroup)
 	.add(eventsGroup)

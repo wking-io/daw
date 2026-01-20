@@ -4,7 +4,7 @@ import type { HttpClientError } from "@effect/platform/HttpClientError";
 import { Context, Data, Effect, Layer } from "effect";
 import type { ParseError } from "effect/ParseResult";
 import { ulid } from "ulid";
-import { StateClient } from "../client";
+import { ApiClient } from "../client";
 
 export class InstrumentNotCreatedError extends Data.TaggedError(
 	"InstrumentNotCreatedError",
@@ -33,7 +33,7 @@ export class InstrumentRepository extends Context.Tag(
 export const InstrumentRepositoryLive = Layer.effect(
 	InstrumentRepository,
 	Effect.gen(function* () {
-		const client = yield* StateClient;
+		const client = yield* ApiClient;
 
 		return {
 			create: (params) =>
@@ -68,4 +68,4 @@ export const InstrumentRepositoryLive = Layer.effect(
 				}),
 		};
 	}),
-).pipe(Layer.provide(StateClient.Default));
+).pipe(Layer.provide(ApiClient.Default));

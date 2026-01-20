@@ -87,8 +87,7 @@ type SSEEvent =
 	| { t: "server.heartbeat"; timestamp: number }
 	| { t: "op"; entry: OpEntry }
 	| { t: "operation"; entry: OpEntry }
-	| { t: "patch"; batch: { version: number; patches: unknown[] } }
-	| { t: "presence"; clients: string[] };
+	| { t: "patch"; batch: { version: number; patches: unknown[] } };
 
 // Configuration for SSE tests
 const SSE_OP_COUNT = Number(process.env.SSE_OP_COUNT ?? "3");

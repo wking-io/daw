@@ -31,17 +31,10 @@ export const PatchEvent = Schema.Struct({
 });
 export type PatchEvent = typeof PatchEvent.Type;
 
-export const PresenceEvent = Schema.Struct({
-	t: Schema.Literal("presence"),
-	clients: Schema.Array(Schema.String),
-});
-export type PresenceEvent = typeof PresenceEvent.Type;
-
 export const Event = Schema.Union(
 	ServerConnectedEvent,
 	ServerHeartbeatEvent,
 	OperationEvent,
 	PatchEvent,
-	PresenceEvent,
 );
 export type Event = typeof Event.Type;

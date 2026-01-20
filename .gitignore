@@ -21,5 +21,4 @@ target
 .scripts
 
 # Local dev files
-logs/
 *.bun-build

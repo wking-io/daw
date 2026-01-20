@@ -96,14 +96,6 @@ describe("getSSEEventKey", () => {
 		expect(getSSEEventKey(event)).toBe("heartbeat");
 	});
 
-	it("returns key for presence events", () => {
-		const event: Events.PresenceEvent = {
-			t: "presence",
-			clients: ["client1", "client2"],
-		};
-		expect(getSSEEventKey(event)).toBe("presence");
-	});
-
 	it("returns undefined for operation events (not coalesced)", () => {
 		const event: Events.OperationEvent = {
 			t: "operation",
