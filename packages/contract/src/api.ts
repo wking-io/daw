@@ -127,4 +127,6 @@ export const Api = HttpApi.make("api")
 	.add(projectsGroup)
 	.add(projectGroup)
 	.add(sseGroup)
+	.addError(HttpApiError.InternalServerError)
+	.addError(HttpApiError.BadRequest)
 	.prefix("/api");

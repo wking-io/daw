@@ -27,6 +27,8 @@
   "[javascriptreact]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  "typescript.tsdk": "./node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
   "cSpell.words": [
     "coalescer",
     "pgrep",

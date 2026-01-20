@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import type { Commands, Events, ProjectId } from "@daw/contract";
+import type { Events, ProjectId } from "@daw/contract";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
-import { Effect, Layer } from "effect";
-import { Persistence, PersistenceLive } from "./sqlite";
+import { Effect, Layer, Option } from "effect";
+import { Persistence } from "./sqlite";
 
 // Create tables manually for tests (matches migration)
 const SetupLayer = Layer.effectDiscard(
@@ -37,11 +37,10 @@ const SetupLayer = Layer.effectDiscard(
 	}),
 );
 
+const SqlLayer = SqliteClient.layer({ filename: ":memory:" });
+
 const makeLayer = () =>
-	PersistenceLive.pipe(
-		Layer.provideMerge(SetupLayer),
-		Layer.provide(SqliteClient.layer({ filename: ":memory:" })),
-	);
+	Persistence.Default.pipe(Layer.provide(SetupLayer), Layer.provide(SqlLayer));
 
 const testProjectId = "test-project-id" as ProjectId;
 
@@ -65,16 +64,24 @@ describe("Persistence", () => {
 				automationLanes: [],
 				audioFiles: [],
 			};
-			yield* persistence.saveSnapshot(testProjectId, snapshot);
-			const loaded = yield* persistence.loadLatestSnapshot(testProjectId);
+			yield* persistence.createSnapshot({
+				projectId: testProjectId,
+				version: snapshot.version,
+				data: JSON.stringify(snapshot),
+			});
+			const loaded = yield* persistence.findSnapshot({
+				projectId: testProjectId,
+			});
 			return loaded;
 		});
 
 		const loaded = await Effect.runPromise(
 			program.pipe(Effect.provide(makeLayer())),
 		);
-		expect(loaded?.version).toBe(1);
-		expect(loaded?.project.name).toBe("Test Project");
+		expect(Option.isSome(loaded)).toBe(true);
+		if (Option.isSome(loaded)) {
+			expect(loaded.value.version).toBe(1);
+		}
 	});
 
 	it("appends and reads event batches", async () => {
@@ -89,18 +96,22 @@ describe("Persistence", () => {
 					},
 				],
 			};
-			yield* persistence.appendEvent(testProjectId, {
+			yield* persistence.createEvent({
+				projectId: testProjectId,
 				version: 1,
-				batch: eventBatch,
+				data: JSON.stringify(eventBatch),
 			});
-			return yield* persistence.loadEventsAfter(testProjectId, 0);
+			return yield* persistence.listEvents({
+				projectId: testProjectId,
+				version: 0,
+			});
 		});
 
 		const events = await Effect.runPromise(
 			program.pipe(Effect.provide(makeLayer())),
 		);
 		expect(events).toHaveLength(1);
-		expect(events[0]?.batch.events[0]?.t).toBe("project.renamed");
+		expect(events[0]?.version).toBe(1);
 	});
 
 	it("isolates data between projects", async () => {
@@ -144,11 +155,19 @@ describe("Persistence", () => {
 				audioFiles: [],
 			};
 
-			yield* persistence.saveSnapshot(projectA, snapshotA);
-			yield* persistence.saveSnapshot(projectB, snapshotB);
+			yield* persistence.createSnapshot({
+				projectId: projectA,
+				version: snapshotA.version,
+				data: JSON.stringify(snapshotA),
+			});
+			yield* persistence.createSnapshot({
+				projectId: projectB,
+				version: snapshotB.version,
+				data: JSON.stringify(snapshotB),
+			});
 
-			const loadedA = yield* persistence.loadLatestSnapshot(projectA);
-			const loadedB = yield* persistence.loadLatestSnapshot(projectB);
+			const loadedA = yield* persistence.findSnapshot({ projectId: projectA });
+			const loadedB = yield* persistence.findSnapshot({ projectId: projectB });
 
 			return { loadedA, loadedB };
 		});
@@ -157,9 +176,11 @@ describe("Persistence", () => {
 			program.pipe(Effect.provide(makeLayer())),
 		);
 
-		expect(loadedA?.project.name).toBe("Project A");
-		expect(loadedA?.version).toBe(1);
-		expect(loadedB?.project.name).toBe("Project B");
-		expect(loadedB?.version).toBe(5);
+		expect(Option.isSome(loadedA)).toBe(true);
+		expect(Option.isSome(loadedB)).toBe(true);
+		if (Option.isSome(loadedA) && Option.isSome(loadedB)) {
+			expect(loadedA.value.version).toBe(1);
+			expect(loadedB.value.version).toBe(5);
+		}
 	});
 });

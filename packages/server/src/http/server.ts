@@ -2,7 +2,6 @@ import {
 	Api,
 	Authorization,
 	Commands,
-	Events,
 	HealthResponse,
 	SSE,
 } from "@daw/contract";
@@ -83,15 +82,27 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 			Effect.gen(function* () {
 				const store = yield* Store;
 				const snapshot = yield* store.getSnapshot(path.projectId);
-				return Events.Snapshot.make(snapshot);
-			}),
+				return snapshot;
+			}).pipe(
+				Effect.catchTags({
+					ParseError: () => Effect.fail(new HttpApiError.BadRequest()),
+					SqlError: () => Effect.fail(new HttpApiError.InternalServerError()),
+				}),
+			),
 		)
 		.handle("executeCommand", ({ path, payload }) =>
 			Effect.gen(function* () {
 				const store = yield* Store;
 				const result = yield* store.executeCommand(path.projectId, payload);
-				return Events.CommandResult.make(result);
-			}),
+				return result;
+			}).pipe(
+				Effect.catchTags({
+					NoSuchElementException: () =>
+						Effect.fail(new HttpApiError.NotFound()),
+					ParseError: () => Effect.fail(new HttpApiError.BadRequest()),
+					SqlError: () => Effect.fail(new HttpApiError.InternalServerError()),
+				}),
+			),
 		)
 		.handle("getEvents", ({ path, urlParams }) =>
 			Effect.gen(function* () {
@@ -101,7 +112,12 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				);
 				const events = yield* store.getEventsAfter(path.projectId, fromVersion);
 				return events;
-			}),
+			}).pipe(
+				Effect.catchTags({
+					ParseError: () => Effect.fail(new HttpApiError.BadRequest()),
+					SqlError: () => Effect.fail(new HttpApiError.InternalServerError()),
+				}),
+			),
 		)
 		.handle("deleteProject", ({ path }) =>
 			Effect.gen(function* () {
@@ -166,7 +182,11 @@ const sseGroupLive = HttpApiBuilder.group(Api, "sse", (handlers) =>
 					connection: "keep-alive",
 				},
 			});
-		}),
+		}).pipe(
+			Effect.catchAllCause((cause) =>
+				Effect.fail(new HttpApiError.InternalServerError()),
+			),
+		),
 	),
 ).pipe(Layer.provide(AuthorizationLive));
 

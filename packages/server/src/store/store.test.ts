@@ -3,8 +3,8 @@ import type { Commands, ProjectId } from "@daw/contract";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Chunk, Effect, Layer, Stream } from "effect";
-import { PersistenceLive } from "../persist/sqlite";
-import { Store, StoreLive } from "./store";
+import { Persistence } from "../persist/sqlite";
+import { Store } from "./store";
 
 const testProjectId = "test-project" as ProjectId;
 
@@ -40,14 +40,17 @@ const SetupLayer = Layer.effectDiscard(
 	}),
 );
 
+const SqlLayer = SqliteClient.layer({ filename: ":memory:" });
+
 const makeLayer = () =>
-	StoreLive.pipe(
+	Store.Default.pipe(
 		Layer.provide(
-			PersistenceLive.pipe(
-				Layer.provideMerge(SetupLayer),
-				Layer.provide(SqliteClient.layer({ filename: ":memory:" })),
+			Persistence.Default.pipe(
+				Layer.provide(SetupLayer),
+				Layer.provide(SqlLayer),
 			),
 		),
+		Layer.provide(SqlLayer),
 	);
 
 describe("Store", () => {

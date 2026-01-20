@@ -5,8 +5,8 @@ import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer } from "effect";
 import { ServerConfigTest } from "../config";
-import { PersistenceLive } from "../persist/sqlite";
-import { StoreLive } from "../store/store";
+import { Persistence } from "../persist/sqlite";
+import { Store } from "../store/store";
 import { ApiLive } from "./server";
 
 const TEST_TOKEN = "test-token-123";
@@ -46,11 +46,14 @@ const SetupLayer = Layer.effectDiscard(
 
 const makeLayer = () => {
 	const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
-	const persistenceLayer = PersistenceLive.pipe(
-		Layer.provideMerge(SetupLayer),
+	const persistenceLayer = Persistence.Default.pipe(
+		Layer.provide(SetupLayer),
 		Layer.provide(sqlLayer),
 	);
-	const storeLayer = StoreLive.pipe(Layer.provide(persistenceLayer));
+	const storeLayer = Store.Default.pipe(
+		Layer.provide(persistenceLayer),
+		Layer.provide(sqlLayer),
+	);
 	const configLayer = ServerConfigTest({ authToken: TEST_TOKEN });
 
 	// ApiLive needs ServerConfig and Store
