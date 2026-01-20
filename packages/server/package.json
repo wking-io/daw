@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun run src/index.ts",
+		"migrate": "bun run scripts/migrate.ts",
 		"build": "bun run scripts/build-binary.ts",
 		"build:binary": "bun run scripts/build-binary.ts --single",
 		"build:binaries": "bun run scripts/build-binary.ts --all",

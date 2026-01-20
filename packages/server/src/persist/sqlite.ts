@@ -32,26 +32,7 @@ const decodeDoc = Schema.decodeUnknownSync(Project.ProjectDoc);
 const encodeSubmit = Schema.encodeSync(Project.Submit);
 const decodeSubmit = Schema.decodeUnknownSync(Project.Submit);
 
-const ensureTables = Effect.gen(function* () {
-	const sql = yield* SqlClient.SqlClient;
-	yield* sql`
-		CREATE TABLE IF NOT EXISTS daw_snapshots (
-			version INTEGER PRIMARY KEY,
-			doc_json TEXT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)
-	`;
-	yield* sql`
-		CREATE TABLE IF NOT EXISTS daw_events (
-			version INTEGER PRIMARY KEY,
-			submit_json TEXT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)
-	`;
-});
-
 const PersistenceLiveEffect = Effect.gen(function* () {
-	yield* ensureTables;
 	const sql = yield* SqlClient.SqlClient;
 
 	return Persistence.of({
