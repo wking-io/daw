@@ -1,4 +1,11 @@
-import type { Events, Instrument, Project } from "@daw/contract";
+import type {
+	Commands,
+	Domain,
+	Events,
+	ProjectId,
+	SSE,
+	TrackId,
+} from "@daw/contract";
 import type * as Registry from "@effect-atom/atom/Registry";
 import { RegistryContext, useAtomValue } from "@effect-atom/atom-react";
 import {
@@ -10,44 +17,40 @@ import {
 	useState,
 } from "react";
 import { ulid } from "ulid";
+import { connectedAtom, readyAtom } from "../events/atoms";
 import {
-	addLogWithRegistry,
 	applyPatchBatchWithRegistry,
 	applySnapshotWithRegistry,
-	applySubmitWithRegistry,
 	handleSSEEventWithRegistry,
-	instrumentsAtom,
-	logsAtom,
-	serverReadyAtom,
-	sseConnectedAtom,
 	versionAtom,
-} from "../daw/atoms";
+} from "../events/handlers";
 import { createDawStateClient, type DawStateClient } from "../http/client";
+import { snapshotAtom } from "../instruments/atoms";
+import { logsAtom } from "../logs/atoms";
+import * as Logs from "../logs/handlers";
 import type { ServerInfo } from "../ports/Platform";
 import { useAppServices } from "./AppProviders";
 
 export function AppRoot() {
-	const instruments = useAtomValue(instrumentsAtom);
+	const snapshot = useAtomValue(snapshotAtom);
 	const logs = useAtomValue(logsAtom);
-	const serverReady = useAtomValue(serverReadyAtom);
-	const sseConnected = useAtomValue(sseConnectedAtom);
+	const serverReady = useAtomValue(readyAtom);
+	const sseConnected = useAtomValue(connectedAtom);
 	const currentVersion = useAtomValue(versionAtom);
 	const registry = useContext(RegistryContext) as Registry.Registry;
 	const { platform } = useAppServices();
 	const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
 	const versionRef = useRef(0);
 
-	const instrumentTypes = useMemo(
-		(): ReadonlyArray<Instrument.InstrumentType> => [
-			"synth",
-			"sampler",
-			"drum",
-		],
+	// For demo: hardcoded project ID (in real app, would be selected from project list)
+	const [projectId] = useState<ProjectId>("demo-project" as ProjectId);
+
+	const trackTypes = useMemo(
+		(): ReadonlyArray<Domain.TrackType> => ["midi", "audio", "bus"],
 		[],
 	);
-	const [newInstrumentType, setNewInstrumentType] =
-		useState<Instrument.InstrumentType>("synth");
-	const [newInstrumentName, setNewInstrumentName] = useState("Bass");
+	const [newTrackType, setNewTrackType] = useState<Domain.TrackType>("midi");
+	const [newTrackName, setNewTrackName] = useState("Bass");
 	const [isCreating, setIsCreating] = useState(false);
 
 	// Create the DAW state client when server info is available
@@ -84,7 +87,7 @@ export function AppRoot() {
 	useEffect(() => {
 		if (!stateClient) return;
 		let cancelled = false;
-		registry.set(serverReadyAtom, false);
+		registry.set(readyAtom, false);
 
 		const waitForHealth = async () => {
 			let attempt = 0;
@@ -92,7 +95,7 @@ export function AppRoot() {
 				try {
 					const health = await stateClient.getHealth();
 					if (health.healthy) {
-						registry.set(serverReadyAtom, true);
+						registry.set(readyAtom, true);
 						return;
 					}
 				} catch {
@@ -110,10 +113,8 @@ export function AppRoot() {
 	}, [stateClient, registry]);
 
 	const canCreate = useMemo(
-		() =>
-			newInstrumentType.trim().length > 0 &&
-			newInstrumentName.trim().length > 0,
-		[newInstrumentType, newInstrumentName],
+		() => newTrackType.trim().length > 0 && newTrackName.trim().length > 0,
+		[newTrackType, newTrackName],
 	);
 
 	// Gap recovery
@@ -121,35 +122,31 @@ export function AppRoot() {
 		async (trigger: string) => {
 			if (!stateClient) return;
 			try {
-				const response = await stateClient.getOps(versionRef.current);
+				const response = await stateClient.getEvents(
+					projectId,
+					versionRef.current,
+				);
 				let expectedVersion = versionRef.current;
-				for (const entry of response.operations) {
-					if (entry.version !== expectedVersion + 1) break;
-					applySubmitWithRegistry(
-						registry,
-						entry.submit,
-						entry.submit.op.instrumentId as Instrument.InstrumentId,
-					);
-					expectedVersion = entry.version;
+				for (const batch of response.events) {
+					if (batch.version !== expectedVersion + 1) break;
+					// TODO: Apply events to local state
+					expectedVersion = batch.version;
 					versionRef.current = expectedVersion;
 				}
 
-				const lastEntry = response.operations[response.operations.length - 1];
-				if (!lastEntry || lastEntry.version !== versionRef.current) {
-					const snapshot = await stateClient.getSnapshot();
+				const lastBatch = response.events[response.events.length - 1];
+				if (!lastBatch || lastBatch.version !== versionRef.current) {
+					const snapshot = await stateClient.getSnapshot(projectId);
 					versionRef.current = snapshot.version;
 					applySnapshotWithRegistry(registry, snapshot);
-					addLogWithRegistry(
-						registry,
-						`← (state) gap recovery snapshot (${trigger})`,
-					);
+					Logs.push(registry, `← (state) gap recovery snapshot (${trigger})`);
 				}
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				addLogWithRegistry(registry, `← (state) gap recovery error ${message}`);
+				Logs.push(registry, `← (state) gap recovery error ${message}`);
 			}
 		},
-		[stateClient, registry],
+		[stateClient, registry, projectId],
 	);
 
 	// SSE connection effect - uses callback-based approach
@@ -168,19 +165,17 @@ export function AppRoot() {
 				reconnectTimer = null;
 				connectSSE(versionRef.current);
 			}, delay);
-			addLogWithRegistry(
-				registry,
-				`← (sse) reconnect in ${delay}ms (${reason})`,
-			);
+			Logs.push(registry, `← (sse) reconnect in ${delay}ms (${reason})`);
 		};
 
 		const connectSSE = (fromVersion: number) => {
 			disconnectSSE();
-			registry.set(sseConnectedAtom, false);
+			registry.set(connectedAtom, false);
 
 			disconnectSSE = stateClient.connectSSE({
+				projectId,
 				fromVersion,
-				onEvent: (event: Events.Event) => {
+				onEvent: (event: SSE.SSEEvent) => {
 					handleSSEEventWithRegistry(
 						registry,
 						event,
@@ -189,11 +184,11 @@ export function AppRoot() {
 					);
 				},
 				onError: (error) => {
-					addLogWithRegistry(registry, `← (sse) error ${error.message}`);
+					Logs.push(registry, `← (sse) error ${error.message}`);
 					scheduleReconnect("error");
 				},
 				onClose: () => {
-					registry.set(sseConnectedAtom, false);
+					registry.set(connectedAtom, false);
 					scheduleReconnect("close");
 				},
 			});
@@ -202,19 +197,19 @@ export function AppRoot() {
 
 		const initializeState = async () => {
 			try {
-				const snapshot = await stateClient.getSnapshot();
+				const snapshot = await stateClient.getSnapshot(projectId);
 				if (cancelled) return;
 				versionRef.current = snapshot.version;
 				applySnapshotWithRegistry(registry, snapshot);
-				addLogWithRegistry(
+				Logs.push(
 					registry,
-					`← (state) snapshot v${snapshot.version} with ${snapshot.doc.instruments.length} instruments`,
+					`← (state) snapshot v${snapshot.version} with ${snapshot.tracks.length} tracks`,
 				);
 				connectSSE(snapshot.version);
 			} catch (err) {
 				if (cancelled) return;
 				const message = err instanceof Error ? err.message : String(err);
-				addLogWithRegistry(registry, `← (state) snapshot error ${message}`);
+				Logs.push(registry, `← (state) snapshot error ${message}`);
 				scheduleReconnect("snapshot.error");
 			}
 		};
@@ -228,55 +223,52 @@ export function AppRoot() {
 				clearTimeout(reconnectTimer);
 			}
 		};
-	}, [stateClient, serverReady, recoverFromGap, registry]);
+	}, [stateClient, serverReady, recoverFromGap, registry, projectId]);
 
 	// Handle UI create button
 	const handleCreate = async () => {
 		if (!canCreate || !stateClient) return;
 		setIsCreating(true);
 
-		addLogWithRegistry(
+		Logs.push(
 			registry,
-			`→ (ui) submit instrument.create ${JSON.stringify({
-				type: newInstrumentType,
-				name: newInstrumentName.trim(),
+			`→ (ui) submit track.create ${JSON.stringify({
+				type: newTrackType,
+				name: newTrackName.trim(),
 			})}`,
 		);
 
-		const instrumentId = ulid() as Instrument.InstrumentId;
-		const createdAt = Date.now();
-		const submit: Project.Submit = {
-			opId: ulid(),
-			baseVersion: versionRef.current,
+		const trackId = ulid() as TrackId;
+		const command: Commands.Command = {
+			commandId: ulid(),
+			expectedVersion: versionRef.current,
 			actor: "ui",
-			op: {
-				t: "instrument.create",
-				type: newInstrumentType,
-				name: newInstrumentName.trim(),
-				instrumentId,
-				createdAt,
+			payload: {
+				t: "track.create",
+				type: newTrackType,
+				name: newTrackName.trim(),
 			},
 		};
 
 		try {
-			const result = await stateClient.submitOp(submit);
+			const result = await stateClient.executeCommand(projectId, command);
 			versionRef.current = applyPatchBatchWithRegistry(
 				registry,
-				result.patches,
+				result.events,
 				versionRef.current,
 			);
-			const created = result.patches.patches.find(
-				(patch) => patch.t === "instrument.add",
+			const created = result.events.events.find(
+				(event) => event.t === "track.created",
 			);
-			if (created) {
-				addLogWithRegistry(
+			if (created && created.t === "track.created") {
+				Logs.push(
 					registry,
-					`← (ui) ok ${created.instrument.name} (${created.instrument.id})`,
+					`← (ui) ok ${created.track.name} (${created.track.id})`,
 				);
 			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			addLogWithRegistry(registry, `← (ui) error ${message}`);
+			Logs.push(registry, `← (ui) error ${message}`);
 		} finally {
 			setIsCreating(false);
 		}
@@ -291,24 +283,26 @@ export function AppRoot() {
 		);
 	}
 
+	const tracks = snapshot?.tracks ?? [];
+
 	return (
 		<div style={{ padding: "16px", fontFamily: "system-ui, sans-serif" }}>
 			<h2>DAW</h2>
 
 			<section style={{ margin: "16px 0" }}>
-				<h3>Create instrument (UI → tool call)</h3>
+				<h3>Create track</h3>
 				<div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
 					<label style={{ display: "flex", gap: "6px", alignItems: "center" }}>
 						<span>Type</span>
 						<select
-							value={newInstrumentType}
+							value={newTrackType}
 							onChange={(e) => {
-								const next = e.target.value as Instrument.InstrumentType;
-								if (instrumentTypes.includes(next)) setNewInstrumentType(next);
+								const next = e.target.value as Domain.TrackType;
+								if (trackTypes.includes(next)) setNewTrackType(next);
 							}}
 							disabled={isCreating}
 						>
-							{instrumentTypes.map((t) => (
+							{trackTypes.map((t) => (
 								<option key={t} value={t}>
 									{t}
 								</option>
@@ -318,8 +312,8 @@ export function AppRoot() {
 					<label style={{ display: "flex", gap: "6px", alignItems: "center" }}>
 						<span>Name</span>
 						<input
-							value={newInstrumentName}
-							onChange={(e) => setNewInstrumentName(e.target.value)}
+							value={newTrackName}
+							onChange={(e) => setNewTrackName(e.target.value)}
 							disabled={isCreating}
 							style={{ width: "220px" }}
 						/>
@@ -329,7 +323,7 @@ export function AppRoot() {
 						disabled={!canCreate || isCreating}
 						onClick={handleCreate}
 					>
-						{isCreating ? "Creating…" : "Create"}
+						{isCreating ? "Creating..." : "Create"}
 					</button>
 				</div>
 				<p style={{ margin: "8px 0 0", opacity: 0.7 }}>
@@ -340,15 +334,15 @@ export function AppRoot() {
 
 			<section style={{ margin: "16px 0" }}>
 				<h3>
-					Instruments{" "}
+					Tracks{" "}
 					<span style={{ fontSize: "0.8em", opacity: 0.7 }}>
-						(v{currentVersion}, SSE: {sseConnected ? "✓" : "…"})
+						(v{currentVersion}, SSE: {sseConnected ? "connected" : "..."})
 					</span>
 				</h3>
 				<ul>
-					{instruments.map((i) => (
-						<li key={i.id}>
-							{i.type}: {i.name} ({i.id})
+					{tracks.map((track) => (
+						<li key={track.id}>
+							{track.type}: {track.name} ({track.id})
 						</li>
 					))}
 				</ul>

@@ -1,11 +1,13 @@
-import { InstrumentCommands } from "@daw/contract";
 import { Effect } from "effect";
 import * as Cause from "effect/Cause";
 import * as ParseResult from "effect/ParseResult";
 import { TreeFormatter } from "effect/ParseResult";
-import { InstrumentRepository, type InstrumentRepositoryError } from "./repo";
+import type { DawRepository, DawRepositoryError } from "./repo";
 
-const formatCreateInstrumentError = (cause: Cause.Cause<unknown>): string => {
+// Stubbed handlers - the instrument command pattern will be replaced
+// with a new operation-based pattern
+
+const formatError = (cause: Cause.Cause<unknown>): string => {
 	const error = Cause.squash(cause);
 	if (ParseResult.isParseError(error)) {
 		return TreeFormatter.formatErrorSync(error);
@@ -14,45 +16,22 @@ const formatCreateInstrumentError = (cause: Cause.Cause<unknown>): string => {
 };
 
 /**
- * Internal, typed handler logic.
- *
- * Prefer keeping failures in the error channel until you hit a "boundary"
- * (tool/runtime/transport), then collapse them to an `ok:false` domain result.
+ * Handle track creation - matches the daw.track.create tool schema.
  */
-export const createInstrumentEffect = (
-	params: InstrumentCommands.CreateCommand,
-): Effect.Effect<
-	InstrumentCommands.CreateResult,
-	InstrumentRepositoryError,
-	InstrumentRepository
+export const handleCreateTrack = (params: {
+	projectId: string;
+	trackType: "audio" | "midi" | "bus";
+	name: string;
+}): Effect.Effect<
+	{ ok: boolean; trackId?: string; error?: string },
+	never,
+	DawRepository
 > =>
-	Effect.gen(function* () {
-		const repo = yield* InstrumentRepository;
-		const instrument = yield* repo.create(params);
-		return InstrumentCommands.CreateResultSuccess.make({
-			ok: true,
-			instrument,
-		});
+	Effect.succeed({
+		ok: false,
+		error: "Not implemented - track creation needs operation submission",
 	});
 
-export const handleCreateInstrument = (
-	params: InstrumentCommands.CreateCommand,
-): Effect.Effect<
-	InstrumentCommands.CreateResult,
-	never,
-	InstrumentRepository
-> =>
-	createInstrumentEffect(params).pipe(
-		Effect.catchAllCause((cause) => {
-			// Don't turn cancellation into a "business error"
-			if (Cause.isInterruptedOnly(cause)) {
-				return Effect.interrupt;
-			}
-			return Effect.succeed(
-				InstrumentCommands.CreateResultError.make({
-					ok: false,
-					error: formatCreateInstrumentError(cause),
-				}),
-			);
-		}),
-	);
+// Keep old export for backwards compatibility during transition
+export { handleCreateTrack as handleProjectOperation };
+export { handleCreateTrack as handleCreateInstrument };

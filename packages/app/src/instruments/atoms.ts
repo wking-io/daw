@@ -1,10 +1,9 @@
-import type { Instrument } from "@daw/contract";
+import type { Patches } from "@daw/contract";
 import { Atom } from "@effect-atom/atom-react";
 
-export const instrumentsAtom = Atom.make<ReadonlyArray<Instrument.Instrument>>(
-	[],
-);
+/** Current project snapshot - will be populated from server */
+export const snapshotAtom = Atom.make<Patches.Snapshot | null>(null);
 
 export const ReactivityKeys = {
-	instruments: "instruments",
+	snapshot: "snapshot",
 } as const;

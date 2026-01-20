@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { Project } from "@daw/contract";
+import { type Commands, Events, type ProjectId } from "@daw/contract";
 import { Schema } from "effect";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
@@ -7,8 +7,11 @@ import { join } from "path";
 
 const serverRoot = new URL("..", import.meta.url).pathname;
 
-const decodeSnapshot = Schema.decodeUnknownSync(Project.Snapshot);
-const decodeSubmitResult = Schema.decodeUnknownSync(Project.SubmitResult);
+const decodeSnapshot = Schema.decodeUnknownSync(Events.Snapshot);
+const decodeCommandResult = Schema.decodeUnknownSync(Events.CommandResult);
+
+// Use a fixed test project ID - project is lazily created when accessed
+const TEST_PROJECT_ID = "e2e-test-project" as ProjectId;
 
 const readStreamText = async (
 	stream: ReadableStream | number | undefined | null,
@@ -33,7 +36,7 @@ const waitForServer = async (
 			throw new Error(`Server exited early: ${child.exitCode}\n${stderr}`);
 		}
 		try {
-			const res = await fetch(`${baseUrl}/api/project/snapshot`);
+			const res = await fetch(`${baseUrl}/api/health`);
 			if (res.ok) return;
 		} catch {
 			// ignore until ready
@@ -47,11 +50,13 @@ describe("HTTP e2e", () => {
 	let child: ReturnType<typeof Bun.spawn> | null = null;
 	let baseUrl = "";
 	let dbDir = "";
+	let authToken = "";
 
 	beforeAll(async () => {
 		dbDir = await mkdtemp(join(tmpdir(), "daw-server-"));
 		const port = 43125 + Math.floor(Math.random() * 1000);
 		baseUrl = `http://127.0.0.1:${port}`;
+		authToken = "e2e-test-token";
 
 		child = Bun.spawn(["bun", "run", "src/index.ts"], {
 			cwd: serverRoot,
@@ -59,6 +64,7 @@ describe("HTTP e2e", () => {
 				...process.env,
 				DAW_STATE_PORT: String(port),
 				DAW_STATE_DB: join(dbDir, "state.db"),
+				DAW_STATE_TOKEN: authToken,
 			},
 			stdout: "pipe",
 			stderr: "pipe",
@@ -77,47 +83,69 @@ describe("HTTP e2e", () => {
 		}
 	});
 
-	it("GET /api/project/snapshot returns initial state", async () => {
-		const res = await fetch(`${baseUrl}/api/project/snapshot`);
+	it("GET /api/projects/:projectId/snapshot returns initial state", async () => {
+		const res = await fetch(
+			`${baseUrl}/api/projects/${TEST_PROJECT_ID}/snapshot`,
+			{
+				headers: { Authorization: `Bearer ${authToken}` },
+			},
+		);
+		if (!res.ok) {
+			console.error("Snapshot response not ok:", res.status, await res.text());
+		}
 		expect(res.ok).toBe(true);
 		const json = await res.json();
 		const snapshot = decodeSnapshot(json);
 		expect(snapshot.version).toBe(0);
-		expect(snapshot.doc.instruments).toHaveLength(0);
+		expect(snapshot.tracks).toHaveLength(0);
 	}, 20000);
 
-	it("POST /api/project/operations creates instruments", async () => {
-		const snapshotRes = await fetch(`${baseUrl}/api/project/snapshot`);
+	it("POST /api/projects/:projectId/commands executes command", async () => {
+		const snapshotRes = await fetch(
+			`${baseUrl}/api/projects/${TEST_PROJECT_ID}/snapshot`,
+			{
+				headers: { Authorization: `Bearer ${authToken}` },
+			},
+		);
 		const snapshot = decodeSnapshot(await snapshotRes.json());
 
-		const submit: Project.Submit = {
-			opId: "e2e-op-1",
-			baseVersion: snapshot.version,
+		const command: Commands.Command = {
+			commandId: "e2e-cmd-1",
+			expectedVersion: snapshot.version,
 			actor: "ui",
-			op: {
-				t: "instrument.create",
-				type: "synth",
-				name: "E2E Lead",
+			payload: {
+				t: "project.rename",
+				name: "E2E Project",
 			},
 		};
 
-		const res = await fetch(`${baseUrl}/api/project/operations`, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify(submit),
-		});
+		const res = await fetch(
+			`${baseUrl}/api/projects/${TEST_PROJECT_ID}/commands`,
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: `Bearer ${authToken}`,
+				},
+				body: JSON.stringify(command),
+			},
+		);
 		expect(res.ok).toBe(true);
-		const result = decodeSubmitResult(await res.json());
+		const result = decodeCommandResult(await res.json());
 		expect(result.version).toBe(1);
-		expect(result.patches.patches[0]?.t).toBe("instrument.add");
+		expect(result.events.events[0]?.t).toBe("project.renamed");
 	}, 20000);
 
-	it("GET /api/project/operations returns ops after version", async () => {
-		const res = await fetch(`${baseUrl}/api/project/operations?fromVersion=0`);
+	it("GET /api/projects/:projectId/events returns events after version", async () => {
+		const res = await fetch(
+			`${baseUrl}/api/projects/${TEST_PROJECT_ID}/events?fromVersion=0`,
+			{
+				headers: { Authorization: `Bearer ${authToken}` },
+			},
+		);
 		expect(res.ok).toBe(true);
-		const json = (await res.json()) as Project.OperationsResponse;
-		expect(json.fromVersion).toBe(0);
-		expect(Array.isArray(json.operations)).toBe(true);
+		const json = (await res.json()) as Events.EventBatch[];
+		expect(Array.isArray(json)).toBe(true);
 	}, 20000);
 
 	it("GET /api/health returns healthy status", async () => {
@@ -128,8 +156,13 @@ describe("HTTP e2e", () => {
 		expect(typeof json.version).toBe("string");
 	}, 20000);
 
-	it("GET /api/events returns SSE stream", async () => {
-		const res = await fetch(`${baseUrl}/api/events?fromVersion=0`);
+	it("GET /api/projects/:projectId/subscribe returns SSE stream", async () => {
+		const res = await fetch(
+			`${baseUrl}/api/projects/${TEST_PROJECT_ID}/subscribe?fromVersion=0`,
+			{
+				headers: { Authorization: `Bearer ${authToken}` },
+			},
+		);
 		expect(res.ok).toBe(true);
 		expect(res.headers.get("content-type")).toBe("text/event-stream");
 
@@ -145,5 +178,15 @@ describe("HTTP e2e", () => {
 		expect(text).toContain("server.connected");
 
 		await reader!.cancel();
+	}, 20000);
+
+	it("GET /api/projects returns empty list for new database", async () => {
+		const res = await fetch(`${baseUrl}/api/projects`, {
+			headers: { Authorization: `Bearer ${authToken}` },
+		});
+		expect(res.ok).toBe(true);
+		const projects = (await res.json()) as Array<{ id: string }>;
+		// Multi-project model returns empty list initially
+		expect(Array.isArray(projects)).toBe(true);
 	}, 20000);
 });

@@ -1,1 +1,1 @@
-export { instrumentsAtom as atom, ReactivityKeys } from "./atoms";
+export { ReactivityKeys, snapshotAtom as atom } from "./atoms";

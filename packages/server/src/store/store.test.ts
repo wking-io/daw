@@ -1,69 +1,103 @@
 import { describe, expect, it } from "bun:test";
-import type { Project } from "@daw/contract";
+import type { Commands, ProjectId } from "@daw/contract";
+import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Chunk, Effect, Layer, Stream } from "effect";
 import { PersistenceLive } from "../persist/sqlite";
-import { DawStore, DawStoreLive } from "./store";
+import { Store, StoreLive } from "./store";
+
+const testProjectId = "test-project" as ProjectId;
+
+// Create tables manually for tests (matches migration)
+const SetupLayer = Layer.effectDiscard(
+	Effect.gen(function* () {
+		const sql = yield* SqlClient.SqlClient;
+		yield* sql`
+			CREATE TABLE IF NOT EXISTS snapshots (
+				project_id TEXT NOT NULL,
+				version INTEGER NOT NULL,
+				data TEXT NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (project_id, version)
+			)
+		`;
+		yield* sql`
+			CREATE TABLE IF NOT EXISTS events (
+				project_id TEXT NOT NULL,
+				version INTEGER NOT NULL,
+				data TEXT NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (project_id, version)
+			)
+		`;
+		yield* sql`
+			CREATE TABLE IF NOT EXISTS projects (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			)
+		`;
+	}),
+);
 
 const makeLayer = () =>
-	DawStoreLive.pipe(
+	StoreLive.pipe(
 		Layer.provide(
 			PersistenceLive.pipe(
+				Layer.provideMerge(SetupLayer),
 				Layer.provide(SqliteClient.layer({ filename: ":memory:" })),
 			),
 		),
 	);
 
-describe("DawStore", () => {
-	it("submits ops and updates snapshot", async () => {
+describe("Store", () => {
+	it("executes commands and updates snapshot", async () => {
 		const program = Effect.gen(function* () {
-			const store = yield* DawStore;
-			const before = yield* store.getSnapshot;
-			const submit: Project.Submit = {
-				opId: "op-1",
-				baseVersion: before.version,
+			const store = yield* Store;
+			const before = yield* store.getSnapshot(testProjectId);
+			const command: Commands.Command = {
+				commandId: "cmd-1",
+				expectedVersion: before.version,
 				actor: "ui",
-				op: {
-					t: "instrument.create",
-					type: "synth",
-					name: "Lead",
+				payload: {
+					t: "project.rename",
+					name: "New Name",
 				},
 			};
-			yield* store.submitOp(submit);
-			return yield* store.getSnapshot;
+			yield* store.executeCommand(testProjectId, command);
+			return yield* store.getSnapshot(testProjectId);
 		});
 
 		const snapshot = await Effect.runPromise(
 			program.pipe(Effect.provide(makeLayer())),
 		);
 		expect(snapshot.version).toBe(1);
-		expect(snapshot.doc.instruments).toHaveLength(1);
+		expect(snapshot.project.name).toBe("New Name");
 	});
 
-	it("streams patches from a version", async () => {
+	it("streams events from a version", async () => {
 		const program = Effect.gen(function* () {
-			const store = yield* DawStore;
-			const before = yield* store.getSnapshot;
-			const submit: Project.Submit = {
-				opId: "op-2",
-				baseVersion: before.version,
+			const store = yield* Store;
+			const before = yield* store.getSnapshot(testProjectId);
+			const command: Commands.Command = {
+				commandId: "cmd-2",
+				expectedVersion: before.version,
 				actor: "ui",
-				op: {
-					t: "instrument.create",
-					type: "drum",
-					name: "Kit",
+				payload: {
+					t: "project.setTempo",
+					bpm: 140,
 				},
 			};
-			yield* store.submitOp(submit);
-			const stream = yield* store.patchStreamFrom(0);
+			yield* store.executeCommand(testProjectId, command);
+			const stream = yield* store.eventStreamFrom(testProjectId, 0);
 			return yield* Stream.take(stream, 1).pipe(Stream.runCollect);
 		});
 
-		const patchesChunk = await Effect.runPromise(
+		const eventsChunk = await Effect.runPromise(
 			program.pipe(Effect.provide(makeLayer())),
 		);
-		const patches = Chunk.toArray(patchesChunk);
-		expect(patches).toHaveLength(1);
-		expect(patches[0]?.patches[0]?.t).toBe("instrument.add");
+		const events = Chunk.toArray(eventsChunk);
+		expect(events).toHaveLength(1);
+		expect(events[0]?.events[0]?.t).toBe("project.tempoChanged");
 	});
 });

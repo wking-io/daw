@@ -1,10 +1,11 @@
-import type { Events } from "@daw/contract";
+import type { SSE } from "@daw/contract";
 
 export interface SSEClientOptions {
 	baseUrl: string;
 	token?: string;
+	projectId?: string;
 	fromVersion?: number;
-	onEvent: (event: Events.Event) => void;
+	onEvent: (event: SSE.SSEEvent) => void;
 	onError?: (error: Error) => void;
 	onClose?: () => void;
 }
@@ -17,6 +18,7 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 	const {
 		baseUrl,
 		token,
+		projectId,
 		fromVersion = 0,
 		onEvent,
 		onError,
@@ -24,7 +26,11 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 	} = options;
 	const controller = new AbortController();
 
-	const url = new URL(`${baseUrl}/api/events`);
+	// Build URL with optional projectId
+	const eventsPath = projectId
+		? `${baseUrl}/api/projects/${projectId}/events`
+		: `${baseUrl}/api/events`;
+	const url = new URL(eventsPath);
 	url.searchParams.set("fromVersion", String(fromVersion));
 	if (token) {
 		url.searchParams.set("token", token);
@@ -69,7 +75,7 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 					if (line.startsWith("data: ")) {
 						const data = line.slice(6);
 						try {
-							const event = JSON.parse(data) as Events.Event;
+							const event = JSON.parse(data) as SSE.SSEEvent;
 							onEvent(event);
 						} catch {
 							// Ignore parse errors
@@ -163,15 +169,15 @@ export function createEventCoalescer<T>(options: CoalescingOptions<T>) {
  * SSE event key generator for coalescing.
  * Returns a key for events that should be coalesced.
  */
-export function getSSEEventKey(event: Events.Event): string | undefined {
+export function getSSEEventKey(event: SSE.SSEEvent): string | undefined {
 	switch (event.t) {
 		case "server.heartbeat":
 			return "heartbeat";
-		case "operation":
-			// Don't coalesce ops - each one matters
+		case "server.connected":
+			// Don't coalesce connected events
 			return undefined;
-		case "patch":
-			// Don't coalesce patches - each one matters
+		case "events":
+			// Don't coalesce event batches - each one matters
 			return undefined;
 		default:
 			return undefined;

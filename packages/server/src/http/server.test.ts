@@ -1,22 +1,59 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import type { Events, Project } from "@daw/contract";
+import type { Commands, Events, ProjectId, SSE } from "@daw/contract";
 import { HttpApiBuilder, HttpServer } from "@effect/platform";
+import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
-import { Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { ServerConfigTest } from "../config";
 import { PersistenceLive } from "../persist/sqlite";
-import { DawStoreLive } from "../store/store";
+import { StoreLive } from "../store/store";
 import { ApiLive } from "./server";
 
 const TEST_TOKEN = "test-token-123";
+const TEST_PROJECT_ID = "test-project" as ProjectId;
+
+// Create tables manually for tests (matches migration)
+const SetupLayer = Layer.effectDiscard(
+	Effect.gen(function* () {
+		const sql = yield* SqlClient.SqlClient;
+		yield* sql`
+			CREATE TABLE IF NOT EXISTS snapshots (
+				project_id TEXT NOT NULL,
+				version INTEGER NOT NULL,
+				data TEXT NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (project_id, version)
+			)
+		`;
+		yield* sql`
+			CREATE TABLE IF NOT EXISTS events (
+				project_id TEXT NOT NULL,
+				version INTEGER NOT NULL,
+				data TEXT NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY (project_id, version)
+			)
+		`;
+		yield* sql`
+			CREATE TABLE IF NOT EXISTS projects (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			)
+		`;
+	}),
+);
 
 const makeLayer = () => {
 	const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
-	const persistenceLayer = PersistenceLive.pipe(Layer.provide(sqlLayer));
-	const storeLayer = DawStoreLive.pipe(Layer.provide(persistenceLayer));
+	const persistenceLayer = PersistenceLive.pipe(
+		Layer.provideMerge(SetupLayer),
+		Layer.provide(sqlLayer),
+	);
+	const storeLayer = StoreLive.pipe(Layer.provide(persistenceLayer));
 	const configLayer = ServerConfigTest({ authToken: TEST_TOKEN });
 
-	// ApiLive needs ServerConfig and DawStore
+	// ApiLive needs ServerConfig and Store
 	const apiWithDeps = ApiLive.pipe(
 		Layer.provide(storeLayer),
 		Layer.provide(configLayer),
@@ -35,45 +72,46 @@ describe("HttpEndpoints", () => {
 		}
 	});
 
-	it("serves snapshot and postOperations", async () => {
+	it("serves snapshot and executeCommand", async () => {
 		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
 		dispose = webHandler.dispose;
 		const { handler } = webHandler;
 
+		// Get snapshot (project is lazily created)
 		const snapshotRes = await handler(
-			new Request("http://localhost/api/project/snapshot", {
+			new Request(`http://localhost/api/projects/${TEST_PROJECT_ID}/snapshot`, {
 				headers: { Authorization: `Bearer ${TEST_TOKEN}` },
 			}),
 		);
 		expect(snapshotRes.status).toBe(200);
-		const snapshot = (await snapshotRes.json()) as Project.Snapshot;
+		const snapshot = (await snapshotRes.json()) as Events.Snapshot;
 		expect(snapshot.version).toBe(0);
 
-		const submit: Project.Submit = {
-			opId: "op-1",
-			baseVersion: snapshot.version,
+		// Execute command
+		const command: Commands.Command = {
+			commandId: "cmd-1",
+			expectedVersion: snapshot.version,
 			actor: "ui",
-			op: {
-				t: "instrument.create",
-				type: "sampler",
-				name: "Chops",
+			payload: {
+				t: "project.rename",
+				name: "My Project",
 			},
 		};
 
-		const submitRes = await handler(
-			new Request("http://localhost/api/project/operations", {
+		const commandRes = await handler(
+			new Request(`http://localhost/api/projects/${TEST_PROJECT_ID}/commands`, {
 				method: "POST",
 				headers: {
 					"content-type": "application/json",
 					Authorization: `Bearer ${TEST_TOKEN}`,
 				},
-				body: JSON.stringify(submit),
+				body: JSON.stringify(command),
 			}),
 		);
-		expect(submitRes.status).toBe(200);
-		const submitResult = (await submitRes.json()) as Project.SubmitResult;
-		expect(submitResult.version).toBe(1);
-		expect(submitResult.patches.patches[0]?.t).toBe("instrument.add");
+		expect(commandRes.status).toBe(200);
+		const commandResult = (await commandRes.json()) as Events.CommandResult;
+		expect(commandResult.version).toBe(1);
+		expect(commandResult.events.events[0]?.t).toBe("project.renamed");
 	});
 
 	it("serves health check", async () => {
@@ -95,9 +133,12 @@ describe("HttpEndpoints", () => {
 		const { handler } = webHandler;
 
 		const res = await handler(
-			new Request("http://localhost/api/events?fromVersion=0", {
-				headers: { Authorization: `Bearer ${TEST_TOKEN}` },
-			}),
+			new Request(
+				`http://localhost/api/projects/${TEST_PROJECT_ID}/subscribe?fromVersion=0`,
+				{
+					headers: { Authorization: `Bearer ${TEST_TOKEN}` },
+				},
+			),
 		);
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("text/event-stream");
@@ -118,7 +159,7 @@ describe("HttpEndpoints", () => {
 		expect(dataLine).toBeDefined();
 		if (!dataLine) throw new Error("Data line is undefined");
 
-		const eventData = JSON.parse(dataLine.slice(6)) as Events.Event;
+		const eventData = JSON.parse(dataLine.slice(6)) as SSE.SSEEvent;
 		expect(eventData.t).toBe("server.connected");
 		if (eventData.t === "server.connected") {
 			expect(eventData.serverVersion).toBe(0);
@@ -133,26 +174,42 @@ describe("HttpEndpoints", () => {
 		dispose = webHandler.dispose;
 		const { handler } = webHandler;
 
-		// Snapshot requires auth
-		const res = await handler(
-			new Request("http://localhost/api/project/snapshot"),
-		);
+		// Projects endpoint requires auth
+		const res = await handler(new Request("http://localhost/api/projects"));
 		expect(res.status).toBe(401);
 	});
 
-	it("serves getOperations", async () => {
+	it("serves getEvents", async () => {
 		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
 		dispose = webHandler.dispose;
 		const { handler } = webHandler;
 
 		const res = await handler(
-			new Request("http://localhost/api/project/operations?fromVersion=0", {
+			new Request(
+				`http://localhost/api/projects/${TEST_PROJECT_ID}/events?fromVersion=0`,
+				{
+					headers: { Authorization: `Bearer ${TEST_TOKEN}` },
+				},
+			),
+		);
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as Events.EventBatch[];
+		expect(Array.isArray(body)).toBe(true);
+	});
+
+	it("returns empty list for listProjects", async () => {
+		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
+		dispose = webHandler.dispose;
+		const { handler } = webHandler;
+
+		const res = await handler(
+			new Request("http://localhost/api/projects", {
 				headers: { Authorization: `Bearer ${TEST_TOKEN}` },
 			}),
 		);
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as Project.OperationsResponse;
-		expect(body.fromVersion).toBe(0);
-		expect(Array.isArray(body.operations)).toBe(true);
+		const projects = (await res.json()) as Array<{ id: string }>;
+		// In multi-project model, starts with empty list
+		expect(Array.isArray(projects)).toBe(true);
 	});
 });

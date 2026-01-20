@@ -1,10 +1,6 @@
-import type { Project } from "@daw/contract";
+import type { Patches } from "@daw/contract";
 
-export function compileAudioDeltas(
-	_batch: Project.PatchBatch,
-): Project.AudioDeltaBatch {
-	return {
-		version: _batch.version,
-		deltas: [],
-	};
+// Stubbed for now - audio compilation not yet implemented
+export function compileAudioDeltas(_batch: Patches.PatchBatch): void {
+	// No-op for now
 }

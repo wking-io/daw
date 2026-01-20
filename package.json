@@ -52,7 +52,8 @@
     "verify:server": "bun ./scripts/verify-server.ts",
     "verify:server:local": "bun ./scripts/verify-server-local.ts",
     "build:desktop": "bun run --cwd packages/desktop tauri build",
-    "build:app": "bun run --cwd packages/app build"
+    "build:app": "bun run --cwd packages/app build",
+    "migrate:clean": "bun run --cwd packages/server migrate --clean"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

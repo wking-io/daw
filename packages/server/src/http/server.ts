@@ -1,9 +1,10 @@
 import {
 	Api,
 	Authorization,
+	Commands,
 	Events,
 	HealthResponse,
-	Project,
+	SSE,
 } from "@daw/contract";
 import {
 	HttpApiBuilder,
@@ -20,7 +21,7 @@ import {
 	Stream,
 } from "effect";
 import { ServerConfig } from "../config";
-import { DawStore } from "../store/store";
+import { Store } from "../store/store";
 import { formatSSE } from "../utils/sse";
 
 const HEARTBEAT_INTERVAL_MS = 30000;
@@ -51,46 +52,81 @@ const AuthorizationLive = Layer.effect(
 	}),
 );
 
-const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
+/**
+ * Projects list endpoints (listing/creating projects)
+ * For now, this is stubbed to work with a single project
+ */
+const projectsGroupLive = HttpApiBuilder.group(Api, "projects", (handlers) =>
 	handlers
-		.handle("getSnapshot", () =>
+		.handle("listProjects", () =>
 			Effect.gen(function* () {
-				const store = yield* DawStore;
-				const snapshot = yield* store.getSnapshot;
-				return Project.Snapshot.make(snapshot);
+				const store = yield* Store;
+				const projects = yield* store.listProjects();
+				return projects;
 			}),
 		)
-		.handle("getOperations", ({ urlParams }) =>
+		.handle("createProject", ({ payload }) =>
 			Effect.gen(function* () {
-				const store = yield* DawStore;
-				const fromVersion = Option.fromNullable(urlParams.fromVersion).pipe(
-					Option.getOrElse(() => 0),
-				);
-				const operations = yield* store.getOpsAfter(fromVersion);
-				return Project.OperationsResponse.make({ fromVersion, operations });
-			}),
-		)
-		.handle("postOperations", ({ payload }) =>
-			Effect.gen(function* () {
-				const store = yield* DawStore;
-				const result = yield* store.submitOp(payload);
-				return Project.SubmitResult.make(result);
+				// For now, just return an error - we don't support creating projects yet
+				// In a real implementation, this would create a new project
+				return yield* Effect.fail(new HttpApiError.Unauthorized());
 			}),
 		),
 ).pipe(Layer.provide(AuthorizationLive));
 
-const eventsGroupLive = HttpApiBuilder.group(Api, "events", (handlers) =>
-	handlers.handle("events", ({ urlParams }) =>
+/**
+ * Single project endpoints
+ */
+const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
+	handlers
+		.handle("getSnapshot", ({ path }) =>
+			Effect.gen(function* () {
+				const store = yield* Store;
+				const snapshot = yield* store.getSnapshot(path.projectId);
+				return Events.Snapshot.make(snapshot);
+			}),
+		)
+		.handle("executeCommand", ({ path, payload }) =>
+			Effect.gen(function* () {
+				const store = yield* Store;
+				const result = yield* store.executeCommand(path.projectId, payload);
+				return Events.CommandResult.make(result);
+			}),
+		)
+		.handle("getEvents", ({ path, urlParams }) =>
+			Effect.gen(function* () {
+				const store = yield* Store;
+				const fromVersion = Option.fromNullable(urlParams.fromVersion).pipe(
+					Option.getOrElse(() => 0),
+				);
+				const events = yield* store.getEventsAfter(path.projectId, fromVersion);
+				return events;
+			}),
+		)
+		.handle("deleteProject", ({ path }) =>
+			Effect.gen(function* () {
+				// For now, we don't support deleting projects
+				return yield* Effect.fail(new HttpApiError.NotFound());
+			}),
+		),
+).pipe(Layer.provide(AuthorizationLive));
+
+/**
+ * SSE endpoint group - renamed from "events" to "sse"
+ */
+const sseGroupLive = HttpApiBuilder.group(Api, "sse", (handlers) =>
+	handlers.handle("subscribe", ({ path, urlParams }) =>
 		Effect.gen(function* () {
-			const store = yield* DawStore;
-			const snapshot = yield* store.getSnapshot;
+			const store = yield* Store;
+			const projectId = path.projectId;
+			const snapshot = yield* store.getSnapshot(projectId);
 			const fromVersion = Option.fromNullable(urlParams.fromVersion).pipe(
 				Option.getOrElse(() => 0),
 			);
 
 			// Create connected event
 			const connectedStream = Stream.make(
-				Events.ServerConnectedEvent.make({
+				SSE.ServerConnectedEvent.make({
 					t: "server.connected",
 					serverVersion: snapshot.version,
 				}),
@@ -100,7 +136,7 @@ const eventsGroupLive = HttpApiBuilder.group(Api, "events", (handlers) =>
 			const heartbeatStream = Stream.repeatEffect(
 				Effect.delay(
 					Effect.sync(() =>
-						Events.ServerHeartbeatEvent.make({
+						SSE.ServerHeartbeatEvent.make({
 							t: "server.heartbeat",
 							timestamp: Date.now(),
 						}),
@@ -109,25 +145,14 @@ const eventsGroupLive = HttpApiBuilder.group(Api, "events", (handlers) =>
 				),
 			);
 
-			// Get op stream and map to SSE events
-			const opStream = yield* store.opStreamFrom(fromVersion);
-			const opEventStream = opStream.pipe(
-				Stream.map((entry) =>
-					Events.OperationEvent.make({ t: "operation", entry }),
-				),
-			);
-
-			// Get patch stream and map to SSE events
-			const patchStream = yield* store.patchStreamFrom(fromVersion);
-			const patchEventStream = patchStream.pipe(
-				Stream.map((batch) => Events.PatchEvent.make({ t: "patch", batch })),
+			// Get event stream and map to SSE events
+			const eventStream = yield* store.eventStreamFrom(projectId, fromVersion);
+			const eventBatchStream = eventStream.pipe(
+				Stream.map((batch) => SSE.EventBatchEvent.make({ t: "events", batch })),
 			);
 
 			// Combine all event streams
-			const combinedStream = Stream.merge(
-				Stream.merge(opEventStream, patchEventStream),
-				heartbeatStream,
-			);
+			const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
 
 			// Prepend connected event and format as SSE
 			const stream = Stream.concat(connectedStream, combinedStream).pipe(
@@ -147,6 +172,7 @@ const eventsGroupLive = HttpApiBuilder.group(Api, "events", (handlers) =>
 
 export const ApiLive = HttpApiBuilder.api(Api).pipe(
 	Layer.provide(healthGroupLive),
+	Layer.provide(projectsGroupLive),
 	Layer.provide(projectGroupLive),
-	Layer.provide(eventsGroupLive),
+	Layer.provide(sseGroupLive),
 );

@@ -1,71 +1,62 @@
-import type { Instrument, InstrumentCommands, Project } from "@daw/contract";
+import type { Commands, Events } from "@daw/contract";
 import type { HttpApiError } from "@effect/platform";
 import type { HttpClientError } from "@effect/platform/HttpClientError";
 import { Context, Data, Effect, Layer } from "effect";
 import type { ParseError } from "effect/ParseResult";
-import { ulid } from "ulid";
 import { ApiClient } from "../client";
 
-export class InstrumentNotCreatedError extends Data.TaggedError(
-	"InstrumentNotCreatedError",
+export class OperationFailedError extends Data.TaggedError(
+	"OperationFailedError",
 )<{
 	readonly message: string;
 }> {}
 
-export type InstrumentRepositoryError =
+export type DawRepositoryError =
 	| HttpClientError
 	| ParseError
 	| HttpApiError.Unauthorized
 	| HttpApiError.HttpApiDecodeError
-	| InstrumentNotCreatedError;
+	| HttpApiError.NotFound
+	| OperationFailedError;
 
-export class InstrumentRepository extends Context.Tag(
-	"mcp/InstrumentRepository",
-)<
-	InstrumentRepository,
+// Stubbed repository interface for DAW operations
+export class DawRepository extends Context.Tag("mcp/DawRepository")<
+	DawRepository,
 	{
-		readonly create: (
-			params: InstrumentCommands.CreateCommand,
-		) => Effect.Effect<Instrument.Instrument, InstrumentRepositoryError>;
+		readonly executeCommand: (
+			projectId: string,
+			command: Commands.Command,
+		) => Effect.Effect<Events.CommandResult, DawRepositoryError>;
+		/** @deprecated Use executeCommand instead */
+		readonly submitOperation: (
+			projectId: string,
+			command: Commands.Command,
+		) => Effect.Effect<Events.CommandResult, DawRepositoryError>;
 	}
 >() {}
 
-export const InstrumentRepositoryLive = Layer.effect(
-	InstrumentRepository,
+export const DawRepositoryLive = Layer.effect(
+	DawRepository,
 	Effect.gen(function* () {
 		const client = yield* ApiClient;
 
+		const executeCommand = (projectId: string, command: Commands.Command) =>
+			Effect.gen(function* () {
+				const result = yield* client.project.executeCommand({
+					path: { projectId: projectId as any },
+					payload: command,
+				});
+				return result;
+			});
+
 		return {
-			create: (params) =>
-				Effect.gen(function* () {
-					const snapshot = yield* client.project.getSnapshot();
-					const submit: Project.Submit = {
-						opId: ulid(),
-						baseVersion: snapshot.version,
-						actor: "agent",
-						op: {
-							t: "instrument.create",
-							type: params.type,
-							name: params.name,
-							preset: params.preset,
-							instrumentId: ulid() as Instrument.InstrumentId,
-							createdAt: Date.now(),
-						},
-					};
-					const result = yield* client.project.postOperations({
-						payload: submit,
-					});
-					const created = result.patches.patches.find(
-						(patch) => patch.t === "instrument.add",
-					);
-					if (!created) {
-						return yield* new InstrumentNotCreatedError({
-							message:
-								"submitOp succeeded but no instrument.add patch returned",
-						});
-					}
-					return created.instrument;
-				}),
+			executeCommand,
+			submitOperation: executeCommand,
 		};
 	}),
 ).pipe(Layer.provide(ApiClient.Default));
+
+// Keep old exports for backwards compatibility during transition
+export { DawRepository as InstrumentRepository };
+export { DawRepositoryLive as InstrumentRepositoryLive };
+export type { DawRepositoryError as InstrumentRepositoryError };

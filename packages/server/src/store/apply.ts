@@ -1,57 +1,186 @@
-import type { Instrument, Project } from "@daw/contract";
+import type { Commands, Domain, Events, ProjectId } from "@daw/contract";
 import { ulid } from "ulid";
 
+/**
+ * In-memory state for a single project.
+ * This replaces the old ProjectDoc approach.
+ */
+export interface ProjectState {
+	project: Domain.Project;
+	tracks: Map<string, Domain.Track>;
+	clips: Map<string, Domain.Clip>;
+	midiPatterns: Map<string, Domain.MidiPattern>;
+	automationLanes: Map<string, Domain.AutomationLane>;
+	audioFiles: Map<string, Domain.AudioFile>;
+}
+
 export interface ApplyResult {
-	doc: Project.ProjectDoc;
-	patches: Project.PatchBatch;
-	audioDeltas: Project.AudioDeltaBatch;
+	state: ProjectState;
+	events: Events.EventBatch;
 }
 
-export const emptyDoc: Project.ProjectDoc = {
-	instruments: [],
-};
+export const emptyProject = (
+	projectId: ProjectId,
+	name: string,
+): Domain.Project => ({
+	id: projectId,
+	name,
+	createdAt: new Date(),
+	updatedAt: new Date(),
+	bpm: 120,
+	timeSignature: { numerator: 4, denominator: 4 },
+});
 
-export function applyOp(
-	doc: Project.ProjectDoc,
-	version: Project.ProjectVersion,
-	op: Project.Operation,
+export const emptyState = (
+	projectId: ProjectId,
+	name = "Untitled",
+): ProjectState => ({
+	project: emptyProject(projectId, name),
+	tracks: new Map(),
+	clips: new Map(),
+	midiPatterns: new Map(),
+	automationLanes: new Map(),
+	audioFiles: new Map(),
+});
+
+export const stateToSnapshot = (
+	state: ProjectState,
+	version: number,
+): Events.Snapshot => ({
+	version,
+	project: state.project,
+	tracks: Array.from(state.tracks.values()),
+	clips: Array.from(state.clips.values()),
+	midiPatterns: Array.from(state.midiPatterns.values()),
+	automationLanes: Array.from(state.automationLanes.values()),
+	audioFiles: Array.from(state.audioFiles.values()),
+});
+
+/**
+ * Apply a command payload to project state.
+ * Returns updated state and events to broadcast.
+ *
+ * This is a minimal stub - only implements project operations for now.
+ */
+export function applyCommand(
+	state: ProjectState,
+	version: number,
+	payload: Commands.CommandPayload,
 ): ApplyResult {
-	switch (op.t) {
-		case "instrument.create": {
-			// TODO: Fix id generation
-			const instrumentId =
-				op.instrumentId ?? (ulid() as Instrument.InstrumentId);
-			const createdAt =
-				typeof op.createdAt === "number" ? new Date(op.createdAt) : new Date();
-			const instrument: Instrument.Instrument = {
-				id: instrumentId,
-				type: op.type,
-				name: op.name,
-				params: {},
-				createdAt,
-			};
+	const events: Events.Event[] = [];
+	let nextState = state;
 
-			const nextDoc: Project.ProjectDoc = {
-				...doc,
-				instruments: [...doc.instruments, instrument],
-			};
-
-			return {
-				doc: nextDoc,
-				patches: {
-					version,
-					patches: [
-						{
-							t: "instrument.add",
-							instrument,
-						},
-					],
-				},
-				audioDeltas: {
-					version,
-					deltas: [],
-				},
-			};
+	switch (payload.t) {
+		case "project.create": {
+			// project.create is handled at the store level, not here
+			// This case should not normally be reached
+			break;
 		}
+		case "project.delete": {
+			events.push({ t: "project.deleted", projectId: state.project.id });
+			break;
+		}
+		case "project.rename": {
+			const updatedProject = {
+				...state.project,
+				name: payload.name,
+				updatedAt: new Date(),
+			};
+			nextState = { ...state, project: updatedProject };
+			events.push({ t: "project.renamed", name: payload.name });
+			break;
+		}
+		case "project.setTempo": {
+			const updatedProject = {
+				...state.project,
+				bpm: payload.bpm,
+				updatedAt: new Date(),
+			};
+			nextState = { ...state, project: updatedProject };
+			events.push({ t: "project.tempoChanged", bpm: payload.bpm });
+			break;
+		}
+		case "project.setTimeSignature": {
+			const updatedProject = {
+				...state.project,
+				timeSignature: payload.timeSignature,
+				updatedAt: new Date(),
+			};
+			nextState = { ...state, project: updatedProject };
+			events.push({
+				t: "project.timeSignatureChanged",
+				timeSignature: payload.timeSignature,
+			});
+			break;
+		}
+		case "project.reorderTracks": {
+			// Update sortOrder on tracks based on new order
+			const newTracks = new Map(state.tracks);
+			payload.trackIds.forEach((trackId, index) => {
+				const track = newTracks.get(trackId);
+				if (track) {
+					newTracks.set(trackId, { ...track, sortOrder: index });
+				}
+			});
+			nextState = { ...state, tracks: newTracks };
+			events.push({
+				t: "project.tracksReordered",
+				trackIds: payload.trackIds,
+			});
+			break;
+		}
+		// Track operations - stubbed
+		case "track.create":
+		case "track.delete":
+		case "track.rename":
+		case "track.setColor":
+		case "track.setVolume":
+		case "track.setPan":
+		case "track.setMute":
+		case "track.setSolo":
+		case "track.reorderClips":
+			// TODO: implement track operations
+			break;
+		// Clip operations - stubbed
+		case "clip.createMidi":
+		case "clip.createAudio":
+		case "clip.delete":
+		case "clip.move":
+		case "clip.resize":
+		case "clip.setLoop":
+			// TODO: implement clip operations
+			break;
+		// MIDI operations - stubbed
+		case "midi.renamePattern":
+		case "midi.addNote":
+		case "midi.deleteNote":
+		case "midi.moveNote":
+		case "midi.setNoteVelocity":
+		case "midi.setNotePitch":
+			// TODO: implement MIDI operations
+			break;
+		// Automation operations - stubbed
+		case "automation.createLane":
+		case "automation.deleteLane":
+		case "automation.addPoint":
+		case "automation.deletePoint":
+		case "automation.movePoint":
+		case "automation.setPointCurve":
+			// TODO: implement automation operations
+			break;
+		// Audio file operations - stubbed
+		case "audioFile.register":
+		case "audioFile.unregister":
+		case "audioFile.rename":
+			// TODO: implement audio file operations
+			break;
 	}
+
+	return {
+		state: nextState,
+		events: { version, events },
+	};
 }
+
+/** @deprecated Use applyCommand instead */
+export const applyOp = applyCommand;

@@ -3,7 +3,7 @@ import { HttpApiClient, HttpClient, HttpClientRequest } from "@effect/platform";
 import { Effect, Redacted } from "effect";
 import { McpConfig, McpConfigLive } from "./config";
 
-export class ApiClient extends Effect.Service<ApiClient>()("daw/ApiClient", {
+export class ApiClient extends Effect.Service<ApiClient>()("mcp/ApiClient", {
 	effect: Effect.gen(function* () {
 		const config = yield* McpConfig;
 		const token = Redacted.value(config.serverToken);

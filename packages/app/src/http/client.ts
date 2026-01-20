@@ -1,4 +1,8 @@
-import { type Events, Project } from "@daw/contract";
+import type { Commands, Events, ProjectId, SSE } from "@daw/contract";
+import {
+	Commands as CommandsSchema,
+	Events as EventsSchema,
+} from "@daw/contract";
 import {
 	FetchHttpClient,
 	HttpClient,
@@ -17,12 +21,29 @@ export interface DawStateClientOptions {
 
 export interface DawStateClient {
 	getHealth: () => Promise<{ healthy: boolean; version: string }>;
-	getSnapshot: () => Promise<Project.Snapshot>;
-	submitOp: (submit: Project.Submit) => Promise<Project.SubmitResult>;
-	getOps: (fromVersion: number) => Promise<Project.OperationsResponse>;
+	getSnapshot: (projectId: ProjectId) => Promise<Events.Snapshot>;
+	executeCommand: (
+		projectId: ProjectId,
+		command: Commands.Command,
+	) => Promise<Events.CommandResult>;
+	/** @deprecated Use executeCommand instead */
+	submitOp: (
+		projectId: ProjectId,
+		command: Commands.Command,
+	) => Promise<Events.CommandResult>;
+	getEvents: (
+		projectId: ProjectId,
+		fromVersion: number,
+	) => Promise<{ fromVersion: number; events: readonly Events.EventBatch[] }>;
+	/** @deprecated Use getEvents instead */
+	getOps: (
+		projectId: ProjectId,
+		fromVersion: number,
+	) => Promise<{ fromVersion: number; events: readonly Events.EventBatch[] }>;
 	connectSSE: (options: {
+		projectId: ProjectId;
 		fromVersion: number;
-		onEvent: (event: Events.Event) => void;
+		onEvent: (event: SSE.SSEEvent) => void;
 		onError?: (error: Error) => void;
 		onClose?: () => void;
 	}) => () => void;
@@ -87,60 +108,101 @@ export const createDawStateClient = (
 				}),
 			),
 
-		getSnapshot: () =>
+		getSnapshot: (projectId) =>
 			runEffect(
 				Effect.gen(function* () {
 					const client = yield* HttpClient.HttpClient;
 					const response = yield* client.get(
-						`${baseUrl}/api/project/snapshot`,
+						`${baseUrl}/api/projects/${projectId}/snapshot`,
 						{
 							headers: authHeaders,
 						},
 					);
-					return yield* HttpClientResponse.schemaBodyJson(Project.Snapshot)(
-						response,
-					);
-				}),
-			),
-
-		submitOp: (submit) =>
-			runEffect(
-				Effect.gen(function* () {
-					const client = yield* HttpClient.HttpClient;
-					const encodeBody = Schema.encodeSync(Project.Submit);
-					const request = HttpClientRequest.post(
-						`${baseUrl}/api/project/operations`,
-					).pipe(
-						HttpClientRequest.setHeaders({
-							...authHeaders,
-						}),
-						HttpClientRequest.bodyUnsafeJson(encodeBody(submit)),
-					);
-					const response = yield* client.execute(request);
-					return yield* HttpClientResponse.schemaBodyJson(Project.SubmitResult)(
-						response,
-					);
-				}),
-			),
-
-		getOps: (fromVersion) =>
-			runEffect(
-				Effect.gen(function* () {
-					const client = yield* HttpClient.HttpClient;
-					const response = yield* client.get(
-						`${baseUrl}/api/project/operations?fromVersion=${encodeURIComponent(String(fromVersion))}`,
-						{ headers: authHeaders },
-					);
 					return yield* HttpClientResponse.schemaBodyJson(
-						Project.OperationsResponse,
+						EventsSchema.Snapshot,
 					)(response);
 				}),
 			),
 
-		connectSSE: ({ fromVersion, onEvent, onError, onClose }) => {
+		executeCommand: (projectId, command) =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const encodeBody = Schema.encodeSync(CommandsSchema.Command);
+					const request = HttpClientRequest.post(
+						`${baseUrl}/api/projects/${projectId}/commands`,
+					).pipe(
+						HttpClientRequest.setHeaders({
+							...authHeaders,
+						}),
+						HttpClientRequest.bodyUnsafeJson(encodeBody(command)),
+					);
+					const response = yield* client.execute(request);
+					return yield* HttpClientResponse.schemaBodyJson(
+						EventsSchema.CommandResult,
+					)(response);
+				}),
+			),
+
+		submitOp: (projectId, command) =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const encodeBody = Schema.encodeSync(CommandsSchema.Command);
+					const request = HttpClientRequest.post(
+						`${baseUrl}/api/projects/${projectId}/commands`,
+					).pipe(
+						HttpClientRequest.setHeaders({
+							...authHeaders,
+						}),
+						HttpClientRequest.bodyUnsafeJson(encodeBody(command)),
+					);
+					const response = yield* client.execute(request);
+					return yield* HttpClientResponse.schemaBodyJson(
+						EventsSchema.CommandResult,
+					)(response);
+				}),
+			),
+
+		getEvents: (projectId, fromVersion) =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const response = yield* client.get(
+						`${baseUrl}/api/projects/${projectId}/events?fromVersion=${encodeURIComponent(String(fromVersion))}`,
+						{ headers: authHeaders },
+					);
+					return yield* HttpClientResponse.schemaBodyJson(
+						Schema.Struct({
+							fromVersion: Schema.Number,
+							events: Schema.Array(EventsSchema.EventBatch),
+						}),
+					)(response);
+				}),
+			),
+
+		getOps: (projectId, fromVersion) =>
+			runEffect(
+				Effect.gen(function* () {
+					const client = yield* HttpClient.HttpClient;
+					const response = yield* client.get(
+						`${baseUrl}/api/projects/${projectId}/events?fromVersion=${encodeURIComponent(String(fromVersion))}`,
+						{ headers: authHeaders },
+					);
+					return yield* HttpClientResponse.schemaBodyJson(
+						Schema.Struct({
+							fromVersion: Schema.Number,
+							events: Schema.Array(EventsSchema.EventBatch),
+						}),
+					)(response);
+				}),
+			),
+
+		connectSSE: ({ projectId, fromVersion, onEvent, onError, onClose }) => {
 			return createSSEClient({
 				baseUrl,
 				token,
+				projectId,
 				fromVersion,
 				onEvent,
 				onError,

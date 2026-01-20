@@ -1,9 +1,4 @@
-import {
-	HttpApiBuilder,
-	HttpMiddleware,
-	HttpRouter,
-	HttpServer,
-} from "@effect/platform";
+import { HttpApiBuilder, HttpMiddleware, HttpServer } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer } from "effect";
@@ -12,15 +7,15 @@ import path from "path";
 import type { ServerConfigService } from "./config";
 import { ServerConfig, ServerConfigLive } from "./config";
 import { ApiLive } from "./http/server";
-import { PersistenceLive } from "./persist/sqlite";
-import { DawStoreLive } from "./store/store";
+import { Persistence } from "./persist/sqlite";
+import { Store } from "./store/store";
 
 const makeHttpLive = (config: ServerConfigService) =>
 	HttpApiBuilder.serve(HttpMiddleware.cors()).pipe(
 		HttpServer.withLogAddress,
 		Layer.provide(ApiLive),
-		Layer.provide(DawStoreLive),
-		Layer.provide(PersistenceLive),
+		Layer.provide(Store.Default),
+		Layer.provide(Persistence.Default),
 		Layer.provide(SqliteClient.layer({ filename: config.db })),
 		Layer.provide(
 			BunHttpServer.layer({

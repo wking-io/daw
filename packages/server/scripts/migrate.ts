@@ -3,8 +3,10 @@
 // Standalone migration runner
 // Usage: bun run scripts/migrate.ts
 // Or with custom DB: DB_PATH=./test.db bun run scripts/migrate.ts
+// Add --clean to delete existing database before migrating
 
-import { mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { BunContext, BunRuntime } from "@effect/platform-bun";
 import { SqliteClient, SqliteMigrator } from "@effect/sql-sqlite-bun";
@@ -15,6 +17,8 @@ const migrationsPath = resolve(import.meta.dirname, "../migrations");
 const dbPath = Bun.env.DB_PATH
 	? resolve(Bun.env.DB_PATH)
 	: getDefaultDBLocation();
+
+const shouldClean = Bun.argv.includes("--clean");
 
 const program = Effect.gen(function* () {
 	console.log(`Database: ${dbPath}`);
@@ -34,6 +38,17 @@ const program = Effect.gen(function* () {
 		console.log(`Applied ${migrations.length} migration(s)`);
 	}
 });
+
+// Clean existing database if --clean flag is provided
+if (shouldClean) {
+	const filesToDelete = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
+	for (const file of filesToDelete) {
+		if (existsSync(file)) {
+			console.log(`Deleting: ${file}`);
+			await rm(file);
+		}
+	}
+}
 
 // Ensure DB directory exists, then run migrations
 await mkdir(dirname(dbPath), { recursive: true });

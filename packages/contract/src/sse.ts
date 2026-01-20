@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { OperationEntry, PatchBatch } from "./project";
+import { ProjectVersion } from "./commands";
+import { EventBatch } from "./events";
 
 /**
  * SSE Event Types
@@ -9,7 +10,7 @@ import { OperationEntry, PatchBatch } from "./project";
 
 export const ServerConnectedEvent = Schema.Struct({
 	t: Schema.Literal("server.connected"),
-	serverVersion: Schema.Number,
+	serverVersion: ProjectVersion,
 });
 export type ServerConnectedEvent = typeof ServerConnectedEvent.Type;
 
@@ -19,22 +20,28 @@ export const ServerHeartbeatEvent = Schema.Struct({
 });
 export type ServerHeartbeatEvent = typeof ServerHeartbeatEvent.Type;
 
-export const OperationEvent = Schema.Struct({
-	t: Schema.Literal("operation"),
-	entry: OperationEntry,
+export const EventBatchEvent = Schema.Struct({
+	t: Schema.Literal("events"),
+	batch: EventBatch,
 });
-export type OperationEvent = typeof OperationEvent.Type;
+export type EventBatchEvent = typeof EventBatchEvent.Type;
 
+/** @deprecated Use EventBatchEvent instead */
 export const PatchEvent = Schema.Struct({
 	t: Schema.Literal("patch"),
-	batch: PatchBatch,
+	batch: EventBatch,
 });
+/** @deprecated Use EventBatchEvent instead */
 export type PatchEvent = typeof PatchEvent.Type;
 
-export const Event = Schema.Union(
+export const SSEEvent = Schema.Union(
 	ServerConnectedEvent,
 	ServerHeartbeatEvent,
-	OperationEvent,
-	PatchEvent,
+	EventBatchEvent,
 );
-export type Event = typeof Event.Type;
+export type SSEEvent = typeof SSEEvent.Type;
+
+/** @deprecated Use SSEEvent instead */
+export const Event = SSEEvent;
+/** @deprecated Use SSEEvent instead */
+export type Event = SSEEvent;

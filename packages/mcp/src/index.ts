@@ -3,12 +3,12 @@ import { FetchHttpClient, HttpRouter } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
 import { McpConfig, McpConfigLive } from "./config";
-import { handleCreateInstrument } from "./instruments/handlers";
-import { InstrumentRepositoryLive } from "./instruments/repo";
+import { handleCreateTrack } from "./instruments/handlers";
+import { DawRepositoryLive } from "./instruments/repo";
 import { DawToolkit } from "./toolkit";
 
 const ToolHandlersLive = DawToolkit.toLayer({
-	"daw.instrument.create": handleCreateInstrument,
+	"daw.track.create": handleCreateTrack,
 });
 
 const RegisterToolsLive = Layer.effectDiscard(
@@ -29,7 +29,7 @@ const Main = Effect.gen(function* () {
 			}),
 		),
 		Layer.provide(BunHttpServer.layer({ port: config.port })),
-		Layer.provide(InstrumentRepositoryLive),
+		Layer.provide(DawRepositoryLive),
 		Layer.provide(FetchHttpClient.layer),
 	);
 	yield* Layer.launch(program).pipe(Effect.scoped);

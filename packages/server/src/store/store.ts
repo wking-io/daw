@@ -1,259 +1,201 @@
-import type { Instrument, Project } from "@daw/contract";
-import {
-	Context,
-	Effect,
-	Layer,
-	Option,
-	Stream,
-	SubscriptionRef,
-} from "effect";
-import { ulid } from "ulid";
+import type { Commands, Events, ProjectId } from "@daw/contract";
+import { Effect, Option, Stream, SubscriptionRef } from "effect";
 import { Persistence } from "../persist/sqlite";
-import { applyOp, emptyDoc } from "./apply";
-import { compileAudioDeltas } from "./compile-audio";
+import {
+	applyCommand,
+	emptyState,
+	type ProjectState,
+	stateToSnapshot,
+} from "./apply";
 
 export interface StoreState {
-	doc: Project.ProjectDoc;
-	version: Project.ProjectVersion;
-	patchLog: ReadonlyArray<Project.PatchBatch>;
-	audioLog: ReadonlyArray<Project.AudioDeltaBatch>;
-	opLog: ReadonlyArray<Project.OperationEntry>;
-	undoStack: ReadonlyArray<Project.Submit>;
-	redoStack: ReadonlyArray<Project.Submit>;
+	state: ProjectState;
+	version: number;
+	eventLog: ReadonlyArray<Events.EventBatch>;
+	undoStack: ReadonlyArray<Commands.Command>;
+	redoStack: ReadonlyArray<Commands.Command>;
 }
-
-export interface DawStoreService {
-	getSnapshot: Effect.Effect<Project.Snapshot>;
-	submitOp: (submit: Project.Submit) => Effect.Effect<Project.SubmitResult>;
-	patchStreamFrom: (
-		fromVersion: number,
-	) => Effect.Effect<Stream.Stream<Project.PatchBatch>>;
-	audioStreamFrom: (
-		fromVersion: number,
-	) => Effect.Effect<Stream.Stream<Project.AudioDeltaBatch>>;
-	opStreamFrom: (
-		fromVersion: number,
-	) => Effect.Effect<Stream.Stream<Project.OperationEntry>>;
-	getOpsAfter: (
-		fromVersion: number,
-	) => Effect.Effect<ReadonlyArray<Project.OperationEntry>>;
-}
-
-export class DawStore extends Context.Tag("daw/DawStore")<
-	DawStore,
-	DawStoreService
->() {}
 
 const snapshotEvery = 25;
 
-const normalizeSubmit = (submit: Project.Submit): Project.Submit => {
-	if (submit.op.t !== "instrument.create") return submit;
-	return {
-		...submit,
-		op: {
-			...submit.op,
-			instrumentId:
-				submit.op.instrumentId ?? (ulid() as Instrument.InstrumentId),
-			createdAt: submit.op.createdAt ?? Date.now(),
-		},
-	};
+const normalizeCommand = (command: Commands.Command): Commands.Command => {
+	// TODO: Normalize command if needed (e.g., add generated IDs)
+	return command;
 };
 
 const makeInitialState = (
-	snapshot: Project.Snapshot | null,
-	events: ReadonlyArray<{ submit: Project.Submit; version: number }>,
-) => {
-	let doc = snapshot?.doc ?? emptyDoc;
-	let version = snapshot?.version ?? 0;
-	const patchLog: Array<Project.PatchBatch> = [];
-	const audioLog: Array<Project.AudioDeltaBatch> = [];
-	const opLog: Array<Project.OperationEntry> = [];
-	for (const event of events) {
-		version = event.version;
-		const normalizedSubmit = normalizeSubmit(event.submit);
-		const applied = applyOp(doc, version, normalizedSubmit.op);
-		const audioDeltas = compileAudioDeltas(applied.patches);
-		doc = applied.doc;
-		patchLog.push(applied.patches);
-		audioLog.push(audioDeltas);
-		opLog.push({ version: event.version, submit: normalizedSubmit });
-	}
+	projectId: ProjectId,
+	snapshot: Option.Option<Events.Snapshot>,
+	eventBatches: ReadonlyArray<Events.EventBatch>,
+): StoreState => {
+	const projectState: ProjectState = snapshot.pipe(
+		Option.map((snapshot) => ({
+			project: snapshot.project,
+			tracks: new Map(snapshot.tracks.map((t) => [t.id, t])),
+			clips: new Map(snapshot.clips.map((c) => [c.id, c])),
+			midiPatterns: new Map(snapshot.midiPatterns.map((p) => [p.id, p])),
+			automationLanes: new Map(snapshot.automationLanes.map((l) => [l.id, l])),
+			audioFiles: new Map(snapshot.audioFiles.map((f) => [f.id, f])),
+		})),
+		Option.getOrElse(() => emptyState(projectId)),
+	);
+	const eventLog: Array<Events.EventBatch> = [];
 
-	const state: StoreState = {
-		doc,
+	const version = eventBatches
+		.reduce<Option.Option<number>>((_, batch) => {
+			eventLog.push(batch);
+			return Option.some(batch.version);
+		}, Option.none())
+		.pipe(
+			Option.orElse(() => snapshot.pipe(Option.map((s) => s.version))),
+			Option.getOrElse(() => 0),
+		);
+
+	return {
+		state: projectState,
 		version,
-		patchLog,
-		audioLog,
-		opLog,
+		eventLog,
 		undoStack: [],
 		redoStack: [],
 	};
-	return state;
 };
 
-const DawStoreLiveEffect = Effect.gen(function* () {
-	const persistence = yield* Persistence;
-	const snapshotRow = yield* persistence.loadLatestSnapshot.pipe(Effect.orDie);
-	const eventRows = yield* persistence
-		.loadEventsAfter(snapshotRow?.version ?? 0)
-		.pipe(Effect.orDie);
-	const initial = makeInitialState(
-		snapshotRow ? { version: snapshotRow.version, doc: snapshotRow.doc } : null,
-		eventRows,
-	);
+interface ProjectStore {
+	stateRef: SubscriptionRef.SubscriptionRef<StoreState>;
+	latestEventRef: SubscriptionRef.SubscriptionRef<
+		Option.Option<Events.EventBatch>
+	>;
+}
 
-	const stateRef = yield* SubscriptionRef.make<StoreState>(initial);
-	const latestPatchRef = yield* SubscriptionRef.make<
-		Option.Option<Project.PatchBatch>
-	>(Option.none());
-	const latestAudioRef = yield* SubscriptionRef.make<
-		Option.Option<Project.AudioDeltaBatch>
-	>(Option.none());
-	const latestOpRef = yield* SubscriptionRef.make<
-		Option.Option<Project.OperationEntry>
-	>(Option.none());
+export class Store extends Effect.Service<Store>()("daw/Store", {
+	effect: Effect.gen(function* () {
+		const persistence = yield* Persistence;
 
-	const getSnapshot = SubscriptionRef.get(stateRef).pipe(
-		Effect.map((state) => ({ version: state.version, doc: state.doc })),
-	);
+		// Map of project stores, lazily initialized
+		const projectStores = new Map<ProjectId, ProjectStore>();
 
-	const patchStreamFrom = (fromVersion: number) =>
-		Effect.gen(function* () {
-			const state = yield* SubscriptionRef.get(stateRef);
-			const initialBatches = state.patchLog.filter(
-				(batch) => batch.version > fromVersion,
-			);
-			const updates = latestPatchRef.changes.pipe(
-				Stream.filterMap((value) => value),
-				Stream.filter((batch) => batch.version > fromVersion),
-			);
-			return Stream.concat(Stream.fromIterable(initialBatches), updates);
-		});
-
-	const audioStreamFrom = (fromVersion: number) =>
-		Effect.gen(function* () {
-			const state = yield* SubscriptionRef.get(stateRef);
-			const initialBatches = state.audioLog.filter(
-				(batch) => batch.version > fromVersion,
-			);
-			const updates = latestAudioRef.changes.pipe(
-				Stream.filterMap((value) => value),
-				Stream.filter((batch) => batch.version > fromVersion),
-			);
-			return Stream.concat(Stream.fromIterable(initialBatches), updates);
-		});
-
-	const opStreamFrom = (fromVersion: number) =>
-		Effect.gen(function* () {
-			const state = yield* SubscriptionRef.get(stateRef);
-			const initialEntries = state.opLog.filter(
-				(entry) => entry.version > fromVersion,
-			);
-			const updates = latestOpRef.changes.pipe(
-				Stream.filterMap((value) => value),
-				Stream.filter((entry) => entry.version > fromVersion),
-			);
-			return Stream.concat(Stream.fromIterable(initialEntries), updates);
-		});
-
-	const getOpsAfter = (fromVersion: number) =>
-		SubscriptionRef.get(stateRef).pipe(
-			Effect.map((state) =>
-				state.opLog.filter((entry) => entry.version > fromVersion),
-			),
-		);
-
-	const submitOp = (submit: Project.Submit) =>
-		SubscriptionRef.modifyEffect(stateRef, (state) =>
+		const getOrCreateProjectStore = (projectId: ProjectId) =>
 			Effect.gen(function* () {
-				const normalizedSubmit = normalizeSubmit(submit);
-				const nextVersion = state.version + 1;
-				const applied = applyOp(state.doc, nextVersion, normalizedSubmit.op);
-				const audioDeltas = compileAudioDeltas(applied.patches);
-				const nextState: StoreState = {
-					doc: applied.doc,
-					version: nextVersion,
-					patchLog: [...state.patchLog, applied.patches],
-					audioLog: [...state.audioLog, audioDeltas],
-					opLog: [
-						...state.opLog,
-						{ version: nextVersion, submit: normalizedSubmit },
-					],
-					undoStack: [...state.undoStack, normalizedSubmit],
-					redoStack: [],
-				};
+				const existing = projectStores.get(projectId);
+				if (existing) return existing;
 
-				yield* persistence
-					.appendEvent({ version: nextVersion, submit: normalizedSubmit })
-					.pipe(Effect.orDie);
-				if (nextVersion % snapshotEvery === 0) {
-					yield* persistence
-						.saveSnapshot({ version: nextVersion, doc: applied.doc })
-						.pipe(Effect.orDie);
-				}
+				// Load from persistence
+				const maybeSnapshot = yield* persistence.findSnapshot({ projectId });
 
-				// #region agent log
-				fetch(
-					"http://127.0.0.1:7243/ingest/dd598364-6d60-4474-bb55-b3e85ee947cc",
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							location: "packages/server/src/store/store.ts:submitOp",
-							message: "server.submitOp.applied",
-							data: {
+				const maybeEvents = yield* persistence.listEvents({
+					projectId,
+					version: maybeSnapshot.pipe(
+						Option.map((snapshot) => snapshot.version),
+						Option.getOrElse(() => 0),
+					),
+				});
+
+				const initial = makeInitialState(projectId, maybeSnapshot, maybeEvents);
+
+				const stateRef = yield* SubscriptionRef.make<StoreState>(initial);
+				const latestEventRef = yield* SubscriptionRef.make<
+					Option.Option<Events.EventBatch>
+				>(Option.none());
+
+				const store: ProjectStore = { stateRef, latestEventRef };
+				projectStores.set(projectId, store);
+				return store;
+			});
+
+		const getSnapshot = (projectId: ProjectId) =>
+			Effect.gen(function* () {
+				const store = yield* getOrCreateProjectStore(projectId);
+				const state = yield* SubscriptionRef.get(store.stateRef);
+				return stateToSnapshot(state.state, state.version);
+			});
+
+		const eventStreamFrom = (projectId: ProjectId, fromVersion: number) =>
+			Effect.gen(function* () {
+				const store = yield* getOrCreateProjectStore(projectId);
+				const state = yield* SubscriptionRef.get(store.stateRef);
+				const initialBatches = state.eventLog.filter(
+					(batch) => batch.version > fromVersion,
+				);
+				const updates = store.latestEventRef.changes.pipe(
+					Stream.filterMap((value) => value),
+					Stream.filter((batch) => batch.version > fromVersion),
+				);
+				return Stream.concat(Stream.fromIterable(initialBatches), updates);
+			});
+
+		const getEventsAfter = (projectId: ProjectId, fromVersion: number) =>
+			Effect.gen(function* () {
+				const store = yield* getOrCreateProjectStore(projectId);
+				const state = yield* SubscriptionRef.get(store.stateRef);
+				return state.eventLog.filter((batch) => batch.version > fromVersion);
+			});
+
+		const executeCommand = (projectId: ProjectId, command: Commands.Command) =>
+			Effect.gen(function* () {
+				const store = yield* getOrCreateProjectStore(projectId);
+
+				const result = yield* SubscriptionRef.modifyEffect(
+					store.stateRef,
+					(state) =>
+						Effect.gen(function* () {
+							const normalizedCommand = normalizeCommand(command);
+							const nextVersion = state.version + 1;
+							const applied = applyCommand(
+								state.state,
 								nextVersion,
-								patchCount: applied.patches.patches.length,
-								instrumentCount: applied.doc.instruments.length,
-							},
-							timestamp: Date.now(),
-							sessionId: "debug-session",
-							runId: "pre-fix",
-							hypothesisId: "H4",
+								normalizedCommand.payload,
+							);
+							const eventBatch = applied.events;
+							const nextState: StoreState = {
+								state: applied.state,
+								version: nextVersion,
+								eventLog: [...state.eventLog, eventBatch],
+								undoStack: [...state.undoStack, normalizedCommand],
+								redoStack: [],
+							};
+
+							yield* persistence.createEvent({
+								projectId,
+								version: nextVersion,
+								data: JSON.stringify(eventBatch),
+							});
+
+							if (nextVersion % snapshotEvery === 0) {
+								yield* persistence.createSnapshot({
+									projectId,
+									version: nextVersion,
+									data: JSON.stringify(
+										stateToSnapshot(applied.state, nextVersion),
+									),
+								});
+							}
+
+							return [
+								{
+									version: nextVersion,
+									events: eventBatch,
+								},
+								nextState,
+							];
 						}),
-					},
-				).catch(() => {});
-				// #endregion agent log
-				const opEntry: Project.OperationEntry = {
-					version: nextVersion,
-					submit: normalizedSubmit,
-				};
+				);
 
-				return [
-					{
-						version: nextVersion,
-						patches: applied.patches,
-						audioDeltas,
-						opEntry,
-					},
-					nextState,
-				];
-			}),
-		).pipe(
-			Effect.tap((result) =>
-				SubscriptionRef.set(latestPatchRef, Option.some(result.patches)),
-			),
-			Effect.tap((result) =>
-				SubscriptionRef.set(latestAudioRef, Option.some(result.audioDeltas)),
-			),
-			Effect.tap((result) =>
-				SubscriptionRef.set(latestOpRef, Option.some(result.opEntry)),
-			),
-			Effect.map((result) => ({
-				version: result.version,
-				patches: result.patches,
-				audioDeltas: result.audioDeltas,
-			})),
-		);
+				yield* SubscriptionRef.set(
+					store.latestEventRef,
+					Option.some(result.events),
+				);
 
-	return DawStore.of({
-		getSnapshot,
-		submitOp,
-		patchStreamFrom,
-		audioStreamFrom,
-		opStreamFrom,
-		getOpsAfter,
-	});
-});
+				return result;
+			});
 
-export const DawStoreLive = Layer.effect(DawStore, DawStoreLiveEffect);
+		const listProjects = () => persistence.listProjects().pipe(Effect.orDie);
+		return {
+			getSnapshot,
+			executeCommand,
+			eventStreamFrom,
+			getEventsAfter,
+			listProjects,
+		};
+	}),
+	dependencies: [Persistence.Default],
+}) {}

@@ -1,21 +1,35 @@
 import { describe, expect, it } from "bun:test";
-import { Project } from "@daw/contract";
-import { applyOp, emptyDoc } from "./apply";
+import type { Commands, Events, ProjectId } from "@daw/contract";
+import { applyCommand, emptyState } from "./apply";
 
-describe("applyOp", () => {
-	it("creates an instrument and emits a patch", () => {
-		const op = Project.InstrumentCreateOperation.make({
-			t: "instrument.create",
-			type: "synth",
-			name: "Bass",
-		});
+const testProjectId = "test-project" as ProjectId;
 
-		const result = applyOp(emptyDoc, 1, op);
+describe("applyCommand", () => {
+	it("renames a project and emits an event", () => {
+		const state = emptyState(testProjectId, "Initial");
+		const payload: Commands.ProjectRename = {
+			t: "project.rename",
+			name: "New Name",
+		};
 
-		expect(result.doc.instruments).toHaveLength(1);
-		expect(result.doc.instruments[0]?.name).toBe("Bass");
-		expect(result.patches.version).toBe(1);
-		expect(result.patches.patches[0]?.t).toBe("instrument.add");
-		expect(result.audioDeltas.deltas).toHaveLength(0);
+		const result = applyCommand(state, 1, payload);
+
+		expect(result.state.project.name).toBe("New Name");
+		expect(result.events.version).toBe(1);
+		expect(result.events.events[0]?.t).toBe("project.renamed");
+	});
+
+	it("changes tempo and emits an event", () => {
+		const state = emptyState(testProjectId, "Test");
+		const payload: Commands.ProjectSetTempo = {
+			t: "project.setTempo",
+			bpm: 140,
+		};
+
+		const result = applyCommand(state, 1, payload);
+
+		expect(result.state.project.bpm).toBe(140);
+		expect(result.events.version).toBe(1);
+		expect(result.events.events[0]?.t).toBe("project.tempoChanged");
 	});
 });

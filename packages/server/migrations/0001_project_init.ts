@@ -1,23 +1,36 @@
-CREATE TABLE IF NOT EXISTS "effect_sql_migrations" (
-  migration_id integer PRIMARY KEY NOT NULL,
-  created_at datetime NOT NULL DEFAULT current_timestamp,
-  name VARCHAR(255) NOT NULL
-);
-CREATE TABLE snapshots (
+// Migration 0002: Update schema for multi-project data model
+// - Rename doc_json to snapshot_json in daw_snapshots
+// - Add project_id to daw_snapshots and daw_events tables
+// - Create tables for normalized project entities
+
+import { SqlClient } from "@effect/sql";
+import { Effect } from "effect";
+
+export default Effect.gen(function* () {
+	const sql = yield* SqlClient.SqlClient;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS snapshots (
 			project_id TEXT NOT NULL,
 			version INTEGER NOT NULL,
 			data TEXT NOT NULL,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (project_id, version)
-		);
-CREATE TABLE events (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS events (
 			project_id TEXT NOT NULL,
 			version INTEGER NOT NULL,
 			data TEXT NOT NULL,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (project_id, version)
-		);
-CREATE TABLE projects (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS projects (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
 			bpm REAL NOT NULL DEFAULT 120,
@@ -25,8 +38,11 @@ CREATE TABLE projects (
 			time_sig_denominator INTEGER NOT NULL DEFAULT 4,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);
-CREATE TABLE tracks (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS tracks (
 			id TEXT PRIMARY KEY,
 			project_id TEXT NOT NULL,
 			type TEXT NOT NULL CHECK (type IN ('audio', 'midi', 'bus')),
@@ -39,9 +55,13 @@ CREATE TABLE tracks (
 			sort_order INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-		);
-CREATE TABLE clips (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS clips (
 			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
 			project_id TEXT NOT NULL,
 			track_id TEXT NOT NULL,
 			start_qn REAL NOT NULL,
@@ -56,15 +76,20 @@ CREATE TABLE clips (
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
 			FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
-		);
-CREATE TABLE midi_patterns (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS midi_patterns (
 			id TEXT PRIMARY KEY,
 			project_id TEXT NOT NULL,
-			name TEXT NOT NULL,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-		);
-CREATE TABLE midi_notes (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS midi_notes (
 			id TEXT PRIMARY KEY,
 			pattern_id TEXT NOT NULL,
 			pitch INTEGER NOT NULL CHECK (pitch >= 0 AND pitch <= 127),
@@ -72,8 +97,11 @@ CREATE TABLE midi_notes (
 			start_qn REAL NOT NULL,
 			size_qn REAL NOT NULL,
 			FOREIGN KEY (pattern_id) REFERENCES midi_patterns(id) ON DELETE CASCADE
-		);
-CREATE TABLE automation_lanes (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS automation_lanes (
 			id TEXT PRIMARY KEY,
 			project_id TEXT NOT NULL,
 			track_id TEXT NOT NULL,
@@ -81,16 +109,22 @@ CREATE TABLE automation_lanes (
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
 			FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
-		);
-CREATE TABLE automation_points (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS automation_points (
 			id TEXT PRIMARY KEY,
 			lane_id TEXT NOT NULL,
 			time_qn REAL NOT NULL,
 			value REAL NOT NULL,
 			curve TEXT NOT NULL DEFAULT 'linear' CHECK (curve IN ('linear', 'expo', 'log', 'hold')),
 			FOREIGN KEY (lane_id) REFERENCES automation_lanes(id) ON DELETE CASCADE
-		);
-CREATE TABLE audio_files (
+		)
+	`;
+
+	yield* sql`
+		CREATE TABLE IF NOT EXISTS audio_files (
 			id TEXT PRIMARY KEY,
 			project_id TEXT NOT NULL,
 			name TEXT NOT NULL,
@@ -101,17 +135,19 @@ CREATE TABLE audio_files (
 			channels INTEGER NOT NULL CHECK (channels >= 1 AND channels <= 8),
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-		);
-CREATE INDEX idx_snapshots_project ON snapshots(project_id);
-CREATE INDEX idx_events_project ON events(project_id);
-CREATE INDEX idx_tracks_project ON tracks(project_id);
-CREATE INDEX idx_clips_project ON clips(project_id);
-CREATE INDEX idx_clips_track ON clips(track_id);
-CREATE INDEX idx_midi_patterns_project ON midi_patterns(project_id);
-CREATE INDEX idx_midi_notes_pattern ON midi_notes(pattern_id);
-CREATE INDEX idx_automation_lanes_project ON automation_lanes(project_id);
-CREATE INDEX idx_automation_lanes_track ON automation_lanes(track_id);
-CREATE INDEX idx_automation_points_lane ON automation_points(lane_id);
-CREATE INDEX idx_audio_files_project ON audio_files(project_id);
+		)
+	`;
 
-INSERT INTO effect_sql_migrations VALUES(1,'2026-01-20 18:02:12','project_init');
+	// Indexes for common queries
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_snapshots_project ON snapshots(project_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_events_project ON events(project_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_tracks_project ON tracks(project_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_clips_project ON clips(project_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_clips_track ON clips(track_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_midi_patterns_project ON midi_patterns(project_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_midi_notes_pattern ON midi_notes(pattern_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_automation_lanes_project ON automation_lanes(project_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_automation_lanes_track ON automation_lanes(track_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_automation_points_lane ON automation_points(lane_id)`;
+	yield* sql`CREATE INDEX IF NOT EXISTS idx_audio_files_project ON audio_files(project_id)`;
+});

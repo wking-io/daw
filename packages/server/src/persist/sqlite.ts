@@ -1,75 +1,67 @@
-import { Project } from "@daw/contract";
-import * as SqlClient from "@effect/sql/SqlClient";
-import type { SqlError } from "@effect/sql/SqlError";
-import { Context, Effect, Layer, Schema } from "effect";
+import { Domain, Events, ProjectId } from "@daw/contract";
+import { SqlClient, SqlSchema } from "@effect/sql";
+import { Effect, Schema } from "effect";
 
-export interface SnapshotRow {
-	version: Project.ProjectVersion;
-	doc: Project.ProjectDoc;
-}
+export class Persistence extends Effect.Service<Persistence>()(
+	"server/Persistence",
+	{
+		effect: Effect.gen(function* () {
+			const sql = yield* SqlClient.SqlClient;
 
-export interface EventRow {
-	version: Project.ProjectVersion;
-	submit: Project.Submit;
-}
+			const findSnapshot = SqlSchema.findOne({
+				Result: Events.Snapshot,
+				Request: Schema.Struct({ projectId: ProjectId }),
+				execute: ({ projectId }) =>
+					sql`SELECT version, data FROM snapshots WHERE ${sql`project_id = ${projectId}`} ORDER BY version DESC LIMIT 1`,
+			});
 
-export interface PersistenceService {
-	loadLatestSnapshot: Effect.Effect<SnapshotRow | null, SqlError>;
-	loadEventsAfter: (
-		version: Project.ProjectVersion,
-	) => Effect.Effect<ReadonlyArray<EventRow>, SqlError>;
-	appendEvent: (event: EventRow) => Effect.Effect<void, SqlError>;
-	saveSnapshot: (snapshot: SnapshotRow) => Effect.Effect<void, SqlError>;
-}
+			const createSnapshot = SqlSchema.single({
+				Result: Events.Snapshot,
+				Request: Schema.Struct({
+					projectId: ProjectId,
+					version: Schema.Number,
+					data: Schema.String,
+				}),
+				execute: (request) =>
+					sql`INSERT INTO snapshots ${sql.insert(request)} RETURNING *`,
+			});
 
-export class Persistence extends Context.Tag("daw/Persistence")<
-	Persistence,
-	PersistenceService
->() {}
+			const listEvents = SqlSchema.findAll({
+				Result: Events.EventBatch,
+				Request: Schema.Struct({
+					projectId: Schema.String,
+					version: Schema.Number,
+				}),
+				execute: ({ projectId, version }) =>
+					sql`SELECT version, data FROM events WHERE ${sql.and([sql`project_id = ${projectId}`, sql`version > ${version}`])} ORDER BY version ASC`,
+			});
 
-const encodeDoc = Schema.encodeSync(Project.ProjectDoc);
-const decodeDoc = Schema.decodeUnknownSync(Project.ProjectDoc);
-const encodeSubmit = Schema.encodeSync(Project.Submit);
-const decodeSubmit = Schema.decodeUnknownSync(Project.Submit);
+			const createEvent = SqlSchema.single({
+				Result: Schema.Void,
+				Request: Schema.Struct({
+					projectId: ProjectId,
+					version: Schema.Number,
+					data: Schema.String,
+				}),
+				execute: (request) =>
+					sql`INSERT INTO events ${sql.insert(request)} RETURNING *`,
+			});
 
-const PersistenceLiveEffect = Effect.gen(function* () {
-	const sql = yield* SqlClient.SqlClient;
+			const listProjects = SqlSchema.findAll({
+				Result: Domain.Project,
+				Request: Schema.Void,
+				execute: () =>
+					sql`SELECT id, name, created_at, updated_at, bpm, time_signature FROM projects ORDER BY created_at DESC`,
+			});
 
-	return Persistence.of({
-		loadLatestSnapshot: Effect.gen(function* () {
-			const rows = yield* sql<{
-				version: number;
-				doc_json: string;
-			}>`SELECT version, doc_json FROM daw_snapshots ORDER BY version DESC LIMIT 1`;
-			const row = rows[0];
-			if (!row) return null;
 			return {
-				version: row.version,
-				doc: decodeDoc(JSON.parse(row.doc_json)),
+				findSnapshot,
+				createSnapshot,
+				listEvents,
+				createEvent,
+				listProjects,
 			};
 		}),
-		loadEventsAfter: (version) =>
-			Effect.gen(function* () {
-				const rows = yield* sql<{
-					version: number;
-					submit_json: string;
-				}>`SELECT version, submit_json FROM daw_events WHERE version > ${version} ORDER BY version ASC`;
-				return rows.map((row) => ({
-					version: row.version,
-					submit: decodeSubmit(JSON.parse(row.submit_json)),
-				}));
-			}),
-		appendEvent: (event) =>
-			sql`
-				INSERT OR REPLACE INTO daw_events (version, submit_json)
-				VALUES (${event.version}, ${JSON.stringify(encodeSubmit(event.submit))})
-			`.pipe(Effect.asVoid),
-		saveSnapshot: (snapshot) =>
-			sql`
-				INSERT OR REPLACE INTO daw_snapshots (version, doc_json)
-				VALUES (${snapshot.version}, ${JSON.stringify(encodeDoc(snapshot.doc))})
-			`.pipe(Effect.asVoid),
-	});
-});
-
-export const PersistenceLive = Layer.effect(Persistence, PersistenceLiveEffect);
+		dependencies: [],
+	},
+) {}
