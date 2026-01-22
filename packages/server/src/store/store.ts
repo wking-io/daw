@@ -1,4 +1,4 @@
-import type { Commands, Events, ProjectId } from "@daw/contract";
+import type { Commands, Events, ProjectId } from "@daw/core";
 import { Effect, Option, Stream, SubscriptionRef } from "effect";
 import { Persistence } from "../persist/sqlite";
 import {
@@ -28,17 +28,17 @@ const makeInitialState = (
 	snapshot: Option.Option<Events.Snapshot>,
 	eventBatches: ReadonlyArray<Events.EventBatch>,
 ): StoreState => {
-	const projectState: ProjectState = snapshot.pipe(
-		Option.map((snapshot) => ({
-			project: snapshot.project,
-			tracks: new Map(snapshot.tracks.map((t) => [t.id, t])),
-			clips: new Map(snapshot.clips.map((c) => [c.id, c])),
-			midiPatterns: new Map(snapshot.midiPatterns.map((p) => [p.id, p])),
-			automationLanes: new Map(snapshot.automationLanes.map((l) => [l.id, l])),
-			audioFiles: new Map(snapshot.audioFiles.map((f) => [f.id, f])),
-		})),
-		Option.getOrElse(() => emptyState(projectId)),
-	);
+	const projectState: ProjectState = Option.match(snapshot, {
+		onNone: () => emptyState(projectId),
+		onSome: (s): ProjectState => ({
+			project: s.project,
+			tracks: new Map(s.tracks.map((t) => [t.id, t])),
+			clips: new Map(s.clips.map((c) => [c.id, c])),
+			midiPatterns: new Map(s.midiPatterns.map((p) => [p.id, p])),
+			automationLanes: new Map(s.automationLanes.map((l) => [l.id, l])),
+			audioFiles: new Map(s.audioFiles.map((f) => [f.id, f])),
+		}),
+	});
 	const eventLog: Array<Events.EventBatch> = [];
 
 	const version = eventBatches
@@ -155,14 +155,14 @@ export class Store extends Effect.Service<Store>()("daw/Store", {
 							};
 
 							yield* persistence.createEvent({
-								projectId,
+								project_id: projectId,
 								version: nextVersion,
 								data: JSON.stringify(eventBatch),
 							});
 
 							if (nextVersion % snapshotEvery === 0) {
 								yield* persistence.createSnapshot({
-									projectId,
+									project_id: projectId,
 									version: nextVersion,
 									data: JSON.stringify(
 										stateToSnapshot(applied.state, nextVersion),
@@ -188,7 +188,8 @@ export class Store extends Effect.Service<Store>()("daw/Store", {
 				return result;
 			});
 
-		const listProjects = () => persistence.listProjects().pipe(Effect.orDie);
+		const listProjects = () => persistence.listProjects();
+
 		return {
 			getSnapshot,
 			executeCommand,

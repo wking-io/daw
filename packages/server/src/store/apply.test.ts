@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Commands, Events, ProjectId } from "@daw/contract";
+import type { Commands, ProjectId } from "@daw/core";
 import { applyCommand, emptyState } from "./apply";
 
 const testProjectId = "test-project" as ProjectId;

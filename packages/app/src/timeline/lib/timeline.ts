@@ -1,6 +1,5 @@
 // timeline.ts
 import type { Numeric } from "./numeric";
-import * as R from "./range";
 import * as S from "./span";
 
 export type Timeline<A extends number> = {

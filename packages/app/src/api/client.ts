@@ -1,25 +1,32 @@
-import { Api } from "@daw/contract";
-import { FetchHttpClient } from "@effect/platform";
+import { Api } from "@daw/core";
+import {
+	FetchHttpClient,
+	HttpClient,
+	HttpClientRequest,
+} from "@effect/platform";
 import { AtomHttpApi } from "@effect-atom/atom-react";
 
-const defaultPort = Number.parseInt(
-	import.meta.env.VITE_DAW_STATE_PORT ?? "43125",
-	10,
-);
+const token = import.meta.env.DAW_STATE_TOKEN;
+const port = Number.parseInt(import.meta.env.DAW_STATE_PORT ?? "43125", 10);
 
-const resolveBaseUrl = (options?: {
-	baseUrl?: string;
-	host?: string;
-	port?: number;
-}) => {
-	if (options?.baseUrl) return options.baseUrl;
-	const host = options?.host ?? "127.0.0.1";
-	const port = options?.port ?? defaultPort;
-	return `http://${host}:${port}`;
-};
-
+/**
+ * Create an ApiClient configured for the given server info.
+ * This allows dynamic baseUrl and token configuration.
+ *
+ * The returned class provides:
+ * - `.query(group, endpoint, request)` - returns an Atom that fetches data
+ * - `.mutation(group, endpoint)` - returns an AtomResultFn for mutations
+ * - `.runtime` - AtomRuntime for running arbitrary Effects
+ * - `.layer` - Effect Layer for providing the client
+ */
 export class ApiClient extends AtomHttpApi.Tag<ApiClient>()("ApiClient", {
 	api: Api,
 	httpClient: FetchHttpClient.layer,
-	baseUrl: resolveBaseUrl(),
+	baseUrl: `http://127.0.0.1:${port}`,
+	transformClient: token
+		? (client) =>
+				HttpClient.mapRequest(client, (req) =>
+					HttpClientRequest.setHeader(req, "Authorization", `Bearer ${token}`),
+				)
+		: undefined,
 }) {}

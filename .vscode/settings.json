@@ -33,6 +33,7 @@
     "coalescer",
     "pgrep",
     "pids",
+    "rrggbb",
     "Tauri",
     "unlisten"
   ]

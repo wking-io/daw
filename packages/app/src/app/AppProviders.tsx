@@ -1,39 +1,6 @@
 import { RegistryProvider } from "@effect-atom/atom-react";
-import { createContext, type PropsWithChildren, useContext } from "react";
-import {
-	NoopPlatform,
-	type Platform,
-	type ServerInfo,
-} from "../ports/Platform";
+import type { PropsWithChildren } from "react";
 
-export interface AppServices {
-	platform: Platform;
-	serverInfo: ServerInfo | null;
-}
-
-const AppServicesContext = createContext<AppServices | null>(null);
-
-export function useAppServices(): AppServices {
-	const ctx = useContext(AppServicesContext);
-	if (!ctx) throw new Error("AppServicesContext not found");
-	return ctx;
-}
-
-export function AppProviders(
-	props: PropsWithChildren<{
-		platform?: Platform;
-		serverInfo?: ServerInfo;
-	}>,
-) {
-	const platform = props.platform ?? NoopPlatform;
-
-	return (
-		<RegistryProvider>
-			<AppServicesContext.Provider
-				value={{ platform, serverInfo: props.serverInfo ?? null }}
-			>
-				{props.children}
-			</AppServicesContext.Provider>
-		</RegistryProvider>
-	);
+export function AppProviders({ children }: PropsWithChildren) {
+	return <RegistryProvider>{children}</RegistryProvider>;
 }

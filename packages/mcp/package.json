@@ -14,7 +14,7 @@
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
-		"@daw/contract": "workspace:*",
+		"@daw/core": "workspace:*",
 		"@effect/ai": "catalog:",
 		"@effect/platform": "catalog:",
 		"@effect/platform-bun": "catalog:",

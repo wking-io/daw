@@ -47,12 +47,12 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
 	// Hex format
 	const hexMatch = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
 	if (hexMatch) {
-		const hex = hexMatch[1]!;
+		const hex = hexMatch[1];
 		if (hex.length === 3) {
 			return {
-				r: parseInt(hex[0]! + hex[0]!, 16),
-				g: parseInt(hex[1]! + hex[1]!, 16),
-				b: parseInt(hex[2]! + hex[2]!, 16),
+				r: parseInt(hex[0] + hex[0], 16),
+				g: parseInt(hex[1] + hex[1], 16),
+				b: parseInt(hex[2] + hex[2], 16),
 			};
 		}
 		return {
@@ -66,34 +66,13 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
 	const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
 	if (rgbMatch) {
 		return {
-			r: parseInt(rgbMatch[1]!, 10),
-			g: parseInt(rgbMatch[2]!, 10),
-			b: parseInt(rgbMatch[3]!, 10),
+			r: parseInt(rgbMatch[1], 10),
+			g: parseInt(rgbMatch[2], 10),
+			b: parseInt(rgbMatch[3], 10),
 		};
 	}
 
 	return null;
-}
-
-/**
- * Darken a color by mixing with black.
- * @param r Red component (0-255)
- * @param g Green component (0-255)
- * @param b Blue component (0-255)
- * @param amount How much to darken (0 = original, 1 = black)
- */
-function darken(
-	r: number,
-	g: number,
-	b: number,
-	amount: number,
-): { r: number; g: number; b: number } {
-	const factor = 1 - amount;
-	return {
-		r: Math.round(r * factor),
-		g: Math.round(g * factor),
-		b: Math.round(b * factor),
-	};
 }
 
 /**
@@ -178,7 +157,7 @@ function computeClipLayouts(args: {
 
 	const trackById = new Map<string, { index: number; color: string }>();
 	for (let i = 0; i < data.tracks.length; i++) {
-		const track = data.tracks[i]!;
+		const track = data.tracks[i];
 		trackById.set(track.id, { index: i, color: track.color });
 	}
 

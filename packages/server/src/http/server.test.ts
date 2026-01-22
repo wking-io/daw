@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import type { Commands, Events, ProjectId, SSE } from "@daw/contract";
+import type { Commands, Events, ProjectId } from "@daw/core";
 import { HttpApiBuilder, HttpServer } from "@effect/platform";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
@@ -38,7 +38,11 @@ const SetupLayer = Layer.effectDiscard(
 			CREATE TABLE IF NOT EXISTS projects (
 				id TEXT PRIMARY KEY,
 				name TEXT NOT NULL,
-				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+				bpm REAL NOT NULL DEFAULT 120,
+				time_sig_numerator INTEGER NOT NULL DEFAULT 4,
+				time_sig_denominator INTEGER NOT NULL DEFAULT 4,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 			)
 		`;
 	}),
@@ -130,7 +134,7 @@ describe("HttpEndpoints", () => {
 		expect(body.version).toBeDefined();
 	});
 
-	it("serves SSE event stream with server.connected event", async () => {
+	it("serves event stream with server.connected event", async () => {
 		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
 		dispose = webHandler.dispose;
 		const { handler } = webHandler;
@@ -157,12 +161,12 @@ describe("HttpEndpoints", () => {
 		const text = new TextDecoder().decode(value);
 		expect(text).toContain("data:");
 
-		// Parse the SSE data
+		// Parse the event stream data
 		const dataLine = text.split("\n").find((line) => line.startsWith("data:"));
 		expect(dataLine).toBeDefined();
 		if (!dataLine) throw new Error("Data line is undefined");
 
-		const eventData = JSON.parse(dataLine.slice(6)) as SSE.SSEEvent;
+		const eventData = JSON.parse(dataLine.slice(6));
 		expect(eventData.t).toBe("server.connected");
 		if (eventData.t === "server.connected") {
 			expect(eventData.serverVersion).toBe(0);

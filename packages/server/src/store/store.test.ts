@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Commands, ProjectId } from "@daw/contract";
+import type { Commands, ProjectId } from "@daw/core";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Chunk, Effect, Layer, Stream } from "effect";

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { type Commands, Events, type ProjectId } from "@daw/contract";
+import { type Commands, Events, type ProjectId } from "@daw/core";
 import { Schema } from "effect";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
@@ -156,7 +156,7 @@ describe("HTTP e2e", () => {
 		expect(typeof json.version).toBe("string");
 	}, 20000);
 
-	it("GET /api/projects/:projectId/subscribe returns SSE stream", async () => {
+	it("GET /api/projects/:projectId/subscribe returns event stream", async () => {
 		const res = await fetch(
 			`${baseUrl}/api/projects/${TEST_PROJECT_ID}/subscribe?fromVersion=0`,
 			{
@@ -168,16 +168,17 @@ describe("HTTP e2e", () => {
 
 		const reader = res.body?.getReader();
 		expect(reader).toBeDefined();
+		if (!reader) throw new Error("Reader is null");
 
 		// Read first chunk (should be server.connected event)
-		const { value, done } = await reader!.read();
+		const { value, done } = await reader.read();
 		expect(done).toBe(false);
 
 		const text = new TextDecoder().decode(value);
 		expect(text).toContain("data:");
 		expect(text).toContain("server.connected");
 
-		await reader!.cancel();
+		await reader.cancel();
 	}, 20000);
 
 	it("GET /api/projects returns empty list for new database", async () => {

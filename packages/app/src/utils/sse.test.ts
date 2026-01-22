@@ -1,6 +1,6 @@
-import type { SSE } from "@daw/contract";
+import type { Events } from "@daw/core";
 import { describe, expect, it } from "vitest";
-import { createEventCoalescer, getSSEEventKey } from "./sse";
+import { createEventCoalescer, getEventsKey } from "./sse";
 
 describe("createEventCoalescer", () => {
 	it("batches events and flushes them", async () => {
@@ -87,31 +87,31 @@ describe("createEventCoalescer", () => {
 	});
 });
 
-describe("getSSEEventKey", () => {
+describe("getEventsKey", () => {
 	it("returns key for heartbeat events", () => {
-		const event: SSE.ServerHeartbeatEvent = {
+		const event: Events.ServerHeartbeatEvent = {
 			t: "server.heartbeat",
 			timestamp: Date.now(),
 		};
-		expect(getSSEEventKey(event)).toBe("heartbeat");
+		expect(getEventsKey(event)).toBe("server.heartbeat");
 	});
 
 	it("returns undefined for events batch (not coalesced)", () => {
-		const event: SSE.EventBatchEvent = {
+		const event: Events.Events = {
 			t: "events",
 			batch: {
 				version: 1,
 				events: [],
 			},
 		};
-		expect(getSSEEventKey(event)).toBeUndefined();
+		expect(getEventsKey(event)).toBeUndefined();
 	});
 
 	it("returns undefined for server.connected events", () => {
-		const event: SSE.ServerConnectedEvent = {
+		const event: Events.ServerConnectedEvent = {
 			t: "server.connected",
 			serverVersion: 0,
 		};
-		expect(getSSEEventKey(event)).toBeUndefined();
+		expect(getEventsKey(event)).toBeUndefined();
 	});
 });

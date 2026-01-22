@@ -1,13 +1,15 @@
 import {
 	Api,
+	ApiError,
 	Authorization,
-	Commands,
+	Events,
 	HealthResponse,
-	SSE,
-} from "@daw/contract";
+} from "@daw/core";
 import {
 	HttpApiBuilder,
-	HttpApiError,
+	HttpApiMiddleware,
+	HttpApp,
+	HttpServerRequest,
 	HttpServerResponse,
 } from "@effect/platform";
 import {
@@ -21,7 +23,30 @@ import {
 } from "effect";
 import { ServerConfig } from "../config";
 import { Store } from "../store/store";
-import { formatSSE } from "../utils/sse";
+import { formatEventStream } from "../utils/format-event-stream";
+
+// Extend the HttpApiMiddleware.Tag class to define the logger middleware tag
+class RequestId extends HttpApiMiddleware.Tag<RequestId>()(
+	"server/RequestId",
+	{},
+) {}
+
+export const RequestIdMiddleware = Layer.effect(
+	RequestId,
+	Effect.gen(function* () {
+		return Effect.gen(function* () {
+			const request = yield* HttpServerRequest.HttpServerRequest;
+			const requestId = request.headers["x-request-id"] ?? crypto.randomUUID();
+
+			// Add pre-response handler to set the x-request-id header on the response
+			yield* HttpApp.appendPreResponseHandler((_req, response) =>
+				Effect.succeed(
+					HttpServerResponse.setHeader(response, "x-request-id", requestId),
+				),
+			);
+		});
+	}),
+);
 
 const HEARTBEAT_INTERVAL_MS = 30000;
 
@@ -43,7 +68,7 @@ const AuthorizationLive = Layer.effect(
 			token: (token) => {
 				const isValid = Redacted.getEquivalence(Equivalence.string);
 				if (!isValid(token, Redacted.make(config.authToken))) {
-					return Effect.fail(new HttpApiError.Unauthorized());
+					return Effect.fail(new ApiError.Unauthorized());
 				}
 				return Effect.void;
 			},
@@ -55,144 +80,133 @@ const AuthorizationLive = Layer.effect(
  * Projects list endpoints (listing/creating projects)
  * For now, this is stubbed to work with a single project
  */
-const projectsGroupLive = HttpApiBuilder.group(Api, "projects", (handlers) =>
-	handlers
-		.handle("listProjects", () =>
-			Effect.gen(function* () {
-				const store = yield* Store;
-				const projects = yield* store.listProjects();
-				return projects;
-			}),
-		)
-		.handle("createProject", ({ payload }) =>
-			Effect.gen(function* () {
-				// For now, just return an error - we don't support creating projects yet
-				// In a real implementation, this would create a new project
-				return yield* Effect.fail(new HttpApiError.Unauthorized());
-			}),
-		),
-).pipe(Layer.provide(AuthorizationLive));
-
-/**
- * Single project endpoints
- */
 const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 	handlers
-		.handle("getSnapshot", ({ path }) =>
+		.handle("list", () =>
 			Effect.gen(function* () {
 				const store = yield* Store;
-				const snapshot = yield* store.getSnapshot(path.projectId);
-				return snapshot;
+				return yield* store.listProjects();
 			}).pipe(
 				Effect.catchTags({
-					ParseError: () => Effect.fail(new HttpApiError.BadRequest()),
-					SqlError: () => Effect.fail(new HttpApiError.InternalServerError()),
+					ParseError: () => Effect.fail(new ApiError.BadRequest()),
+					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
 				}),
 			),
 		)
-		.handle("executeCommand", ({ path, payload }) =>
+		.handle("create", ({ payload }) =>
+			Effect.gen(function* () {
+				const store = yield* Store;
+				return yield* store.createProject(payload);
+			}).pipe(
+				Effect.catchTags({
+					ParseError: () => Effect.fail(new ApiError.BadRequest()),
+					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
+				}),
+			),
+		)
+		.handle("get", ({ path }) =>
+			Effect.gen(function* () {
+				const store = yield* Store;
+				return yield* store.getSnapshot(path.projectId);
+			}).pipe(
+				Effect.catchTags({
+					ParseError: () => Effect.fail(new ApiError.BadRequest()),
+					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
+				}),
+			),
+		)
+		.handle("edit", ({ path, payload }) =>
 			Effect.gen(function* () {
 				const store = yield* Store;
 				const result = yield* store.executeCommand(path.projectId, payload);
 				return result;
 			}).pipe(
 				Effect.catchTags({
-					NoSuchElementException: () =>
-						Effect.fail(new HttpApiError.NotFound()),
-					ParseError: () => Effect.fail(new HttpApiError.BadRequest()),
-					SqlError: () => Effect.fail(new HttpApiError.InternalServerError()),
+					NoSuchElementException: () => Effect.fail(new ApiError.NotFound()),
+					ParseError: () => Effect.fail(new ApiError.BadRequest()),
+					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
 				}),
 			),
 		)
-		.handle("getEvents", ({ path, urlParams }) =>
+		.handle("subscribe", ({ path, urlParams }) =>
 			Effect.gen(function* () {
 				const store = yield* Store;
+				const projectId = path.projectId;
+				const snapshot = yield* store.getSnapshot(projectId);
 				const fromVersion = Option.fromNullable(urlParams.fromVersion).pipe(
 					Option.getOrElse(() => 0),
 				);
-				const events = yield* store.getEventsAfter(path.projectId, fromVersion);
-				return events;
+
+				// Create connected event
+				const connectedStream = Stream.make(
+					Events.ServerConnectedEvent.make({
+						t: "server.connected",
+						serverVersion: snapshot.version,
+					}),
+				);
+
+				// Create heartbeat stream (each emission is delayed by HEARTBEAT_INTERVAL_MS)
+				const heartbeatStream = Stream.repeatEffect(
+					Effect.delay(
+						Effect.sync(() =>
+							Events.ServerHeartbeatEvent.make({
+								t: "server.heartbeat",
+								timestamp: Date.now(),
+							}),
+						),
+						Duration.millis(HEARTBEAT_INTERVAL_MS),
+					),
+				);
+
+				// Get event stream and wrap batches in event envelope
+				const eventStream = yield* store.eventStreamFrom(
+					projectId,
+					fromVersion,
+				);
+				const eventBatchStream = eventStream.pipe(
+					Stream.map((batch) =>
+						Events.Batch.make({
+							t: "events",
+							batch: {
+								version: batch.version,
+								events: batch.events,
+							},
+						}),
+					),
+				);
+
+				// Combine all event streams
+				const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
+
+				// Prepend connected event and format as event stream
+				const stream = Stream.concat(connectedStream, combinedStream).pipe(
+					Stream.map((event) =>
+						new TextEncoder().encode(formatEventStream(event)),
+					),
+				);
+
+				return HttpServerResponse.stream(stream, {
+					contentType: "text/event-stream",
+					headers: {
+						"cache-control": "no-cache",
+						connection: "keep-alive",
+					},
+				});
 			}).pipe(
-				Effect.catchTags({
-					ParseError: () => Effect.fail(new HttpApiError.BadRequest()),
-					SqlError: () => Effect.fail(new HttpApiError.InternalServerError()),
-				}),
+				Effect.catchAllCause((_) =>
+					Effect.fail(new ApiError.InternalServerError()),
+				),
 			),
 		)
-		.handle("deleteProject", ({ path }) =>
+		.handle("delete", (_) =>
 			Effect.gen(function* () {
 				// For now, we don't support deleting projects
-				return yield* Effect.fail(new HttpApiError.NotFound());
+				return yield* Effect.fail(new ApiError.NotFound());
 			}),
 		),
 ).pipe(Layer.provide(AuthorizationLive));
 
-/**
- * SSE endpoint group - renamed from "events" to "sse"
- */
-const sseGroupLive = HttpApiBuilder.group(Api, "sse", (handlers) =>
-	handlers.handle("subscribe", ({ path, urlParams }) =>
-		Effect.gen(function* () {
-			const store = yield* Store;
-			const projectId = path.projectId;
-			const snapshot = yield* store.getSnapshot(projectId);
-			const fromVersion = Option.fromNullable(urlParams.fromVersion).pipe(
-				Option.getOrElse(() => 0),
-			);
-
-			// Create connected event
-			const connectedStream = Stream.make(
-				SSE.ServerConnectedEvent.make({
-					t: "server.connected",
-					serverVersion: snapshot.version,
-				}),
-			);
-
-			// Create heartbeat stream (each emission is delayed by HEARTBEAT_INTERVAL_MS)
-			const heartbeatStream = Stream.repeatEffect(
-				Effect.delay(
-					Effect.sync(() =>
-						SSE.ServerHeartbeatEvent.make({
-							t: "server.heartbeat",
-							timestamp: Date.now(),
-						}),
-					),
-					Duration.millis(HEARTBEAT_INTERVAL_MS),
-				),
-			);
-
-			// Get event stream and map to SSE events
-			const eventStream = yield* store.eventStreamFrom(projectId, fromVersion);
-			const eventBatchStream = eventStream.pipe(
-				Stream.map((batch) => SSE.EventBatchEvent.make({ t: "events", batch })),
-			);
-
-			// Combine all event streams
-			const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
-
-			// Prepend connected event and format as SSE
-			const stream = Stream.concat(connectedStream, combinedStream).pipe(
-				Stream.map((event) => new TextEncoder().encode(formatSSE(event))),
-			);
-
-			return HttpServerResponse.stream(stream, {
-				contentType: "text/event-stream",
-				headers: {
-					"cache-control": "no-cache",
-					connection: "keep-alive",
-				},
-			});
-		}).pipe(
-			Effect.catchAllCause((cause) =>
-				Effect.fail(new HttpApiError.InternalServerError()),
-			),
-		),
-	),
-).pipe(Layer.provide(AuthorizationLive));
-
 export const ApiLive = HttpApiBuilder.api(Api).pipe(
 	Layer.provide(healthGroupLive),
-	Layer.provide(projectsGroupLive),
 	Layer.provide(projectGroupLive),
-	Layer.provide(sseGroupLive),
 );

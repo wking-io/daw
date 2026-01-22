@@ -42,6 +42,7 @@ CREATE TABLE tracks (
 		);
 CREATE TABLE clips (
 			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
 			project_id TEXT NOT NULL,
 			track_id TEXT NOT NULL,
 			start_qn REAL NOT NULL,
@@ -60,7 +61,6 @@ CREATE TABLE clips (
 CREATE TABLE midi_patterns (
 			id TEXT PRIMARY KEY,
 			project_id TEXT NOT NULL,
-			name TEXT NOT NULL,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 		);
@@ -114,4 +114,4 @@ CREATE INDEX idx_automation_lanes_track ON automation_lanes(track_id);
 CREATE INDEX idx_automation_points_lane ON automation_points(lane_id);
 CREATE INDEX idx_audio_files_project ON audio_files(project_id);
 
-INSERT INTO effect_sql_migrations VALUES(1,'2026-01-20 18:02:12','project_init');
+INSERT INTO effect_sql_migrations VALUES(1,'2026-01-21 17:44:23','project_init');

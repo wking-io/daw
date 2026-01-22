@@ -6,12 +6,14 @@ import { mkdirSync } from "fs";
 import path from "path";
 import type { ServerConfigService } from "./config";
 import { ServerConfig, ServerConfigLive } from "./config";
-import { ApiLive } from "./http/server";
+import { ApiLive, RequestIdMiddleware } from "./http/server";
 import { Persistence } from "./persist/sqlite";
 import { Store } from "./store/store";
 
 const makeHttpLive = (config: ServerConfigService) =>
-	HttpApiBuilder.serve(HttpMiddleware.cors()).pipe(
+	HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
+		Layer.provide(HttpApiBuilder.middlewareCors()),
+		Layer.provide(RequestIdMiddleware),
 		HttpServer.withLogAddress,
 		Layer.provide(ApiLive),
 		Layer.provide(Store.Default),

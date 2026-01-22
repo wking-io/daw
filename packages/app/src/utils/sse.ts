@@ -1,20 +1,22 @@
-import type { SSE } from "@daw/contract";
+import type { Events } from "@daw/core";
 
-export interface SSEClientOptions {
+export interface EventStreamClientOptions {
 	baseUrl: string;
 	token?: string;
 	projectId?: string;
 	fromVersion?: number;
-	onEvent: (event: SSE.SSEEvent) => void;
+	onEvent: (event: Events.Events) => void;
 	onError?: (error: Error) => void;
 	onClose?: () => void;
 }
 
 /**
- * SSE client using fetch + ReadableStream.
+ * Event stream client using fetch + ReadableStream.
  * This allows attaching auth headers (unlike native EventSource).
  */
-export function createSSEClient(options: SSEClientOptions): () => void {
+export function createEventStreamClient(
+	options: EventStreamClientOptions,
+): () => void {
 	const {
 		baseUrl,
 		token,
@@ -53,7 +55,7 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 			});
 
 			if (!response.ok) {
-				throw new Error(`SSE connection failed: ${response.status}`);
+				throw new Error(`Event stream connection failed: ${response.status}`);
 			}
 
 			const reader = response.body?.getReader();
@@ -75,7 +77,7 @@ export function createSSEClient(options: SSEClientOptions): () => void {
 					if (line.startsWith("data: ")) {
 						const data = line.slice(6);
 						try {
-							const event = JSON.parse(data) as SSE.SSEEvent;
+							const event = JSON.parse(data) as Events.Events;
 							onEvent(event);
 						} catch {
 							// Ignore parse errors
@@ -166,13 +168,13 @@ export function createEventCoalescer<T>(options: CoalescingOptions<T>) {
 }
 
 /**
- * SSE event key generator for coalescing.
+ * Event key generator for coalescing.
  * Returns a key for events that should be coalesced.
  */
-export function getSSEEventKey(event: SSE.SSEEvent): string | undefined {
+export function getEventsKey(event: Events.Events): string | undefined {
 	switch (event.t) {
 		case "server.heartbeat":
-			return "heartbeat";
+			return event.t;
 		case "server.connected":
 			// Don't coalesce connected events
 			return undefined;

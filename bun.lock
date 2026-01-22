@@ -18,7 +18,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@base-ui/react": "1.1.0",
-        "@daw/contract": "workspace:*",
+        "@daw/core": "workspace:*",
         "@effect-atom/atom": "catalog:",
         "@effect-atom/atom-react": "catalog:",
         "@effect/experimental": "catalog:",
@@ -49,8 +49,8 @@
         "vitest": "catalog:",
       },
     },
-    "packages/contract": {
-      "name": "@daw/contract",
+    "packages/core": {
+      "name": "@daw/core",
       "version": "0.0.0",
       "dependencies": {
         "@effect/platform": "catalog:",
@@ -87,7 +87,7 @@
       "name": "@daw/mcp",
       "version": "0.0.0",
       "dependencies": {
-        "@daw/contract": "workspace:*",
+        "@daw/core": "workspace:*",
         "@effect/ai": "catalog:",
         "@effect/platform": "catalog:",
         "@effect/platform-bun": "catalog:",
@@ -107,7 +107,7 @@
       "name": "@daw/server",
       "version": "0.0.0",
       "dependencies": {
-        "@daw/contract": "workspace:*",
+        "@daw/core": "workspace:*",
         "@effect/platform": "catalog:",
         "@effect/platform-bun": "catalog:",
         "@effect/sql": "catalog:",
@@ -246,7 +246,7 @@
 
     "@daw/app": ["@daw/app@workspace:packages/app"],
 
-    "@daw/contract": ["@daw/contract@workspace:packages/contract"],
+    "@daw/core": ["@daw/core@workspace:packages/core"],
 
     "@daw/desktop": ["@daw/desktop@workspace:packages/desktop"],
 
