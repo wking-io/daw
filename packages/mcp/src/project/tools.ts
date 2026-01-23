@@ -1,4 +1,4 @@
-import { ApiError, Commands, Domain } from "@daw/core";
+import { ApiError, Commands, Project } from "@daw/core";
 import { Tool, Toolkit } from "@effect/ai";
 import { Effect } from "effect";
 import { ProjectRepository } from "./repo";
@@ -6,7 +6,7 @@ import { ProjectRepository } from "./repo";
 export const CreateProjectTool = Tool.make("daw.project.create", {
 	description: "Create a new track in the DAW project",
 	parameters: Commands.ProjectCreate.fields,
-	success: Domain.Project,
+	success: Project.Project,
 	failure: ApiError.ApiError,
 	dependencies: [ProjectRepository],
 });

@@ -11,4 +11,4 @@ export const AudioFile = Schema.Struct({
 	sampleRate: Schema.Number,
 	channels: Schema.Number.pipe(Schema.int(), Schema.between(1, 8)),
 });
-export type AudioFile = typeof AudioFile.Type;
+export type AudioFile = Schema.Schema.Type<typeof AudioFile>;

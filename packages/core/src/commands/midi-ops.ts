@@ -7,23 +7,24 @@ export const MidiPatternRename = Schema.Struct({
 	patternId: PatternId,
 	name: Schema.String,
 });
-export type MidiPatternRename = typeof MidiPatternRename.Type;
+export type MidiPatternRename = Schema.Schema.Type<typeof MidiPatternRename>;
 
 export const MidiAddNote = Schema.Struct({
 	t: Schema.Literal("midi.addNote"),
+	noteId: NoteId,
 	patternId: PatternId,
 	pitch: Schema.Number,
 	velocity: Schema.Number,
 	span: QNSpan,
 });
-export type MidiAddNote = typeof MidiAddNote.Type;
+export type MidiAddNote = Schema.Schema.Type<typeof MidiAddNote>;
 
 export const MidiDeleteNote = Schema.Struct({
 	t: Schema.Literal("midi.deleteNote"),
 	patternId: PatternId,
 	noteId: NoteId,
 });
-export type MidiDeleteNote = typeof MidiDeleteNote.Type;
+export type MidiDeleteNote = Schema.Schema.Type<typeof MidiDeleteNote>;
 
 export const MidiMoveNote = Schema.Struct({
 	t: Schema.Literal("midi.moveNote"),
@@ -31,7 +32,7 @@ export const MidiMoveNote = Schema.Struct({
 	noteId: NoteId,
 	span: QNSpan,
 });
-export type MidiMoveNote = typeof MidiMoveNote.Type;
+export type MidiMoveNote = Schema.Schema.Type<typeof MidiMoveNote>;
 
 export const MidiSetNoteVelocity = Schema.Struct({
 	t: Schema.Literal("midi.setNoteVelocity"),
@@ -39,7 +40,9 @@ export const MidiSetNoteVelocity = Schema.Struct({
 	noteId: NoteId,
 	velocity: Schema.Number,
 });
-export type MidiSetNoteVelocity = typeof MidiSetNoteVelocity.Type;
+export type MidiSetNoteVelocity = Schema.Schema.Type<
+	typeof MidiSetNoteVelocity
+>;
 
 export const MidiSetNotePitch = Schema.Struct({
 	t: Schema.Literal("midi.setNotePitch"),
@@ -47,7 +50,7 @@ export const MidiSetNotePitch = Schema.Struct({
 	noteId: NoteId,
 	pitch: Schema.Number,
 });
-export type MidiSetNotePitch = typeof MidiSetNotePitch.Type;
+export type MidiSetNotePitch = Schema.Schema.Type<typeof MidiSetNotePitch>;
 
 export const MidiOperation = Schema.Union(
 	MidiPatternRename,
@@ -57,4 +60,4 @@ export const MidiOperation = Schema.Union(
 	MidiSetNoteVelocity,
 	MidiSetNotePitch,
 );
-export type MidiOperation = typeof MidiOperation.Type;
+export type MidiOperation = Schema.Schema.Type<typeof MidiOperation>;

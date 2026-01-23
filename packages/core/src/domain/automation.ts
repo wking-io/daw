@@ -8,7 +8,7 @@ import {
 } from "../ids";
 
 export const AutomationCurve = Schema.Literal("linear", "expo", "log", "hold");
-export type AutomationCurve = typeof AutomationCurve.Type;
+export type AutomationCurve = Schema.Schema.Type<typeof AutomationCurve>;
 
 export const AutomationPoint = Schema.Struct({
 	id: AutomationPointId,
@@ -16,7 +16,7 @@ export const AutomationPoint = Schema.Struct({
 	value: Schema.Number,
 	curve: AutomationCurve,
 });
-export type AutomationPoint = typeof AutomationPoint.Type;
+export type AutomationPoint = Schema.Schema.Type<typeof AutomationPoint>;
 
 export const AutomationLane = Schema.Struct({
 	id: AutomationLaneId,
@@ -25,4 +25,4 @@ export const AutomationLane = Schema.Struct({
 	paramPath: Schema.String,
 	points: Schema.Array(AutomationPoint),
 });
-export type AutomationLane = typeof AutomationLane.Type;
+export type AutomationLane = Schema.Schema.Type<typeof AutomationLane>;

@@ -5,7 +5,7 @@ import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer } from "effect";
 import { ServerConfigTest } from "../config";
-import { Persistence } from "../persist/sqlite";
+import { Persistence } from "../db/sqlite";
 import { Store } from "../store/store";
 import { ApiLive } from "./server";
 

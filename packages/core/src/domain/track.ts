@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { DeviceId, ProjectId, TrackId } from "../ids";
 
 export const TrackType = Schema.Literal("audio", "midi", "bus");
-export type TrackType = typeof TrackType.Type;
+export type TrackType = Schema.Schema.Type<typeof TrackType>;
 
 export const Track = Schema.Struct({
 	id: TrackId,
@@ -17,4 +17,4 @@ export const Track = Schema.Struct({
 	sortOrder: Schema.Number,
 	deviceIds: Schema.Array(DeviceId), // stubbed for now
 });
-export type Track = typeof Track.Type;
+export type Track = Schema.Schema.Type<typeof Track>;

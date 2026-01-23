@@ -1,6 +1,6 @@
 import { Config, ConfigProvider, Context, Layer } from "effect";
 import path from "path";
-import { getDefaultDBLocation } from "./persist/get-default-db-location";
+import { getDefaultDBLocation } from "./db/get-default-db-location";
 
 export interface ServerConfigService {
 	readonly version: string;

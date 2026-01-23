@@ -3,7 +3,7 @@ import type { Numeric } from "../lib/numeric";
 
 // Quarter-note position (branded for type safety)
 export const QN = Schema.Number.pipe(Schema.brand("QN"));
-export type QN = typeof QN.Type;
+export type QN = Schema.Schema.Type<typeof QN>;
 
 // QN-specific Numeric instance for use with Span/Range
 export const QNNumeric: Numeric<QN> = {

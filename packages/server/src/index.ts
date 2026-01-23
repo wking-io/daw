@@ -7,8 +7,9 @@ import path from "path";
 import type { ServerConfigService } from "./config";
 import { ServerConfig, ServerConfigLive } from "./config";
 import { ApiLive, RequestIdMiddleware } from "./http/server";
-import { Persistence } from "./persist/sqlite";
-import { Store } from "./store/store";
+import { ProjectEventStore } from "./projects/event-store";
+import { ProjectSnapshotStore } from "./projects/snapshot-store";
+import { ProjectStore } from "./projects/store";
 
 const makeHttpLive = (config: ServerConfigService) =>
 	HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
@@ -16,8 +17,9 @@ const makeHttpLive = (config: ServerConfigService) =>
 		Layer.provide(RequestIdMiddleware),
 		HttpServer.withLogAddress,
 		Layer.provide(ApiLive),
-		Layer.provide(Store.Default),
-		Layer.provide(Persistence.Default),
+		Layer.provide(ProjectSnapshotStore.Default),
+		Layer.provide(ProjectEventStore.Default),
+		Layer.provide(ProjectStore.Default),
 		Layer.provide(SqliteClient.layer({ filename: config.db })),
 		Layer.provide(
 			BunHttpServer.layer({

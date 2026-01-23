@@ -8,8 +8,7 @@ import {
 } from "@effect/platform";
 import { Schema } from "effect";
 import * as Commands from "../commands";
-import * as Domain from "../domain";
-import * as Events from "../events";
+import { Project } from "../domain";
 import { ProjectId } from "../ids";
 import * as ApiError from "./errors";
 
@@ -42,24 +41,24 @@ const healthGroup = HttpApiGroup.make("health")
 
 const projectGroup = HttpApiGroup.make("project")
 	.add(
-		HttpApiEndpoint.get("list", "/").addSuccess(Schema.Array(Domain.Project)),
+		HttpApiEndpoint.get("list", "/").addSuccess(Schema.Array(Project.Project)),
 	)
 	.add(
 		HttpApiEndpoint.post("create", "/")
 			.setPayload(Commands.ProjectCreate)
-			.addSuccess(Domain.Project),
+			.addSuccess(Project.Project),
 	)
 	.add(
 		HttpApiEndpoint.get("get", "/:projectId")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.addSuccess(Events.Snapshot)
+			.addSuccess(Project.Project)
 			.addError(ApiError.NotFound),
 	)
 	.add(
 		HttpApiEndpoint.post("edit", "/:projectId/edit")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.setPayload(Commands.Command)
-			.addSuccess(Events.CommandResult)
+			.setPayload(Commands.EditorCommand)
+			.addSuccess(Project.Project)
 			.addError(ApiError.NotFound),
 	)
 	.add(

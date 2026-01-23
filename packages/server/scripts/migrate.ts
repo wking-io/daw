@@ -11,7 +11,7 @@ import { dirname, resolve } from "node:path";
 import { BunContext, BunRuntime } from "@effect/platform-bun";
 import { SqliteClient, SqliteMigrator } from "@effect/sql-sqlite-bun";
 import { Effect } from "effect";
-import { getDefaultDBLocation } from "../src/persist/get-default-db-location";
+import { getDefaultDBLocation } from "../src/db/get-default-db-location";
 
 const migrationsPath = resolve(import.meta.dirname, "../migrations");
 const dbPath = Bun.env.DB_PATH

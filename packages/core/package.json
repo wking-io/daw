@@ -9,17 +9,18 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
+		"test": "bun test",
 		"lint": "biome check .",
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
 		"@effect/platform": "catalog:",
-		"effect": "catalog:"
+		"effect": "catalog:",
+		"ulid": "catalog:"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"@vitest/coverage-v8": "catalog:",
-		"vitest": "catalog:"
+		"@types/bun": "catalog:",
+		"@vitest/coverage-v8": "catalog:"
 	}
 }

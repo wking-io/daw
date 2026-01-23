@@ -5,29 +5,29 @@ export const QNSpan = Schema.Struct({
 	start: QN,
 	size: QN,
 });
-export type QNSpan = typeof QNSpan.Type;
+export type QNSpan = Schema.Schema.Type<typeof QNSpan>;
 
 export const ClipLoop = Schema.Struct({
 	enabled: Schema.Boolean,
 	length: QN,
 });
-export type ClipLoop = typeof ClipLoop.Type;
+export type ClipLoop = Schema.Schema.Type<typeof ClipLoop>;
 
 export const MidiClipPayload = Schema.Struct({
 	kind: Schema.Literal("midi"),
 	patternId: PatternId,
 });
-export type MidiClipPayload = typeof MidiClipPayload.Type;
+export type MidiClipPayload = Schema.Schema.Type<typeof MidiClipPayload>;
 
 export const AudioClipPayload = Schema.Struct({
 	kind: Schema.Literal("audio"),
 	audioFileId: AudioFileId,
 	offsetSec: Schema.Number,
 });
-export type AudioClipPayload = typeof AudioClipPayload.Type;
+export type AudioClipPayload = Schema.Schema.Type<typeof AudioClipPayload>;
 
 export const ClipPayload = Schema.Union(MidiClipPayload, AudioClipPayload);
-export type ClipPayload = typeof ClipPayload.Type;
+export type ClipPayload = Schema.Schema.Type<typeof ClipPayload>;
 
 export const Clip = Schema.Struct({
 	id: ClipId,
@@ -38,4 +38,4 @@ export const Clip = Schema.Struct({
 	sortOrder: Schema.Number,
 	payload: ClipPayload,
 });
-export type Clip = typeof Clip.Type;
+export type Clip = Schema.Schema.Type<typeof Clip>;

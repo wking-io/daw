@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import * as Numeric from "../numeric";
-import * as Range from "../range";
 import * as Span from "../span";
 
 describe("lib/span", () => {

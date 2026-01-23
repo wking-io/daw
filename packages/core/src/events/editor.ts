@@ -1,5 +1,4 @@
 import { Schema } from "effect";
-import { EventBatch } from ".";
 import { AudioFileEvent } from "./audio";
 import { AutomationEvent } from "./automation";
 import { ClipEvent } from "./clip";
@@ -22,6 +21,9 @@ export const EditorEvent = Schema.Union(
 	// Track
 	TrackEvent,
 );
-export type EditorEvent = typeof EditorEvent.Type;
+export type EditorEvent = Schema.Schema.Type<typeof EditorEvent>;
+
+import { EventBatch } from "./event-batch";
 
 export const EditorEventBatch = EventBatch("ProjectVersion", EditorEvent);
+export type EditorEventBatch = Schema.Schema.Type<typeof EditorEventBatch>;

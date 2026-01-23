@@ -1,4 +1,4 @@
-import { type Events, ProjectId, ProjectVersion } from "@daw/core";
+import { type Events, Ids, Versions } from "@daw/core";
 import { SqlClient, SqlSchema } from "@effect/sql";
 import { Effect, Schema } from "effect";
 import { ProjectEventModel } from "./models";
@@ -12,8 +12,8 @@ export class ProjectEventStore extends Effect.Service<ProjectEventStore>()(
 			const listEvents = SqlSchema.findAll({
 				Result: ProjectEventModel,
 				Request: Schema.Struct({
-					projectId: ProjectId,
-					version: ProjectVersion,
+					projectId: Ids.ProjectId,
+					version: Versions.ProjectVersion,
 				}),
 				execute: ({ projectId, version }) =>
 					sql`SELECT version, data FROM events WHERE project_id = ${projectId} AND version > ${version} ORDER BY version ASC`,
@@ -25,15 +25,15 @@ export class ProjectEventStore extends Effect.Service<ProjectEventStore>()(
 				execute: (request) => sql`insert into events ${sql.insert(request)}`,
 			});
 
-			const load = (id: ProjectId, from?: ProjectVersion) =>
+			const load = (id: Ids.ProjectId, from?: Versions.ProjectVersion) =>
 				listEvents({
 					projectId: id,
-					version: from ?? ProjectVersion.make(0),
+					version: from ?? Versions.ProjectVersion.make(0),
 				});
 
 			const append = (
-				id: ProjectId,
-				version: ProjectVersion,
+				id: Ids.ProjectId,
+				version: Versions.ProjectVersion,
 				event: Events.EditorEvent,
 			) =>
 				insertEvent({ id, version, data: event }).pipe(

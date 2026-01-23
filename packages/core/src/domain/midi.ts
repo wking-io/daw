@@ -8,7 +8,7 @@ export const MidiNote = Schema.Struct({
 	velocity: Schema.Number.pipe(Schema.int(), Schema.between(0, 127)),
 	span: QNSpan,
 });
-export type MidiNote = typeof MidiNote.Type;
+export type MidiNote = Schema.Schema.Type<typeof MidiNote>;
 
 export const MidiPattern = Schema.Struct({
 	id: PatternId,
@@ -16,4 +16,4 @@ export const MidiPattern = Schema.Struct({
 	name: Schema.String,
 	notes: Schema.Array(MidiNote),
 });
-export type MidiPattern = typeof MidiPattern.Type;
+export type MidiPattern = Schema.Schema.Type<typeof MidiPattern>;

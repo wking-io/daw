@@ -55,11 +55,12 @@
       "dependencies": {
         "@effect/platform": "catalog:",
         "effect": "catalog:",
+        "ulid": "catalog:",
       },
       "devDependencies": {
         "@biomejs/biome": "catalog:",
+        "@types/bun": "catalog:",
         "@vitest/coverage-v8": "catalog:",
-        "vitest": "catalog:",
       },
     },
     "packages/desktop": {

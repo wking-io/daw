@@ -4,7 +4,9 @@ export const ServerHeartbeatEvent = Schema.Struct({
 	t: Schema.Literal("server.heartbeat"),
 	timestamp: Schema.Number,
 });
-export type ServerHeartbeatEvent = typeof ServerHeartbeatEvent.Type;
+export type ServerHeartbeatEvent = Schema.Schema.Type<
+	typeof ServerHeartbeatEvent
+>;
 
 export const ServerEvent = Schema.Union(ServerHeartbeatEvent);
-export type ServerEvent = typeof ServerEvent.Type;
+export type ServerEvent = Schema.Schema.Type<typeof ServerEvent>;

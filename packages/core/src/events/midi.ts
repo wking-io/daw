@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import * as Domain from "../domain";
+import { QNSpan } from "../domain/clip";
+import { MidiNote } from "../domain/midi";
 import * as Ids from "../ids";
 
 export const MidiPatternRenamed = Schema.Struct({
@@ -7,29 +8,29 @@ export const MidiPatternRenamed = Schema.Struct({
 	patternId: Ids.PatternId,
 	name: Schema.String,
 });
-export type MidiPatternRenamed = typeof MidiPatternRenamed.Type;
+export type MidiPatternRenamed = Schema.Schema.Type<typeof MidiPatternRenamed>;
 
 export const MidiNoteAdded = Schema.Struct({
 	t: Schema.Literal("midi.noteAdded"),
 	patternId: Ids.PatternId,
-	note: Domain.MidiNote,
+	note: MidiNote,
 });
-export type MidiNoteAdded = typeof MidiNoteAdded.Type;
+export type MidiNoteAdded = Schema.Schema.Type<typeof MidiNoteAdded>;
 
 export const MidiNoteDeleted = Schema.Struct({
 	t: Schema.Literal("midi.noteDeleted"),
 	patternId: Ids.PatternId,
 	noteId: Ids.NoteId,
 });
-export type MidiNoteDeleted = typeof MidiNoteDeleted.Type;
+export type MidiNoteDeleted = Schema.Schema.Type<typeof MidiNoteDeleted>;
 
 export const MidiNoteMoved = Schema.Struct({
 	t: Schema.Literal("midi.noteMoved"),
 	patternId: Ids.PatternId,
 	noteId: Ids.NoteId,
-	span: Domain.QNSpan,
+	span: QNSpan,
 });
-export type MidiNoteMoved = typeof MidiNoteMoved.Type;
+export type MidiNoteMoved = Schema.Schema.Type<typeof MidiNoteMoved>;
 
 export const MidiNoteVelocityChanged = Schema.Struct({
 	t: Schema.Literal("midi.noteVelocityChanged"),
@@ -37,7 +38,9 @@ export const MidiNoteVelocityChanged = Schema.Struct({
 	noteId: Ids.NoteId,
 	velocity: Schema.Number,
 });
-export type MidiNoteVelocityChanged = typeof MidiNoteVelocityChanged.Type;
+export type MidiNoteVelocityChanged = Schema.Schema.Type<
+	typeof MidiNoteVelocityChanged
+>;
 
 export const MidiNotePitchChanged = Schema.Struct({
 	t: Schema.Literal("midi.notePitchChanged"),
@@ -45,7 +48,9 @@ export const MidiNotePitchChanged = Schema.Struct({
 	noteId: Ids.NoteId,
 	pitch: Schema.Number,
 });
-export type MidiNotePitchChanged = typeof MidiNotePitchChanged.Type;
+export type MidiNotePitchChanged = Schema.Schema.Type<
+	typeof MidiNotePitchChanged
+>;
 
 export const MidiEvent = Schema.Union(
 	MidiPatternRenamed,
@@ -55,4 +60,4 @@ export const MidiEvent = Schema.Union(
 	MidiNoteVelocityChanged,
 	MidiNotePitchChanged,
 );
-export type MidiEvent = typeof MidiEvent.Type;
+export type MidiEvent = Schema.Schema.Type<typeof MidiEvent>;
