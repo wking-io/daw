@@ -11,8 +11,8 @@ export class ProjectRepository extends Effect.Service<ProjectRepository>()(
 
 			const list = () => api.project.list();
 
-			const create = (project: Commands.ProjectCreate) =>
-				api.project.create({ payload: project }).pipe(
+			const create = (payload: Commands.ProjectCreateCommand) =>
+				api.project.create({ payload }).pipe(
 					Effect.catchTags({
 						HttpApiDecodeError: (error) =>
 							Effect.fail(

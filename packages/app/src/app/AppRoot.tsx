@@ -1,5 +1,5 @@
 import { ApiClient } from "@app/api/client";
-import { Commands } from "@daw/core";
+import { Commands, Ids, Versions } from "@daw/core";
 import { Result, useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Cause } from "effect";
 /**
@@ -32,7 +32,16 @@ function ProjectList() {
 		const formData = new FormData(e.currentTarget);
 		const name = formData.get("name") as string;
 		create({
-			payload: Commands.ProjectCreate.make({ name, t: "project.create" }),
+			payload: Commands.ProjectCreateCommand.make({
+				id: Ids.generate("CommandId"),
+				expectedVersion: Versions.ProjectVersion.make(0),
+				actor: "ui",
+				payload: Commands.ProjectCreate.make({
+					t: "project.create",
+					name,
+					projectId: Ids.generate("ProjectId"),
+				}),
+			}),
 			reactivityKeys: ["projects"],
 		});
 	};

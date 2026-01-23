@@ -1,4 +1,5 @@
-import { ApiError, Commands, Project } from "@daw/core";
+import { ApiError, Commands, Ids, Project } from "@daw/core";
+import { ProjectVersion } from "@daw/core/versions";
 import { Tool, Toolkit } from "@effect/ai";
 import { Effect } from "effect";
 import { ProjectRepository } from "./repo";
@@ -16,6 +17,12 @@ export const ProjectToolkitLive = ProjectToolkit.toLayer({
 	[CreateProjectTool.name]: (params: Commands.ProjectCreate) =>
 		Effect.gen(function* () {
 			const repo = yield* ProjectRepository;
-			return yield* repo.create(params);
+			const CreateCommand = Commands.ProjectCreateCommand.make({
+				id: Ids.generate("CommandId"),
+				expectedVersion: ProjectVersion.make(0),
+				actor: "agent",
+				payload: params,
+			});
+			return yield* repo.create(CreateCommand);
 		}),
 });

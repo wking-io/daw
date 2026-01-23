@@ -41,24 +41,26 @@ const healthGroup = HttpApiGroup.make("health")
 
 const projectGroup = HttpApiGroup.make("project")
 	.add(
-		HttpApiEndpoint.get("list", "/").addSuccess(Schema.Array(Project.Project)),
+		HttpApiEndpoint.get("list", "/").addSuccess(
+			Schema.Array(Project.ProjectSummary),
+		),
 	)
 	.add(
 		HttpApiEndpoint.post("create", "/")
-			.setPayload(Commands.ProjectCreate)
-			.addSuccess(Project.Project),
+			.setPayload(Commands.ProjectCreateCommand)
+			.addSuccess(Project.ProjectWithTimestamps),
 	)
 	.add(
 		HttpApiEndpoint.get("get", "/:projectId")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.addSuccess(Project.Project)
+			.addSuccess(Project.ProjectWithTimestamps)
 			.addError(ApiError.NotFound),
 	)
 	.add(
 		HttpApiEndpoint.post("edit", "/:projectId/edit")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
 			.setPayload(Commands.EditorCommand)
-			.addSuccess(Project.Project)
+			.addSuccess(Project.ProjectWithTimestamps)
 			.addError(ApiError.NotFound),
 	)
 	.add(

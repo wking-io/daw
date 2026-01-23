@@ -30,8 +30,6 @@ const pkgRoot = path.resolve(__dirname, "..");
 
 process.chdir(pkgRoot);
 
-const singleFlag =
-	process.argv.includes("--single") || !process.argv.includes("--all");
 const allFlag = process.argv.includes("--all");
 const skipClean = process.argv.includes("--skip-clean");
 
@@ -78,23 +76,6 @@ const bunCompileTargetFor = (t: Target) => {
 	if (t.abi) parts.push(t.abi);
 	if (t.baseline) parts.push("baseline");
 	return parts.join("-");
-};
-
-// For sidecar naming in `packages/desktop/src-tauri/sidecars/`, Tauri expects:
-//   <name>-<rust-target-triple>[.exe]
-// Ref: https://tauri.app (externalBin convention)
-const rustTripleFor = (t: Target) => {
-	if (t.os === "darwin" && t.arch === "arm64") return "aarch64-apple-darwin";
-	if (t.os === "darwin" && t.arch === "x64") return "x86_64-apple-darwin";
-	if (t.os === "linux" && t.arch === "arm64" && t.abi === "musl")
-		return "aarch64-unknown-linux-musl";
-	if (t.os === "linux" && t.arch === "arm64")
-		return "aarch64-unknown-linux-gnu";
-	if (t.os === "linux" && t.arch === "x64" && t.abi === "musl")
-		return "x86_64-unknown-linux-musl";
-	if (t.os === "linux" && t.arch === "x64") return "x86_64-unknown-linux-gnu";
-	if (t.os === "win32" && t.arch === "x64") return "x86_64-pc-windows-msvc";
-	throw new Error(`No Rust triple mapping for target: ${JSON.stringify(t)}`);
 };
 
 if (!skipClean) {

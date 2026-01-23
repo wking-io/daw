@@ -155,8 +155,8 @@ export function nodeBounds<A>(node: SceneNode<A>): Rect | undefined {
 			return node.rect;
 		case "line": {
 			if (node.points.length === 0) return undefined;
-			let minX = node.points[0]!.x;
-			let minY = node.points[0]!.y;
+			let minX = node.points[0].x;
+			let minY = node.points[0].y;
 			let maxX = minX;
 			let maxY = minY;
 			for (const p of node.points) {

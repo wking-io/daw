@@ -59,10 +59,10 @@ function renderLine(
 	if (points.length < 2) return;
 
 	ctx.beginPath();
-	ctx.moveTo(Number(points[0]!.x), Number(points[0]!.y));
+	ctx.moveTo(Number(points[0].x), Number(points[0].y));
 
 	for (let i = 1; i < points.length; i++) {
-		ctx.lineTo(Number(points[i]!.x), Number(points[i]!.y));
+		ctx.lineTo(Number(points[i].x), Number(points[i].y));
 	}
 
 	ctx.strokeStyle = stroke.color;

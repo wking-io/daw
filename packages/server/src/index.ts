@@ -7,7 +7,9 @@ import path from "path";
 import type { ServerConfigService } from "./config";
 import { ServerConfig, ServerConfigLive } from "./config";
 import { ApiLive, RequestIdMiddleware } from "./http/server";
+import { ProjectCommandHandler } from "./projects/command-handler";
 import { ProjectEventStore } from "./projects/event-store";
+import { ProjectLister } from "./projects/lister";
 import { ProjectSnapshotStore } from "./projects/snapshot-store";
 import { ProjectStore } from "./projects/store";
 
@@ -17,6 +19,8 @@ const makeHttpLive = (config: ServerConfigService) =>
 		Layer.provide(RequestIdMiddleware),
 		HttpServer.withLogAddress,
 		Layer.provide(ApiLive),
+		Layer.provide(ProjectCommandHandler.Default),
+		Layer.provide(ProjectLister.Default),
 		Layer.provide(ProjectSnapshotStore.Default),
 		Layer.provide(ProjectEventStore.Default),
 		Layer.provide(ProjectStore.Default),
@@ -24,7 +28,6 @@ const makeHttpLive = (config: ServerConfigService) =>
 		Layer.provide(
 			BunHttpServer.layer({
 				port: config.port,
-				// Disable idle timeout for SSE connections (default is 10s)
 				idleTimeout: 0,
 			}),
 		),

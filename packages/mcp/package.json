@@ -9,7 +9,7 @@
 		"build:binary": "bun run scripts/build-binary.ts --single",
 		"build:binaries": "bun run scripts/build-binary.ts --all",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
+		"test": "bun test",
 		"lint": "biome check .",
 		"fmt": "biome check --write ."
 	},

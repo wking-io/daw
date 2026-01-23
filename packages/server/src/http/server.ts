@@ -12,20 +12,13 @@ import {
 	HttpServerRequest,
 	HttpServerResponse,
 } from "@effect/platform";
-import {
-	Duration,
-	Effect,
-	Equivalence,
-	Layer,
-	Option,
-	Redacted,
-	Stream,
-} from "effect";
+import { Duration, Effect, Equivalence, Layer, Redacted, Stream } from "effect";
 import { ServerConfig } from "../config";
-import { Store } from "../store/store";
+import { ProjectCommandHandler } from "../projects/command-handler";
+import { ProjectLister } from "../projects/lister";
+import { ProjectStore } from "../projects/store";
 import { formatEventStream } from "../utils/format-event-stream";
 
-// Extend the HttpApiMiddleware.Tag class to define the logger middleware tag
 class RequestId extends HttpApiMiddleware.Tag<RequestId>()(
 	"server/RequestId",
 	{},
@@ -38,7 +31,6 @@ export const RequestIdMiddleware = Layer.effect(
 			const request = yield* HttpServerRequest.HttpServerRequest;
 			const requestId = request.headers["x-request-id"] ?? crypto.randomUUID();
 
-			// Add pre-response handler to set the x-request-id header on the response
 			yield* HttpApp.appendPreResponseHandler((_req, response) =>
 				Effect.succeed(
 					HttpServerResponse.setHeader(response, "x-request-id", requestId),
@@ -76,16 +68,12 @@ const AuthorizationLive = Layer.effect(
 	}),
 );
 
-/**
- * Projects list endpoints (listing/creating projects)
- * For now, this is stubbed to work with a single project
- */
 const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 	handlers
 		.handle("list", () =>
 			Effect.gen(function* () {
-				const store = yield* Store;
-				return yield* store.listProjects();
+				const lister = yield* ProjectLister;
+				return yield* lister.list();
 			}).pipe(
 				Effect.catchTags({
 					ParseError: () => Effect.fail(new ApiError.BadRequest()),
@@ -95,57 +83,52 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 		)
 		.handle("create", ({ payload }) =>
 			Effect.gen(function* () {
-				const store = yield* Store;
-				return yield* store.createProject(payload);
+				const commandHandler = yield* ProjectCommandHandler;
+				const result = yield* commandHandler.execute(
+					payload.payload.projectId,
+					payload,
+				);
+				return result;
 			}).pipe(
-				Effect.catchTags({
-					ParseError: () => Effect.fail(new ApiError.BadRequest()),
-					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
-				}),
+				Effect.catchAll(() => Effect.fail(new ApiError.InternalServerError())),
 			),
 		)
 		.handle("get", ({ path }) =>
 			Effect.gen(function* () {
-				const store = yield* Store;
-				return yield* store.getSnapshot(path.projectId);
+				const projectStore = yield* ProjectStore;
+				return yield* projectStore.load(path.projectId);
 			}).pipe(
 				Effect.catchTags({
-					ParseError: () => Effect.fail(new ApiError.BadRequest()),
-					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
+					NotFound: () => Effect.fail(new ApiError.NotFound()),
 				}),
+				Effect.catchAll(() => Effect.fail(new ApiError.InternalServerError())),
 			),
 		)
 		.handle("edit", ({ path, payload }) =>
 			Effect.gen(function* () {
-				const store = yield* Store;
-				const result = yield* store.executeCommand(path.projectId, payload);
-				return result;
+				const commandHandler = yield* ProjectCommandHandler;
+				return yield* commandHandler.execute(path.projectId, payload);
 			}).pipe(
 				Effect.catchTags({
-					NoSuchElementException: () => Effect.fail(new ApiError.NotFound()),
-					ParseError: () => Effect.fail(new ApiError.BadRequest()),
-					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
+					NotFound: () => Effect.fail(new ApiError.NotFound()),
 				}),
+				Effect.catchAll(() => Effect.fail(new ApiError.InternalServerError())),
 			),
 		)
-		.handle("subscribe", ({ path, urlParams }) =>
+		.handle("subscribe", ({ path }) =>
 			Effect.gen(function* () {
-				const store = yield* Store;
+				const projectStore = yield* ProjectStore;
 				const projectId = path.projectId;
-				const snapshot = yield* store.getSnapshot(projectId);
-				const fromVersion = Option.fromNullable(urlParams.fromVersion).pipe(
-					Option.getOrElse(() => 0),
-				);
+				const project = yield* projectStore.load(projectId);
 
-				// Create connected event
 				const connectedStream = Stream.make(
-					Events.ServerConnectedEvent.make({
-						t: "server.connected",
-						serverVersion: snapshot.version,
+					Events.ProjectSubscribedEvent.make({
+						t: "project.subscribed",
+						version: project.version,
+						timestamp: Date.now(),
 					}),
 				);
 
-				// Create heartbeat stream (each emission is delayed by HEARTBEAT_INTERVAL_MS)
 				const heartbeatStream = Stream.repeatEffect(
 					Effect.delay(
 						Effect.sync(() =>
@@ -158,27 +141,12 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 					),
 				);
 
-				// Get event stream and wrap batches in event envelope
-				const eventStream = yield* store.eventStreamFrom(
-					projectId,
-					fromVersion,
-				);
-				const eventBatchStream = eventStream.pipe(
-					Stream.map((batch) =>
-						Events.Batch.make({
-							t: "events",
-							batch: {
-								version: batch.version,
-								events: batch.events,
-							},
-						}),
-					),
-				);
+				// TODO: Implement proper event streaming from ProjectEventStore
+				const eventBatchStream =
+					Stream.empty as Stream.Stream<Events.ServerEvent>;
 
-				// Combine all event streams
 				const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
 
-				// Prepend connected event and format as event stream
 				const stream = Stream.concat(connectedStream, combinedStream).pipe(
 					Stream.map((event) =>
 						new TextEncoder().encode(formatEventStream(event)),
@@ -200,7 +168,6 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 		)
 		.handle("delete", (_) =>
 			Effect.gen(function* () {
-				// For now, we don't support deleting projects
 				return yield* Effect.fail(new ApiError.NotFound());
 			}),
 		),

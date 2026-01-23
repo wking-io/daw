@@ -14,7 +14,7 @@ export function hitTest<Action>(
 ): Action | null {
 	// Test in reverse order - last node is on top
 	for (let i = nodes.length - 1; i >= 0; i--) {
-		const node = nodes[i]!;
+		const node = nodes[i];
 		const result = hitTestNode(node, point);
 		if (result != null) return result;
 	}
@@ -83,10 +83,10 @@ function isPointNearLine(
 	if (linePoints.length < 2) return false;
 
 	for (let i = 0; i < linePoints.length - 1; i++) {
-		const x1 = linePoints[i]!.x;
-		const y1 = linePoints[i]!.y;
-		const x2 = linePoints[i + 1]!.x;
-		const y2 = linePoints[i + 1]!.y;
+		const x1 = linePoints[i].x;
+		const y1 = linePoints[i].y;
+		const x2 = linePoints[i + 1].x;
+		const y2 = linePoints[i + 1].y;
 
 		const dist = pointToSegmentDistance(point.x, point.y, x1, y1, x2, y2);
 		if (dist <= tolerance) return true;

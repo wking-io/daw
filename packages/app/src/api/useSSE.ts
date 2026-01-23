@@ -1,4 +1,4 @@
-import type { Events, ProjectId } from "@daw/core";
+import type { Events, Ids } from "@daw/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const port = Number.parseInt(import.meta.env.DAW_STATE_PORT ?? "43125", 10);
@@ -7,11 +7,11 @@ const baseUrl = `http://127.0.0.1:${port}`;
 
 export interface UseSSEOptions {
 	/** Project ID to subscribe to */
-	projectId: ProjectId;
+	projectId: Ids.ProjectId;
 	/** Version to start streaming from */
 	fromVersion: number;
 	/** Callback when an SSE event is received */
-	onEvent: (event: Events.Events) => void;
+	onEvent: (event: Events.EventResponses) => void;
 	/** Callback when an error occurs */
 	onError?: (error: Error) => void;
 	/** Whether the connection should be active */
@@ -87,7 +87,7 @@ export function useSSE(options: UseSSEOptions): UseSSEResult {
 					if (line.startsWith("data: ")) {
 						const data = line.slice(6);
 						try {
-							const event = JSON.parse(data) as Events.Events;
+							const event = JSON.parse(data) as Events.EventResponses;
 							onEvent(event);
 						} catch {
 							// Ignore parse errors

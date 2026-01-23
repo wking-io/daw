@@ -1,4 +1,4 @@
-import type { Events } from "@daw/core";
+import { type Events, Versions } from "@daw/core";
 import { describe, expect, it } from "vitest";
 import { createEventCoalescer, getEventsKey } from "./sse";
 
@@ -89,7 +89,7 @@ describe("createEventCoalescer", () => {
 
 describe("getEventsKey", () => {
 	it("returns key for heartbeat events", () => {
-		const event: Events.ServerHeartbeatEvent = {
+		const event: Events.ServerEvent = {
 			t: "server.heartbeat",
 			timestamp: Date.now(),
 		};
@@ -97,20 +97,19 @@ describe("getEventsKey", () => {
 	});
 
 	it("returns undefined for events batch (not coalesced)", () => {
-		const event: Events.Events = {
+		const event: Events.EditorEventBatch = {
 			t: "events",
-			batch: {
-				version: 1,
-				events: [],
-			},
+			version: Versions.ProjectVersion.make(1),
+			events: [],
 		};
 		expect(getEventsKey(event)).toBeUndefined();
 	});
 
 	it("returns undefined for server.connected events", () => {
-		const event: Events.ServerConnectedEvent = {
-			t: "server.connected",
-			serverVersion: 0,
+		const event: Events.ProjectSubscribedEvent = {
+			t: "project.subscribed",
+			version: Versions.ProjectVersion.make(0),
+			timestamp: Date.now(),
 		};
 		expect(getEventsKey(event)).toBeUndefined();
 	});

@@ -1,9 +1,16 @@
 import { Schema } from "effect";
-import * as Editor from "./editor";
+import { EditorEventBatch } from "./editor";
+import { ProjectSubscribedEvent } from "./project";
 import { ServerEvent } from "./server";
 
 export * from "./editor";
 export * from "./event-batch";
+export { ProjectSubscribedEvent } from "./project";
+export * from "./server";
 
-export const Events = Schema.Union(ServerEvent, Editor.EditorEventBatch);
-export type Events = Schema.Schema.Type<typeof Events>;
+export const EventResponses = Schema.Union(
+	EditorEventBatch,
+	ServerEvent,
+	ProjectSubscribedEvent,
+);
+export type EventResponses = Schema.Schema.Type<typeof EventResponses>;

@@ -1,4 +1,2 @@
-import type { Events } from "@daw/core";
-
-export const formatEventStream = (events: Events.Events): string =>
-	`data: ${JSON.stringify(events)}\n\n`;
+export const formatEventStream = (event: unknown): string =>
+	`data: ${JSON.stringify(event)}\n\n`;

@@ -13,7 +13,8 @@ export type ValidId =
 	| "AutomationLaneId"
 	| "AutomationPointId"
 	| "AudioFileId"
-	| "DeviceId";
+	| "DeviceId"
+	| "CommandId";
 
 export const Id = <B extends ValidId>(brand: B) =>
 	Schema.String.pipe(Schema.brand(brand));
@@ -52,3 +53,6 @@ export type AudioFileId = Schema.Schema.Type<typeof AudioFileId>;
 
 export const DeviceId = Id("DeviceId");
 export type DeviceId = Schema.Schema.Type<typeof DeviceId>;
+
+export const CommandId = Id("CommandId");
+export type CommandId = Schema.Schema.Type<typeof CommandId>;

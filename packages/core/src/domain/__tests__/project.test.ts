@@ -32,8 +32,6 @@ const createBaseProject = (): Project => ({
 	id: ProjectId.make("proj-1"),
 	name: "Test Project",
 	version: ProjectVersion.make(1),
-	createdAt: new Date(1704067200000),
-	updatedAt: new Date(1704067200000),
 	bpm: 120,
 	timeSignature: { numerator: 4, denominator: 4 as const },
 	tracks: [],
@@ -120,8 +118,6 @@ describe("Project schema", () => {
 		id: ProjectId.make("proj-123"),
 		version: ProjectVersion.make(1),
 		name: "My Project",
-		createdAt: 1704067200000, // 2024-01-01
-		updatedAt: 1704153600000, // 2024-01-02
 		bpm: 120,
 		timeSignature: { numerator: 4, denominator: 4 as const },
 		tracks: [],
@@ -137,15 +133,6 @@ describe("Project schema", () => {
 		expect(decoded.version).toBe(ProjectVersion.make(1));
 		expect(decoded.name).toBe("My Project");
 		expect(decoded.bpm).toBe(120);
-		expect(decoded.createdAt).toBeInstanceOf(Date);
-		expect(decoded.updatedAt).toBeInstanceOf(Date);
-	});
-
-	it("encodes project back to JSON format", () => {
-		const decoded = Schema.decodeUnknownSync(Project)(validProjectJson);
-		const encoded = Schema.encodeSync(Project)(decoded);
-		expect(encoded.createdAt).toBe(1704067200000);
-		expect(encoded.updatedAt).toBe(1704153600000);
 	});
 
 	it("rejects bpm below 20", () => {

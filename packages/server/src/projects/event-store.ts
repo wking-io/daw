@@ -12,11 +12,11 @@ export class ProjectEventStore extends Effect.Service<ProjectEventStore>()(
 			const listEvents = SqlSchema.findAll({
 				Result: ProjectEventModel,
 				Request: Schema.Struct({
-					projectId: Ids.ProjectId,
+					id: Ids.ProjectId,
 					version: Versions.ProjectVersion,
 				}),
-				execute: ({ projectId, version }) =>
-					sql`SELECT version, data FROM events WHERE project_id = ${projectId} AND version > ${version} ORDER BY version ASC`,
+				execute: ({ id, version }) =>
+					sql`SELECT * FROM events WHERE id = ${id} AND version > ${version} ORDER BY version ASC`,
 			});
 
 			const insertEvent = SqlSchema.single({
@@ -27,7 +27,7 @@ export class ProjectEventStore extends Effect.Service<ProjectEventStore>()(
 
 			const load = (id: Ids.ProjectId, from?: Versions.ProjectVersion) =>
 				listEvents({
-					projectId: id,
+					id,
 					version: from ?? Versions.ProjectVersion.make(0),
 				});
 
@@ -37,8 +37,9 @@ export class ProjectEventStore extends Effect.Service<ProjectEventStore>()(
 				event: Events.EditorEvent,
 			) =>
 				insertEvent({ id, version, data: event }).pipe(
+					Effect.map(() => version),
 					Effect.catchTags({
-						NoSuchElementException: () => Effect.void,
+						NoSuchElementException: () => Effect.succeed(version),
 					}),
 				);
 

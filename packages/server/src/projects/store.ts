@@ -1,5 +1,8 @@
 import { type Events, type Ids, Project, Versions } from "@daw/core";
+import type { SqlError } from "@effect/sql/SqlError";
 import { Effect } from "effect";
+import type { NoSuchElementException } from "effect/Cause";
+import type { ParseError } from "effect/ParseResult";
 import { ProjectEventStore } from "./event-store";
 import { ProjectSnapshotStore } from "./snapshot-store";
 
@@ -9,28 +12,46 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 		effect: Effect.gen(function* () {
 			const eventStore = yield* ProjectEventStore;
 			const snapshotStore = yield* ProjectSnapshotStore;
+			const CHANGE_THRESHOLD = 20; // TODO: Make this configurable
 
 			const evolve = (
 				project: Project.Project,
-				events: Events.EditorEvent[],
+				events: ReadonlyArray<Events.EditorEvent>,
 			) => {
 				return events.reduce((s, event) => Project.evolve(s, event), project);
 			};
 
-			const load = (id: Ids.ProjectId, from?: Versions.ProjectVersion) =>
+			const load = (id: Ids.ProjectId) =>
 				Effect.gen(function* () {
-					const snapshot = yield* snapshotStore.load(id, from);
-					const events = yield* eventStore.load(id, snapshot.version);
+					const [snapshot, createdAt] = yield* Effect.all([
+						snapshotStore.load(id),
+						snapshotStore
+							.load(id, "ASC")
+							.pipe(Effect.map((snapshot) => snapshot.createdAt)),
+					]);
 
-					return evolve(
-						snapshot.data,
-						events.map((event) => event.data),
-					);
+					const events = yield* eventStore
+						.load(id, snapshot.version)
+						.pipe(Effect.map((events) => events.map((event) => event.data)));
+
+					const project = evolve(snapshot.data, events);
+					return {
+						...project,
+						updatedAt: snapshot.createdAt,
+						createdAt,
+					};
 				});
 
-			const append = (project: Project.Project, events: Events.EditorEvent[]) =>
+			const append = (
+				project: Project.ProjectWithTimestamps,
+				events: ReadonlyArray<Events.EditorEvent>,
+			): Effect.Effect<
+				Project.ProjectWithTimestamps,
+				SqlError | ParseError | NoSuchElementException,
+				never
+			> =>
 				Effect.gen(function* () {
-					const results = Effect.all(
+					const version = yield* Effect.all(
 						events.map((event, idx) =>
 							eventStore.append(
 								project.id,
@@ -38,9 +59,28 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 								event,
 							),
 						),
-					).pipe(Effect.flatMap(() => Effect.void));
+					).pipe(Effect.map((versions) => versions.at(-1) ?? project.version));
 
-					return results;
+					const evolved = evolve(project, events);
+					const updatedProject = { ...evolved, version };
+
+					if (
+						project.version === 0 ||
+						version - project.version > CHANGE_THRESHOLD
+					) {
+						const saved = yield* snapshotStore.append(updatedProject);
+						return {
+							...saved.data,
+							createdAt: project.createdAt,
+							updatedAt: saved.createdAt,
+						};
+					}
+
+					return {
+						...updatedProject,
+						createdAt: project.createdAt,
+						updatedAt: project.updatedAt,
+					};
 				});
 
 			return { load, append };

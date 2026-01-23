@@ -1,4 +1,4 @@
-import { ApiError, Ids, type Project, Versions } from "@daw/core";
+import { ApiError, Ids, type Project } from "@daw/core";
 import { SqlClient, SqlSchema } from "@effect/sql";
 import { Effect, Option, Schema } from "effect";
 import { ProjectSnapshotModel } from "./models";
@@ -9,27 +9,30 @@ export class ProjectSnapshotStore extends Effect.Service<ProjectSnapshotStore>()
 		effect: Effect.gen(function* () {
 			const sql = yield* SqlClient.SqlClient;
 
-			const getSnapshot = SqlSchema.findOne({
+			const getSnapshotAsc = SqlSchema.findOne({
 				Result: ProjectSnapshotModel,
-				Request: Schema.Struct({
-					projectId: Ids.ProjectId,
-					version: Versions.ProjectVersion,
-				}),
-				execute: ({ projectId, version }) =>
-					sql`SELECT version, data FROM events WHERE project_id = ${projectId} AND version > ${version} ORDER BY version ASC`,
+				Request: Schema.Struct({ id: Ids.ProjectId }),
+				execute: ({ id }) =>
+					sql`SELECT * FROM snapshots WHERE id = ${id} ORDER BY version ASC LIMIT 1`,
+			});
+
+			const getSnapshotDesc = SqlSchema.findOne({
+				Result: ProjectSnapshotModel,
+				Request: Schema.Struct({ id: Ids.ProjectId }),
+				execute: ({ id }) =>
+					sql`SELECT * FROM snapshots WHERE id = ${id} ORDER BY version DESC LIMIT 1`,
 			});
 
 			const insertSnapshot = SqlSchema.single({
-				Result: Schema.Void,
+				Result: ProjectSnapshotModel,
 				Request: ProjectSnapshotModel.insert,
-				execute: (request) => sql`insert into snapshots ${sql.insert(request)}`,
+				execute: (request) =>
+					sql`insert into snapshots ${sql.insert(request)} RETURNING *`,
 			});
 
-			const load = (id: Ids.ProjectId, from?: Versions.ProjectVersion) =>
-				getSnapshot({
-					projectId: id,
-					version: from ?? Versions.ProjectVersion.make(0),
-				}).pipe(
+			const load = (id: Ids.ProjectId, order: "ASC" | "DESC" = "DESC") => {
+				const getSnapshot = order === "ASC" ? getSnapshotAsc : getSnapshotDesc;
+				return getSnapshot({ id }).pipe(
 					Effect.flatMap(
 						Option.match({
 							onNone: () =>
@@ -43,17 +46,15 @@ export class ProjectSnapshotStore extends Effect.Service<ProjectSnapshotStore>()
 						}),
 					),
 				);
+			};
 
 			const append = (project: Project.Project) =>
 				insertSnapshot({
 					id: project.id,
+					name: project.name,
 					version: project.version,
 					data: project,
-				}).pipe(
-					Effect.catchTags({
-						NoSuchElementException: () => Effect.void,
-					}),
-				);
+				});
 
 			return {
 				load,

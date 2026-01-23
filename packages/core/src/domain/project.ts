@@ -16,6 +16,7 @@ import {
 	MidiPattern,
 	type MidiPattern as MidiPatternType,
 } from "./midi";
+import { WithTimestamps } from "./timestamps";
 import { Track, type Track as TrackType } from "./track";
 
 export type { AudioFile } from "./audio-file";
@@ -28,8 +29,6 @@ export const Project = Schema.Struct({
 	id: ProjectId,
 	name: Schema.String,
 	version: ProjectVersion,
-	createdAt: Schema.DateFromNumber,
-	updatedAt: Schema.DateFromNumber,
 	bpm: Schema.Number.pipe(Schema.between(20, 999)),
 	timeSignature: TimeSignature,
 	tracks: Schema.Array(Track),
@@ -39,6 +38,20 @@ export const Project = Schema.Struct({
 	audioFiles: Schema.Array(AudioFile),
 });
 export type Project = Schema.Schema.Type<typeof Project>;
+
+export const ProjectWithTimestamps = WithTimestamps(Project);
+export type ProjectWithTimestamps = Schema.Schema.Type<
+	typeof ProjectWithTimestamps
+>;
+
+export const ProjectSummary = WithTimestamps(
+	Schema.Struct({
+		id: ProjectId,
+		name: Schema.String,
+		version: ProjectVersion,
+	}),
+);
+export type ProjectSummary = Schema.Schema.Type<typeof ProjectSummary>;
 
 function updateById<T extends { id: string }>(
 	arr: readonly T[],
@@ -428,7 +441,25 @@ export function decide(
 ): readonly EditorEvent[] {
 	switch (command.t) {
 		case "project.create":
-			return [];
+			return [
+				{
+					t: "project.created",
+					project: {
+						id: command.projectId,
+						name: command.name,
+						version: ProjectVersion.make(0),
+						bpm: command.bpm ?? 120,
+						timeSignature:
+							command.timeSignature ??
+							TimeSignature.make({ numerator: 4, denominator: 4 }),
+						tracks: [],
+						clips: [],
+						midiPatterns: [],
+						automationLanes: [],
+						audioFiles: [],
+					},
+				},
+			];
 
 		case "project.delete":
 			return [{ t: "project.deleted", projectId: project.id }];

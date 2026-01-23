@@ -5,7 +5,7 @@ export interface EventStreamClientOptions {
 	token?: string;
 	projectId?: string;
 	fromVersion?: number;
-	onEvent: (event: Events.Events) => void;
+	onEvent: (event: Events.EventResponses) => void;
 	onError?: (error: Error) => void;
 	onClose?: () => void;
 }
@@ -77,7 +77,7 @@ export function createEventStreamClient(
 					if (line.startsWith("data: ")) {
 						const data = line.slice(6);
 						try {
-							const event = JSON.parse(data) as Events.Events;
+							const event = JSON.parse(data) as Events.EventResponses;
 							onEvent(event);
 						} catch {
 							// Ignore parse errors
@@ -171,11 +171,11 @@ export function createEventCoalescer<T>(options: CoalescingOptions<T>) {
  * Event key generator for coalescing.
  * Returns a key for events that should be coalesced.
  */
-export function getEventsKey(event: Events.Events): string | undefined {
+export function getEventsKey(event: Events.EventResponses): string | undefined {
 	switch (event.t) {
 		case "server.heartbeat":
 			return event.t;
-		case "server.connected":
+		case "project.subscribed":
 			// Don't coalesce connected events
 			return undefined;
 		case "events":
