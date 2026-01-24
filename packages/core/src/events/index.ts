@@ -5,7 +5,7 @@ import { ServerEvent } from "./server";
 
 export * from "./editor";
 export * from "./event-batch";
-export { ProjectSubscribedEvent } from "./project";
+export { ProjectCreated, ProjectSubscribedEvent } from "./project";
 export * from "./server";
 
 export const EventResponses = Schema.Union(

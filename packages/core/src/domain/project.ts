@@ -1,6 +1,8 @@
-import { Schema } from "effect";
+import { Match, Option, Schema } from "effect";
+import type { ProjectCreate } from "../commands";
+import { ProjectCreateCommand } from "../commands/command";
 import type { EditorCommandPayload } from "../commands/editor-ops";
-import type { EditorEvent } from "../events";
+import type { EditorEvent, ProjectCreated } from "../events";
 import { ProjectId } from "../ids";
 import { TimeSignature } from "../lib/time-signature";
 import { ProjectVersion } from "../versions";
@@ -435,32 +437,31 @@ export function evolve(project: Project, event: EditorEvent): Project {
 	}
 }
 
+export function create(command: ProjectCreate): ProjectCreated {
+	return {
+		t: "project.created",
+		project: {
+			id: command.projectId,
+			name: command.name,
+			version: ProjectVersion.make(0),
+			bpm: command.bpm ?? 120,
+			timeSignature:
+				command.timeSignature ??
+				TimeSignature.make({ numerator: 4, denominator: 4 }),
+			tracks: [],
+			clips: [],
+			midiPatterns: [],
+			automationLanes: [],
+			audioFiles: [],
+		},
+	};
+}
+
 export function decide(
 	project: Project,
 	command: EditorCommandPayload,
 ): readonly EditorEvent[] {
 	switch (command.t) {
-		case "project.create":
-			return [
-				{
-					t: "project.created",
-					project: {
-						id: command.projectId,
-						name: command.name,
-						version: ProjectVersion.make(0),
-						bpm: command.bpm ?? 120,
-						timeSignature:
-							command.timeSignature ??
-							TimeSignature.make({ numerator: 4, denominator: 4 }),
-						tracks: [],
-						clips: [],
-						midiPatterns: [],
-						automationLanes: [],
-						audioFiles: [],
-					},
-				},
-			];
-
 		case "project.delete":
 			return [{ t: "project.deleted", projectId: project.id }];
 
@@ -510,7 +511,11 @@ export function decide(
 
 		case "track.rename":
 			return [
-				{ t: "track.renamed", trackId: command.trackId, name: command.name },
+				{
+					t: "track.renamed",
+					trackId: command.trackId,
+					name: command.name,
+				},
 			];
 
 		case "track.setColor":
@@ -533,7 +538,11 @@ export function decide(
 
 		case "track.setPan":
 			return [
-				{ t: "track.panChanged", trackId: command.trackId, pan: command.pan },
+				{
+					t: "track.panChanged",
+					trackId: command.trackId,
+					pan: command.pan,
+				},
 			];
 
 		case "track.setMute":
@@ -610,7 +619,9 @@ export function decide(
 					t: "clip.moved",
 					clipId: command.clipId,
 					start: command.startQN,
-					...(command.trackId !== undefined && { trackId: command.trackId }),
+					...(command.trackId !== undefined && {
+						trackId: command.trackId,
+					}),
 				},
 			];
 

@@ -84,13 +84,14 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 		.handle("create", ({ payload }) =>
 			Effect.gen(function* () {
 				const commandHandler = yield* ProjectCommandHandler;
-				const result = yield* commandHandler.execute(
-					payload.payload.projectId,
-					payload,
-				);
-				return result;
+				return yield* commandHandler.create(payload);
 			}).pipe(
-				Effect.catchAll(() => Effect.fail(new ApiError.InternalServerError())),
+				Effect.catchTags({
+					ParseError: () => Effect.fail(new ApiError.BadRequest()),
+					SqlError: () => Effect.fail(new ApiError.InternalServerError()),
+					NoSuchElementException: () =>
+						Effect.fail(new ApiError.InternalServerError()),
+				}),
 			),
 		)
 		.handle("get", ({ path }) =>

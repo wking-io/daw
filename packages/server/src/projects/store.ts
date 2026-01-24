@@ -42,6 +42,25 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					};
 				});
 
+			const create = (
+				event: Events.ProjectCreated,
+			): Effect.Effect<
+				Project.ProjectWithTimestamps,
+				SqlError | ParseError | NoSuchElementException,
+				never
+			> =>
+				Effect.gen(function* () {
+					const [saved] = yield* Effect.all([
+						snapshotStore.append(event.project),
+						eventStore.append(event.project.id, event.project.version, event),
+					]);
+					return {
+						...saved.data,
+						createdAt: saved.createdAt,
+						updatedAt: saved.createdAt,
+					};
+				});
+
 			const append = (
 				project: Project.ProjectWithTimestamps,
 				events: ReadonlyArray<Events.EditorEvent>,
@@ -83,7 +102,7 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					};
 				});
 
-			return { load, append };
+			return { load, append, create };
 		}),
 		dependencies: [ProjectEventStore.Default, ProjectSnapshotStore.Default],
 	},

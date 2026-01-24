@@ -45,7 +45,6 @@ export type ProjectReorderTracks = Schema.Schema.Type<
 >;
 
 export const ProjectOperation = Schema.Union(
-	ProjectCreate,
 	ProjectDelete,
 	ProjectRename,
 	ProjectSetTempo,
