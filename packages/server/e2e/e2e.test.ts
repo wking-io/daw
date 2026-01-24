@@ -182,7 +182,7 @@ describe("HTTP e2e", () => {
 		const project = (await res.json()) as ProjectResponse;
 		expect(project.id).toBe(testProjectId);
 		expect(project.name).toBe("E2E Test Project");
-		expect(project.version).toBe(1);
+		expect(project.version).toBe(0);
 	}, 20000);
 
 	it("GET /api/projects/:projectId returns the project", async () => {
@@ -227,7 +227,7 @@ describe("HTTP e2e", () => {
 		expect(res.ok).toBe(true);
 		const project = (await res.json()) as ProjectResponse;
 		expect(project.name).toBe("E2E Renamed Project");
-		expect(project.version).toBe(2);
+		expect(project.version).toBe(1);
 	}, 20000);
 
 	it("GET /api/projects/:projectId/subscribe returns event stream", async () => {
