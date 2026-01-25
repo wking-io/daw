@@ -144,9 +144,15 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 					),
 				);
 
-				// TODO: Implement proper event streaming from ProjectEventStore
-				const eventBatchStream =
-					Stream.empty as Stream.Stream<Events.ServerEvent>;
+				const eventBatchStream = projectStore.subscribe(projectId).pipe(
+					Stream.map(
+						(msg): Events.EditorEventBatch => ({
+							t: "events",
+							version: msg.version,
+							events: msg.events,
+						}),
+					),
+				);
 
 				const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
 

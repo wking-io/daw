@@ -256,6 +256,79 @@ describe("HTTP e2e", () => {
 		await reader.cancel();
 	}, 20000);
 
+	it("subscribe streams events when project is edited", async () => {
+		const streamProjectId = Ids.generate("ProjectId");
+
+		const createCommand: Commands.ProjectCreateCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: Versions.ProjectVersion.make(0),
+			actor: "ui",
+			payload: {
+				t: "project.create",
+				projectId: streamProjectId,
+				name: "Stream Test Project",
+			},
+		};
+
+		const createRes = await fetch(`${baseUrl}/api/projects`, {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				Authorization: `Bearer ${authToken}`,
+			},
+			body: JSON.stringify(createCommand),
+		});
+		expect(createRes.ok).toBe(true);
+
+		const subscribeRes = await fetch(
+			`${baseUrl}/api/projects/${streamProjectId}/subscribe?fromVersion=0`,
+			{
+				headers: { Authorization: `Bearer ${authToken}` },
+			},
+		);
+		expect(subscribeRes.ok).toBe(true);
+
+		const reader = subscribeRes.body?.getReader();
+		if (!reader) throw new Error("Reader is null");
+
+		const firstChunk = await reader.read();
+		const firstText = new TextDecoder().decode(firstChunk.value);
+		expect(firstText).toContain("project.subscribed");
+
+		const editCommand: Commands.EditorCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: Versions.ProjectVersion.make(0),
+			actor: "ui",
+			payload: {
+				t: "project.rename",
+				name: "Renamed Stream Project",
+			},
+		};
+
+		const editPromise = fetch(
+			`${baseUrl}/api/projects/${streamProjectId}/edit`,
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: `Bearer ${authToken}`,
+				},
+				body: JSON.stringify(editCommand),
+			},
+		);
+
+		const readPromise = reader.read();
+
+		const [editRes, secondChunk] = await Promise.all([editPromise, readPromise]);
+		expect(editRes.ok).toBe(true);
+
+		const secondText = new TextDecoder().decode(secondChunk.value);
+		expect(secondText).toContain("events");
+		expect(secondText).toContain("project.renamed");
+
+		await reader.cancel();
+	}, 20000);
+
 	it("GET /api/projects lists the created project", async () => {
 		const res = await fetch(`${baseUrl}/api/projects`, {
 			headers: { Authorization: `Bearer ${authToken}` },

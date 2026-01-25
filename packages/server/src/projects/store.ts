@@ -3,6 +3,7 @@ import type { SqlError } from "@effect/sql/SqlError";
 import { Effect, Option } from "effect";
 import type { NoSuchElementException } from "effect/Cause";
 import type { ParseError } from "effect/ParseResult";
+import { ProjectEventBus } from "./event-bus";
 import { ProjectEventStore } from "./event-store";
 import { ProjectSnapshotStore } from "./snapshot-store";
 
@@ -18,6 +19,7 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 		effect: Effect.gen(function* () {
 			const eventStore = yield* ProjectEventStore;
 			const snapshotStore = yield* ProjectSnapshotStore;
+			const eventBus = yield* ProjectEventBus;
 			const CHANGE_THRESHOLD = 20; // TODO: Make this configurable
 
 			const evolve = (
@@ -70,6 +72,11 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 						snapshotStore.append(event.project),
 						eventStore.append(event.project.id, event.project.version, event),
 					]);
+					yield* eventBus.publish(
+						event.project.id,
+						event.project.version,
+						[event],
+					);
 					return {
 						...saved.data,
 						createdAt: saved.createdAt,
@@ -96,6 +103,8 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 						),
 					).pipe(Effect.map((versions) => versions.at(-1) ?? project.version));
 
+					yield* eventBus.publish(project.id, version, events);
+
 					const evolved = evolve(project, events);
 					const updatedProject = { ...evolved, version };
 
@@ -120,8 +129,12 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					};
 				});
 
-			return { load, append, create };
+			return { load, append, create, subscribe: eventBus.subscribe };
 		}),
-		dependencies: [ProjectEventStore.Default, ProjectSnapshotStore.Default],
+		dependencies: [
+			ProjectEventStore.Default,
+			ProjectSnapshotStore.Default,
+			ProjectEventBus.Default,
+		],
 	},
 ) {}

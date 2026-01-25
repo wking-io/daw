@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import type { Project } from "@daw/core";
+import { type Commands, Ids, type Project, Versions } from "@daw/core";
 import { HttpApiBuilder, HttpServer } from "@effect/platform";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer } from "effect";
 import { ServerConfigTest } from "../config";
 import { ProjectCommandHandler } from "../projects/command-handler";
+import { ProjectEventBus } from "../projects/event-bus";
 import { ProjectEventStore } from "../projects/event-store";
 import { ProjectLister } from "../projects/lister";
 import { ProjectSnapshotStore } from "../projects/snapshot-store";
@@ -48,6 +49,7 @@ const makeLayer = () => {
 	const projectLayers = Layer.mergeAll(
 		ProjectSnapshotStore.Default,
 		ProjectEventStore.Default,
+		ProjectEventBus.Default,
 	).pipe(
 		Layer.provideMerge(ProjectStore.Default),
 		Layer.provideMerge(ProjectCommandHandler.Default),
@@ -109,5 +111,131 @@ describe("HttpEndpoints", () => {
 		const projects = (await res.json()) as Project.ProjectSummary[];
 		expect(Array.isArray(projects)).toBe(true);
 		expect(projects.length).toBe(0);
+	});
+
+	it("subscribe endpoint returns project.subscribed event", async () => {
+		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
+		dispose = webHandler.dispose;
+		const { handler } = webHandler;
+
+		const projectId = Ids.generate("ProjectId");
+		const createCommand: Commands.ProjectCreateCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: Versions.ProjectVersion.make(0),
+			actor: "ui",
+			payload: {
+				t: "project.create",
+				projectId,
+				name: "Test Project",
+			},
+		};
+
+		await handler(
+			new Request("http://localhost/api/projects", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: `Bearer ${TEST_TOKEN}`,
+				},
+				body: JSON.stringify(createCommand),
+			}),
+		);
+
+		const res = await handler(
+			new Request(
+				`http://localhost/api/projects/${projectId}/subscribe?fromVersion=0`,
+				{
+					headers: { Authorization: `Bearer ${TEST_TOKEN}` },
+				},
+			),
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.headers.get("content-type")).toBe("text/event-stream");
+
+		const reader = res.body?.getReader();
+		expect(reader).toBeDefined();
+		if (!reader) throw new Error("Reader is null");
+
+		const { value, done } = await reader.read();
+		expect(done).toBe(false);
+		const text = new TextDecoder().decode(value);
+		expect(text).toContain("project.subscribed");
+		await reader.cancel();
+	});
+
+	it("subscribe endpoint streams edit events", async () => {
+		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
+		dispose = webHandler.dispose;
+		const { handler } = webHandler;
+
+		const projectId = Ids.generate("ProjectId");
+		const createCommand: Commands.ProjectCreateCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: Versions.ProjectVersion.make(0),
+			actor: "ui",
+			payload: {
+				t: "project.create",
+				projectId,
+				name: "Test Project",
+			},
+		};
+
+		await handler(
+			new Request("http://localhost/api/projects", {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: `Bearer ${TEST_TOKEN}`,
+				},
+				body: JSON.stringify(createCommand),
+			}),
+		);
+
+		const subscribeRes = await handler(
+			new Request(
+				`http://localhost/api/projects/${projectId}/subscribe?fromVersion=0`,
+				{
+					headers: { Authorization: `Bearer ${TEST_TOKEN}` },
+				},
+			),
+		);
+
+		const reader = subscribeRes.body?.getReader();
+		if (!reader) throw new Error("Reader is null");
+
+		await reader.read();
+
+		const editCommand: Commands.EditorCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: Versions.ProjectVersion.make(0),
+			actor: "ui",
+			payload: {
+				t: "project.rename",
+				name: "Renamed Project",
+			},
+		};
+
+		const editPromise = handler(
+			new Request(`http://localhost/api/projects/${projectId}/edit`, {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					Authorization: `Bearer ${TEST_TOKEN}`,
+				},
+				body: JSON.stringify(editCommand),
+			}),
+		);
+
+		const readPromise = reader.read();
+
+		const [editRes, { value }] = await Promise.all([editPromise, readPromise]);
+		expect(editRes.status).toBe(200);
+
+		const text = new TextDecoder().decode(value);
+		expect(text).toContain("events");
+		expect(text).toContain("project.renamed");
+
+		await reader.cancel();
 	});
 });
