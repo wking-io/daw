@@ -1,4 +1,5 @@
-import { Events, Ids, Project, Versions } from "@daw/core";
+import { Events, Ids, Versions } from "@daw/core";
+import { ProjectStored } from "@daw/core/domain/project-stored";
 import { Model } from "@effect/sql";
 import { Schema } from "effect";
 
@@ -24,7 +25,7 @@ export class ProjectSnapshotModel extends Model.Class<ProjectSnapshotModel>(
 		"insert",
 		"update",
 	)(Versions.ProjectVersion),
-	data: Model.JsonFromString(Project.Project),
+	data: Model.JsonFromString(ProjectStored),
 	createdAt: Model.FieldOnly("select")(Schema.DateTimeUtc),
 	updatedAt: Model.FieldOnly("select")(Schema.DateTimeUtc),
 }) {}

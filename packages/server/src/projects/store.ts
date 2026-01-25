@@ -1,4 +1,11 @@
-import { ApiError, type Events, type Ids, Project, Versions } from "@daw/core";
+import {
+	ApiError,
+	type Events,
+	type Ids,
+	Project,
+	ProjectStored,
+	Versions,
+} from "@daw/core";
 import type { SqlError } from "@effect/sql/SqlError";
 import { Effect, Option } from "effect";
 import type { NoSuchElementException } from "effect/Cause";
@@ -42,7 +49,11 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 						.load(id, snapshot.version)
 						.pipe(Effect.map((events) => events.map((event) => event.data)));
 
-					const project = evolve(snapshot.data, events);
+					const baseProject = ProjectStored.fromStored(
+						snapshot.data,
+						snapshot.version,
+					);
+					const project = evolve(baseProject, events);
 
 					if (isDeleted(project)) {
 						return yield* Effect.fail(
@@ -72,13 +83,11 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 						snapshotStore.append(event.project),
 						eventStore.append(event.project.id, event.project.version, event),
 					]);
-					yield* eventBus.publish(
-						event.project.id,
-						event.project.version,
-						[event],
-					);
+					yield* eventBus.publish(event.project.id, event.project.version, [
+						event,
+					]);
 					return {
-						...saved.data,
+						...event.project,
 						createdAt: saved.createdAt,
 						updatedAt: saved.createdAt,
 					};
@@ -116,8 +125,8 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					if (shouldSnapshot) {
 						const saved = yield* snapshotStore.append(updatedProject);
 						return {
-							...saved.data,
-							createdAt: project.createdAt,
+							...updatedProject,
+							createdAt: saved.createdAt,
 							updatedAt: saved.createdAt,
 						};
 					}

@@ -1,4 +1,4 @@
-import { ApiError, Ids, type Project } from "@daw/core";
+import { ApiError, Ids, type Project, ProjectStored } from "@daw/core";
 import { SqlClient, SqlSchema } from "@effect/sql";
 import { Effect, Option, Schema } from "effect";
 import { ProjectSnapshotModel } from "./models";
@@ -53,7 +53,7 @@ export class ProjectSnapshotStore extends Effect.Service<ProjectSnapshotStore>()
 					id: project.id,
 					name: project.name,
 					version: project.version,
-					data: project,
+					data: ProjectStored.toStored(project),
 				});
 
 			return {
