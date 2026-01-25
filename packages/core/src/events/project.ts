@@ -23,6 +23,7 @@ export type ProjectCreated = Schema.Schema.Type<typeof ProjectCreated>;
 export const ProjectDeleted = Schema.Struct({
 	t: Schema.Literal("project.deleted"),
 	projectId: Ids.ProjectId,
+	deletedAt: Schema.DateTimeUtc,
 });
 export type ProjectDeleted = Schema.Schema.Type<typeof ProjectDeleted>;
 

@@ -50,6 +50,7 @@ interface ProjectResponse {
 	midiPatterns: unknown[];
 	automationLanes: unknown[];
 	audioFiles: unknown[];
+	deletedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -267,13 +268,56 @@ describe("HTTP e2e", () => {
 		expect(testProject?.name).toBe("E2E Test Project");
 	}, 20000);
 
-	it.skip("DELETE /api/projects/:projectId deletes the project", async () => {
-		const res = await fetch(`${baseUrl}/api/projects/${testProjectId}`, {
-			method: "DELETE",
+	it("DELETE /api/projects/:projectId deletes the project", async () => {
+		const getRes = await fetch(`${baseUrl}/api/projects/${testProjectId}`, {
 			headers: { Authorization: `Bearer ${authToken}` },
 		});
+		const currentProject = (await getRes.json()) as ProjectResponse;
+
+		const command: Commands.ProjectDeleteCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: currentProject.version as Versions.ProjectVersion,
+			actor: "ui",
+			payload: { t: "project.delete" },
+		};
+
+		const res = await fetch(`${baseUrl}/api/projects/${testProjectId}`, {
+			method: "DELETE",
+			headers: {
+				"content-type": "application/json",
+				Authorization: `Bearer ${authToken}`,
+			},
+			body: JSON.stringify(command),
+		});
+
 		expect(res.ok).toBe(true);
-		const result = (await res.json()) as { deleted: boolean };
-		expect(result.deleted).toBe(true);
+		const result = (await res.json()) as ProjectResponse;
+		expect(result.deletedAt).not.toBeNull();
+	}, 20000);
+
+	it("GET /api/projects/:projectId returns 410 Gone for deleted project", async () => {
+		const res = await fetch(`${baseUrl}/api/projects/${testProjectId}`, {
+			headers: { Authorization: `Bearer ${authToken}` },
+		});
+		expect(res.status).toBe(410);
+	}, 20000);
+
+	it("DELETE /api/projects/:projectId returns 404 for already deleted project", async () => {
+		const command: Commands.ProjectDeleteCommand = {
+			id: Ids.generate("CommandId"),
+			expectedVersion: Versions.ProjectVersion.make(1),
+			actor: "ui",
+			payload: { t: "project.delete" },
+		};
+
+		const res = await fetch(`${baseUrl}/api/projects/${testProjectId}`, {
+			method: "DELETE",
+			headers: {
+				"content-type": "application/json",
+				Authorization: `Bearer ${authToken}`,
+			},
+			body: JSON.stringify(command),
+		});
+		expect(res.status).toBe(404);
 	}, 20000);
 });

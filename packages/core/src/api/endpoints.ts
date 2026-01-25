@@ -54,7 +54,8 @@ const projectGroup = HttpApiGroup.make("project")
 		HttpApiEndpoint.get("get", "/:projectId")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
 			.addSuccess(Project.ProjectWithTimestamps)
-			.addError(ApiError.NotFound),
+			.addError(ApiError.NotFound)
+			.addError(ApiError.Gone),
 	)
 	.add(
 		HttpApiEndpoint.post("edit", "/:projectId/edit")
@@ -84,7 +85,8 @@ const projectGroup = HttpApiGroup.make("project")
 	.add(
 		HttpApiEndpoint.del("delete", "/:projectId")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.addSuccess(Schema.Struct({ deleted: Schema.Boolean }))
+			.setPayload(Commands.ProjectDeleteCommand)
+			.addSuccess(Project.ProjectWithTimestamps)
 			.addError(ApiError.NotFound),
 	)
 	.addError(ApiError.Unauthorized)

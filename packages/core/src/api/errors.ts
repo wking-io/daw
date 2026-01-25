@@ -161,6 +161,31 @@ export class NotAcceptable extends Schema.TaggedError<NotAcceptable>()(
 ) {}
 
 /**
+ * Gone (410) - The resource has been permanently deleted
+ */
+export class Gone extends Schema.TaggedError<Gone>()(
+	"Gone",
+	{
+		type: Schema.optionalWith(Schema.String, {
+			default: () =>
+				"https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410",
+		}),
+		title: Schema.optionalWith(Schema.String, {
+			default: () => "Gone",
+		}),
+		status: Schema.optionalWith(Schema.Literal(410), {
+			default: () => 410 as const,
+		}),
+		detail: Schema.optional(Schema.String),
+		instance: Schema.optional(Schema.String),
+	},
+	problemAnnotations({
+		status: 410,
+		description: "The resource has been permanently deleted",
+	}),
+) {}
+
+/**
  * Conflict (409) - The request conflicts with the current state
  */
 export class Conflict extends Schema.TaggedError<Conflict>()(
@@ -250,6 +275,7 @@ export const ApiError = Schema.Union(
 	Forbidden,
 	NotFound,
 	NotAcceptable,
+	Gone,
 	Conflict,
 	UnprocessableEntity,
 	InternalServerError,

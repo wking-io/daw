@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Schema } from "effect";
+import { DateTime, Option, Schema } from "effect";
 import { Ids } from "../..";
 import type { EditorCommandPayload } from "../../commands/editor-ops";
 import type { EditorEvent } from "../../events";
@@ -39,6 +39,7 @@ const createBaseProject = (): Project => ({
 	midiPatterns: [],
 	automationLanes: [],
 	audioFiles: [],
+	deletedAt: Option.none(),
 });
 
 const createTrack = (id: string, overrides?: Partial<Track>): Track => ({
@@ -125,6 +126,7 @@ describe("Project schema", () => {
 		midiPatterns: [],
 		automationLanes: [],
 		audioFiles: [],
+		deletedAt: null,
 	};
 
 	it("decodes valid project", () => {
@@ -168,16 +170,19 @@ describe("Project.evolve", () => {
 			expect(result.bpm).toBe(140);
 		});
 
-		it("handles project.deleted by returning project unchanged", () => {
+		it("handles project.deleted by setting deletedAt", () => {
 			const project = createBaseProject();
+			const deletedAt = DateTime.unsafeNow();
 			const event: EditorEvent = {
 				t: "project.deleted",
 				projectId: ProjectId.make("proj-1"),
+				deletedAt,
 			};
 
 			const result = evolve(project, event);
 
-			expect(result).toEqual(project);
+			expect(Option.isSome(result.deletedAt)).toBe(true);
+			expect(Option.getOrNull(result.deletedAt)).toEqual(deletedAt);
 		});
 
 		it("handles project.renamed", () => {

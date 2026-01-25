@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { Ids, type Project, Versions } from "@daw/core";
+import { ApiError, Ids, type Project, Versions } from "@daw/core";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 import { ProjectCommandHandler } from "../command-handler";
 import { ProjectEventStore } from "../event-store";
 import { ProjectSnapshotStore } from "../snapshot-store";
@@ -51,7 +51,7 @@ const makeTestLayer = () => {
 		Layer.provide(storeStack),
 	);
 
-	return Layer.mergeAll(commandHandler, storeStack);
+	return Layer.mergeAll(commandHandler, projectStore, storeStack);
 };
 
 const createTestProject = (id: string): Project.Project => ({
@@ -65,6 +65,7 @@ const createTestProject = (id: string): Project.Project => ({
 	midiPatterns: [],
 	automationLanes: [],
 	audioFiles: [],
+	deletedAt: Option.none(),
 });
 
 describe("ProjectCommandHandler", () => {
@@ -114,5 +115,83 @@ describe("ProjectCommandHandler", () => {
 		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
 		expect(result.name).toBe("Test Project");
+	});
+
+	it("deletes a project and sets deletedAt", async () => {
+		const projectId = Ids.ProjectId.make("test-project");
+
+		const result = await Effect.gen(function* () {
+			const snapshotStore = yield* ProjectSnapshotStore;
+			const commandHandler = yield* ProjectCommandHandler;
+
+			const project = createTestProject("test-project");
+			yield* snapshotStore.append(project);
+
+			return yield* commandHandler.execute(projectId, {
+				id: Ids.generate("CommandId"),
+				expectedVersion: Versions.ProjectVersion.make(1),
+				actor: "ui",
+				payload: {
+					t: "project.delete",
+				},
+			});
+		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+
+		expect(Option.isSome(result.deletedAt)).toBe(true);
+	});
+
+	it("returns Gone error when loading a deleted project", async () => {
+		const projectId = Ids.ProjectId.make("test-project");
+
+		const error = await Effect.gen(function* () {
+			const snapshotStore = yield* ProjectSnapshotStore;
+			const commandHandler = yield* ProjectCommandHandler;
+			const projectStore = yield* ProjectStore;
+
+			const project = createTestProject("test-project");
+			yield* snapshotStore.append(project);
+
+			yield* commandHandler.execute(projectId, {
+				id: Ids.generate("CommandId"),
+				expectedVersion: Versions.ProjectVersion.make(1),
+				actor: "ui",
+				payload: {
+					t: "project.delete",
+				},
+			});
+
+			return yield* projectStore.load(projectId).pipe(Effect.flip);
+		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+
+		expect(error).toBeInstanceOf(ApiError.Gone);
+	});
+
+	it("creates a snapshot when project is deleted", async () => {
+		const projectId = Ids.ProjectId.make("test-project");
+
+		const snapshots = await Effect.gen(function* () {
+			const snapshotStore = yield* ProjectSnapshotStore;
+			const commandHandler = yield* ProjectCommandHandler;
+			const sql = yield* SqlClient.SqlClient;
+
+			const project = createTestProject("test-project");
+			yield* snapshotStore.append(project);
+
+			yield* commandHandler.execute(projectId, {
+				id: Ids.generate("CommandId"),
+				expectedVersion: Versions.ProjectVersion.make(1),
+				actor: "ui",
+				payload: {
+					t: "project.delete",
+				},
+			});
+
+			const rows = yield* sql`SELECT * FROM snapshots WHERE id = ${projectId} ORDER BY version DESC`;
+			return rows;
+		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+
+		expect(snapshots.length).toBe(2);
+		const latestSnapshot = JSON.parse(snapshots[0].data as string);
+		expect(latestSnapshot.deletedAt).not.toBeNull();
 	});
 });

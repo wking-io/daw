@@ -99,10 +99,12 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				const projectStore = yield* ProjectStore;
 				return yield* projectStore.load(path.projectId);
 			}).pipe(
-				Effect.catchTags({
-					NotFound: () => Effect.fail(new ApiError.NotFound()),
+				Effect.mapError((e) => {
+					if (e._tag === "NotFound") return new ApiError.NotFound();
+					if (e._tag === "Gone")
+						return new ApiError.Gone({ detail: (e as ApiError.Gone).detail });
+					return new ApiError.InternalServerError();
 				}),
-				Effect.catchAll(() => Effect.fail(new ApiError.InternalServerError())),
 			),
 		)
 		.handle("edit", ({ path, payload }) =>
@@ -167,10 +169,17 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				),
 			),
 		)
-		.handle("delete", (_) =>
+		.handle("delete", ({ path, payload }) =>
 			Effect.gen(function* () {
-				return yield* Effect.fail(new ApiError.NotFound());
-			}),
+				const commandHandler = yield* ProjectCommandHandler;
+				return yield* commandHandler.execute(path.projectId, payload);
+			}).pipe(
+				Effect.mapError((e) => {
+					if (e._tag === "NotFound" || e._tag === "Gone")
+						return new ApiError.NotFound();
+					return new ApiError.InternalServerError();
+				}),
+			),
 		),
 ).pipe(Layer.provide(AuthorizationLive));
 

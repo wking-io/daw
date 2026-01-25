@@ -1,6 +1,5 @@
-import { Match, Option, Schema } from "effect";
+import { DateTime, Option, Schema } from "effect";
 import type { ProjectCreate } from "../commands";
-import { ProjectCreateCommand } from "../commands/command";
 import type { EditorCommandPayload } from "../commands/editor-ops";
 import type { EditorEvent, ProjectCreated } from "../events";
 import { ProjectId } from "../ids";
@@ -38,6 +37,7 @@ export const Project = Schema.Struct({
 	midiPatterns: Schema.Array(MidiPattern),
 	automationLanes: Schema.Array(AutomationLane),
 	audioFiles: Schema.Array(AudioFile),
+	deletedAt: Schema.OptionFromNullOr(Schema.DateTimeUtc),
 });
 export type Project = Schema.Schema.Type<typeof Project>;
 
@@ -130,7 +130,7 @@ export function evolve(project: Project, event: EditorEvent): Project {
 			return event.project;
 
 		case "project.deleted":
-			return project;
+			return { ...project, deletedAt: Option.some(event.deletedAt) };
 
 		case "project.renamed":
 			return { ...project, name: event.name };
@@ -453,6 +453,7 @@ export function create(command: ProjectCreate): ProjectCreated {
 			midiPatterns: [],
 			automationLanes: [],
 			audioFiles: [],
+			deletedAt: Option.none(),
 		},
 	};
 }
@@ -463,7 +464,13 @@ export function decide(
 ): readonly EditorEvent[] {
 	switch (command.t) {
 		case "project.delete":
-			return [{ t: "project.deleted", projectId: project.id }];
+			return [
+				{
+					t: "project.deleted",
+					projectId: project.id,
+					deletedAt: DateTime.unsafeNow(),
+				},
+			];
 
 		case "project.rename":
 			if (command.name === project.name) return [];

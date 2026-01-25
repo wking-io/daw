@@ -1,10 +1,16 @@
-import { type Events, type Ids, Project, Versions } from "@daw/core";
+import { ApiError, type Events, type Ids, Project, Versions } from "@daw/core";
 import type { SqlError } from "@effect/sql/SqlError";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 import type { NoSuchElementException } from "effect/Cause";
 import type { ParseError } from "effect/ParseResult";
 import { ProjectEventStore } from "./event-store";
 import { ProjectSnapshotStore } from "./snapshot-store";
+
+const isDeleted = (project: Project.Project): boolean =>
+	Option.isSome(project.deletedAt);
+
+const containsDeletion = (events: ReadonlyArray<Events.EditorEvent>): boolean =>
+	events.some((e) => e.t === "project.deleted");
 
 export class ProjectStore extends Effect.Service<ProjectStore>()(
 	"ProjectStore",
@@ -35,6 +41,16 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 						.pipe(Effect.map((events) => events.map((event) => event.data)));
 
 					const project = evolve(snapshot.data, events);
+
+					if (isDeleted(project)) {
+						return yield* Effect.fail(
+							new ApiError.Gone({
+								detail: `Project ${id} has been deleted`,
+								instance: `/api/projects/${id}`,
+							}),
+						);
+					}
+
 					return {
 						...project,
 						updatedAt: snapshot.createdAt,
@@ -83,10 +99,12 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					const evolved = evolve(project, events);
 					const updatedProject = { ...evolved, version };
 
-					if (
+					const shouldSnapshot =
 						project.version === 0 ||
-						version - project.version > CHANGE_THRESHOLD
-					) {
+						version - project.version > CHANGE_THRESHOLD ||
+						containsDeletion(events);
+
+					if (shouldSnapshot) {
 						const saved = yield* snapshotStore.append(updatedProject);
 						return {
 							...saved.data,

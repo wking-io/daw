@@ -6,7 +6,7 @@ import { AudioFileOperation } from "./audio-file-ops";
 import { AutomationOperation } from "./automation-ops";
 import { ClipOperation } from "./clip-ops";
 import { MidiOperation } from "./midi-ops";
-import { ProjectCreate, ProjectOperation } from "./project-ops";
+import { ProjectCreate, ProjectDelete, ProjectOperation } from "./project-ops";
 import { TrackOperation } from "./track-ops";
 
 export const CommandPayload = Schema.Union(
@@ -36,4 +36,9 @@ export const Command = <
 export const ProjectCreateCommand = Command("ProjectVersion", ProjectCreate);
 export type ProjectCreateCommand = Schema.Schema.Type<
 	typeof ProjectCreateCommand
+>;
+
+export const ProjectDeleteCommand = Command("ProjectVersion", ProjectDelete);
+export type ProjectDeleteCommand = Schema.Schema.Type<
+	typeof ProjectDeleteCommand
 >;

@@ -6,7 +6,7 @@ import {
 	type Project,
 	Versions,
 } from "@daw/core";
-import { DateTime, Effect, Layer } from "effect";
+import { DateTime, Effect, Layer, Option } from "effect";
 import { ProjectRepository } from "./repo";
 
 const makeTestProject = (
@@ -23,6 +23,7 @@ const makeTestProject = (
 	midiPatterns: [],
 	automationLanes: [],
 	audioFiles: [],
+	deletedAt: Option.none(),
 	createdAt: DateTime.unsafeNow(),
 	updatedAt: DateTime.unsafeNow(),
 });
@@ -53,16 +54,29 @@ const makeCreateCommand = (
 });
 
 type ListFn = ProjectRepository["list"];
+type GetFn = ProjectRepository["get"];
 type CreateFn = ProjectRepository["create"];
+type RemoveFn = ProjectRepository["remove"];
 
-const makeTestLayer = (overrides: { list?: ListFn; create?: CreateFn }) => {
+const makeTestLayer = (overrides: {
+	list?: ListFn;
+	get?: GetFn;
+	create?: CreateFn;
+	remove?: RemoveFn;
+}) => {
 	const defaultList: ListFn = () => Effect.succeed([]);
+	const defaultGet: GetFn = () =>
+		Effect.succeed(makeTestProject("test-id", "Test Project"));
 	const defaultCreate: CreateFn = () =>
+		Effect.succeed(makeTestProject("test-id", "Test Project"));
+	const defaultRemove: RemoveFn = () =>
 		Effect.succeed(makeTestProject("test-id", "Test Project"));
 
 	return Layer.succeed(ProjectRepository, {
 		list: overrides.list ?? defaultList,
+		get: overrides.get ?? defaultGet,
 		create: overrides.create ?? defaultCreate,
+		remove: overrides.remove ?? defaultRemove,
 	} as unknown as ProjectRepository);
 };
 
