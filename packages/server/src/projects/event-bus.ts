@@ -6,7 +6,9 @@ export const ProjectEventMessage = Schema.Struct({
 	version: Versions.ProjectVersion,
 	events: Schema.Array(Events.EditorEvent),
 });
-export type ProjectEventMessage = Schema.Schema.Type<typeof ProjectEventMessage>;
+export type ProjectEventMessage = Schema.Schema.Type<
+	typeof ProjectEventMessage
+>;
 
 export class ProjectEventBus extends Effect.Service<ProjectEventBus>()(
 	"server/ProjectEventBus",

@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# build output (if/when added)
+dist/
+dist-types/
+
+# tooling caches
+tsconfig.tsbuildinfo
+**/*.tsbuildinfo
+
+# logs
+*.log

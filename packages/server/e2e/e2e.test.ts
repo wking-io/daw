@@ -319,7 +319,10 @@ describe("HTTP e2e", () => {
 
 		const readPromise = reader.read();
 
-		const [editRes, secondChunk] = await Promise.all([editPromise, readPromise]);
+		const [editRes, secondChunk] = await Promise.all([
+			editPromise,
+			readPromise,
+		]);
 		expect(editRes.ok).toBe(true);
 
 		const secondText = new TextDecoder().decode(secondChunk.value);

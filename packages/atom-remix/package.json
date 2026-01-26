@@ -1,5 +1,5 @@
 {
-	"name": "@daw/core",
+	"name": "@daw/atom-remix",
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
@@ -14,9 +14,9 @@
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
-		"@effect/platform": "catalog:",
-		"effect": "catalog:",
-		"ulid": "catalog:"
+		"@effect-atom/atom": "catalog:",
+		"@remix-run/component": "catalog:",
+		"effect": "catalog:"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",

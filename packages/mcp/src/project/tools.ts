@@ -22,7 +22,10 @@ export const DeleteProjectTool = Tool.make("daw.project.delete", {
 	dependencies: [ProjectRepository],
 });
 
-export const ProjectToolkit = Toolkit.make(CreateProjectTool, DeleteProjectTool);
+export const ProjectToolkit = Toolkit.make(
+	CreateProjectTool,
+	DeleteProjectTool,
+);
 export const ProjectToolkitLive = ProjectToolkit.toLayer({
 	[CreateProjectTool.name]: (params: Commands.ProjectCreate) =>
 		Effect.gen(function* () {
