@@ -1,0 +1,28 @@
+{
+	"name": "@daw/app-remix",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"test": "bun test",
+		"lint": "biome check .",
+		"fmt": "biome check --write ."
+	},
+	"dependencies": {
+		"@daw/atom-remix": "workspace:*",
+		"@daw/core": "workspace:*",
+		"@effect/platform": "catalog:",
+		"@remix-run/component": "catalog:",
+		"@remix-run/interaction": "catalog:",
+		"effect": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@types/bun": "catalog:",
+		"typescript": "catalog:"
+	}
+}

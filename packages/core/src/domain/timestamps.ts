@@ -1,8 +1,8 @@
 import { Schema } from "effect";
 
 export const Timestamp = Schema.Struct({
-	updatedAt: Schema.DateTimeUtcFromSelf,
-	createdAt: Schema.DateTimeUtcFromSelf,
+	updatedAt: Schema.DateTimeUtc,
+	createdAt: Schema.DateTimeUtc,
 });
 export type Timestamp = Schema.Schema.Type<typeof Timestamp>;
 export const WithTimestamps = <A extends Schema.Schema.Any>(A: A) =>

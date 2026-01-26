@@ -5,10 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"predev": "bun ./scripts/predev.ts",
-		"dev": "vite",
 		"prebuild": "bun ./scripts/predev.ts",
-		"build": "bun run typecheck && vite build",
-		"preview": "vite preview",
+		"dev": "bun ./server/dev.ts",
+		"build": "bun run typecheck",
 		"tauri": "tauri",
 		"test:js": "bun test ./scripts",
 		"test:rust": "bun ./scripts/test-rust.ts",
@@ -21,20 +20,14 @@
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
-		"@daw/app": "workspace:*",
-		"@tauri-apps/api": "catalog:",
-		"react": "catalog:",
-		"react-dom": "catalog:"
+		"@daw/app-remix": "workspace:*",
+		"@remix-run/component": "catalog:",
+		"@remix-run/interaction": "catalog:"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "catalog:",
-		"@vitest/coverage-v8": "catalog:",
 		"@types/bun": "catalog:",
-		"@types/react": "catalog:",
-		"@types/react-dom": "catalog:",
 		"@biomejs/biome": "catalog:",
-		"typescript": "catalog:",
-		"vite": "catalog:",
-		"vitest": "catalog:"
+		"typescript": "catalog:"
 	}
 }

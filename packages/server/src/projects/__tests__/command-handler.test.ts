@@ -186,7 +186,8 @@ describe("ProjectCommandHandler", () => {
 				},
 			});
 
-			const rows = yield* sql`SELECT * FROM snapshots WHERE id = ${projectId} ORDER BY version DESC`;
+			const rows =
+				yield* sql`SELECT * FROM snapshots WHERE id = ${projectId} ORDER BY version DESC`;
 			return rows;
 		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 

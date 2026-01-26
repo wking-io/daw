@@ -1,12 +1,11 @@
 {
-  "recommendations": [
-    "rust-lang.rust-analyzer",
-    "vadimcn.vscode-lldb",
-    "serayuzgur.crates",
-    "tamasfe.even-better-toml",
-    "tauri-apps.tauri-vscode",
-    "biomejs.biome",
-    "usernamehw.errorlens"
-  ]
+	"recommendations": [
+		"rust-lang.rust-analyzer",
+		"vadimcn.vscode-lldb",
+		"serayuzgur.crates",
+		"tamasfe.even-better-toml",
+		"tauri-apps.tauri-vscode",
+		"biomejs.biome",
+		"usernamehw.errorlens"
+	]
 }
-

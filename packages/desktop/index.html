@@ -1,13 +1,22 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DAW Desktop</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>DAW Desktop</title>
+		<script type="importmap">
+			{
+				"imports": {
+					"@remix-run/component": "/node_modules/@remix-run/component",
+					"@remix-run/component/jsx-runtime": "/node_modules/@remix-run/component/jsx-runtime",
+					"@remix-run/component/jsx-dev-runtime": "/node_modules/@remix-run/component/jsx-dev-runtime",
+					"@remix-run/interaction": "/node_modules/@remix-run/interaction"
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
 </html>
-
