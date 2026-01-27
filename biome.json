@@ -18,6 +18,9 @@
 			"recommended": true,
 			"style": {
 				"useNodejsImportProtocol": "off"
+			},
+			"suspicious": {
+				"noUnknownAtRules": "off"
 			}
 		}
 	},
@@ -27,6 +30,11 @@
 			"source": {
 				"organizeImports": "on"
 			}
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	}
 }

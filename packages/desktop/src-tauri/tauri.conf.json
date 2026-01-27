@@ -17,8 +17,9 @@
 			{
 				"label": "main",
 				"title": "DAW",
-				"width": 1000,
-				"height": 700,
+				"hiddenTitle": true,
+				"titleBarStyle": "Overlay",
+				"maximized": true,
 				"resizable": true,
 				"visible": true
 			}

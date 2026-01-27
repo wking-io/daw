@@ -1,8 +1,11 @@
-import { App, configureApiClient } from "@daw/app-remix";
+import { configureApiClient, Root } from "@daw/app";
 import { createRoot } from "@remix-run/component";
 
-const statePort = Bun.env.DAW_STATE_PORT;
-const stateToken = Bun.env.DAW_STATE_TOKEN;
+declare const __DAW_STATE_PORT__: string;
+declare const __DAW_STATE_TOKEN__: string;
+
+const statePort = __DAW_STATE_PORT__;
+const stateToken = __DAW_STATE_TOKEN__;
 
 if (!statePort || !stateToken) {
 	throw new Error(
@@ -18,4 +21,4 @@ configureApiClient({
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 
-createRoot(root).render(<App />);
+createRoot(root).render(<Root />);

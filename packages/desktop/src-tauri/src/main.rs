@@ -96,8 +96,6 @@ async fn wait_for_health(base_url: &str, token: &str, timeout: Duration) -> bool
     false
 }
 
-
-
 fn main() {
     let sidecar_handles = SidecarHandles::default();
     let shutdown_flag = Arc::new(AtomicBool::new(false));

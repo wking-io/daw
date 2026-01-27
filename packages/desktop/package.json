@@ -6,8 +6,8 @@
 	"scripts": {
 		"predev": "bun ./scripts/predev.ts",
 		"prebuild": "bun ./scripts/predev.ts",
-		"dev": "bun ./server/dev.ts",
-		"build": "bun run typecheck",
+		"dev": "vite",
+		"build": "vite build",
 		"tauri": "tauri",
 		"test:js": "bun test ./scripts",
 		"test:rust": "bun ./scripts/test-rust.ts",
@@ -20,14 +20,17 @@
 		"fmt": "biome check --write ."
 	},
 	"dependencies": {
-		"@daw/app-remix": "workspace:*",
+		"@daw/app": "workspace:*",
 		"@remix-run/component": "catalog:",
 		"@remix-run/interaction": "catalog:"
 	},
 	"devDependencies": {
+		"@tailwindcss/vite": "catalog:",
 		"@tauri-apps/cli": "catalog:",
 		"@types/bun": "catalog:",
 		"@biomejs/biome": "catalog:",
-		"typescript": "catalog:"
+		"tailwindcss": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:"
 	}
 }

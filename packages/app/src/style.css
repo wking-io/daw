@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@source "./";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+	--color-white: #ffffff;
+
+	--color-background: oklch(92.3% 0.003 48.717);
+	--color-layer: oklch(98.5% 0.001 106.423);
+	--color-layer-2: oklch(97% 0.001 106.424);
+	--color-foreground: oklch(21.6% 0.006 56.043);
+	--color-foreground-muted: color-mix(
+		in srgb,
+		var(--color-foreground) 65%,
+		transparent
+	);
+}
+
+.dark {
+	--color-background: oklch(21.6% 0.006 56.043);
+	--color-layer: oklch(26.8% 0.007 34.298);
+	--color-layer-2: oklch(44.4% 0.011 73.639);
+	--color-foreground: oklch(92.3% 0.003 48.717);
+	--color-foreground-muted: color-mix(
+		in srgb,
+		var(--color-foreground) 70%,
+		transparent
+	);
+}
+
+.timeline {
+	box-shadow: inset 0 0 1px 1px
+		color-mix(in srgb, var(--color-stone-950) 20%, transparent);
+}

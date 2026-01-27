@@ -1,7 +1,7 @@
-import type { ClassValue } from "clsx";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+type Falsy = false | null | undefined | 0 | "" | 0n;
 
-export function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(inputs));
+export function cn(...classes: Array<string | Falsy>): string {
+	return classes
+		.reduce<string>((acc, s) => (s ? `${acc} ${s}` : acc), "")
+		.trim();
 }

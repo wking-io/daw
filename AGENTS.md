@@ -336,7 +336,7 @@ Uncaught NotFoundError: Failed to execute 'insertBefore' on 'Node': The node bef
 
 ## Build
 
-There is no build step for `packages/app-remix`. This is shipped as-is. Instead, we use Bun's built-in runtime typescript support and we do a runtime bundling of the client-side code in `server/bundling.ts`.
+There is no build step for `packages/app`. This is shipped as-is. Instead, we use Bun's built-in runtime typescript support and we do a runtime bundling of the client-side code in `server/bundling.ts`.
 
 ## APIs
 
