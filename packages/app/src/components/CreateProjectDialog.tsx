@@ -1,12 +1,14 @@
 import { getAtom, getAtomSet } from "@daw/atom-remix";
-import { Commands, Ids, Versions } from "@daw/core";
+import { ProjectCreate, ProjectCreateCommand } from "@daw/core/commands/command";
+import * as Ids from "@daw/core/ids";
+import { ProjectVersion } from "@daw/core/versions";
 import type { Handle } from "@remix-run/component";
 import { ApiClient } from "../api/client";
 import { tabsAtom } from "../state/tabs";
 
 export function CreateProjectDialog(
 	handle: Handle,
-	setupProps: { onClose: () => void },
+	setup: { onClose: () => void },
 ) {
 	const create = getAtomSet(handle, ApiClient.mutation("project", "create"));
 	const [, setTabs] = getAtom(handle, tabsAtom);
@@ -34,11 +36,11 @@ export function CreateProjectDialog(
 		const projectId = Ids.generate("ProjectId");
 
 		create({
-			payload: Commands.ProjectCreateCommand.make({
+			payload: ProjectCreateCommand.make({
 				id: Ids.generate("CommandId"),
-				expectedVersion: Versions.ProjectVersion.make(0),
+				expectedVersion: ProjectVersion.make(0),
 				actor: "ui",
-				payload: Commands.ProjectCreate.make({
+				payload: ProjectCreate.make({
 					t: "project.create",
 					name,
 					projectId,
@@ -55,58 +57,28 @@ export function CreateProjectDialog(
 			activeTabId: projectId,
 		}));
 
-		setupProps.onClose();
+		setup.onClose();
 	};
 
-	return (renderProps: { onClose: () => void }) => (
+	return (props: { onClose: () => void }) => (
 		<div
-			css={{
-				position: "fixed",
-				inset: 0,
-				backgroundColor: "rgba(0, 0, 0, 0.7)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				zIndex: 1000,
-			}}
+			class="fixed inset-0 z-1000 flex items-center justify-center bg-black/70"
 			on={{
 				click: (e) => {
 					if (e.target === e.currentTarget) {
-						renderProps.onClose();
+						props.onClose();
 					}
 				},
 			}}
 		>
-			<div
-				css={{
-					backgroundColor: "#1a1a1a",
-					borderRadius: "8px",
-					padding: "24px",
-					width: "400px",
-					maxWidth: "90vw",
-					border: "1px solid #333",
-				}}
-			>
-				<h2
-					css={{
-						margin: "0 0 16px 0",
-						fontSize: "18px",
-						color: "#fff",
-					}}
-				>
-					Create New Project
-				</h2>
+			<div class="w-100 max-w-[90vw] rounded-lg border border-neutral-700 bg-neutral-900 p-6">
+				<h2 class="m-0 mb-4 text-lg text-white">Create New Project</h2>
 
 				<form on={{ submit: handleSubmit }}>
-					<div css={{ marginBottom: "16px" }}>
+					<div class="mb-4">
 						<label
 							for="project-name"
-							css={{
-								display: "block",
-								marginBottom: "6px",
-								fontSize: "13px",
-								color: "#999",
-							}}
+							class="mb-1.5 block text-sm text-neutral-400"
 						>
 							Project Name
 						</label>
@@ -115,20 +87,7 @@ export function CreateProjectDialog(
 							type="text"
 							name="name"
 							placeholder="My Project"
-							css={{
-								width: "100%",
-								padding: "10px 12px",
-								backgroundColor: "#2d2d2d",
-								border: "1px solid #444",
-								borderRadius: "4px",
-								color: "#fff",
-								fontSize: "14px",
-								outline: "none",
-								boxSizing: "border-box",
-								"&:focus": {
-									borderColor: "#3b82f6",
-								},
-							}}
+							class="box-border w-full rounded border border-neutral-600 bg-neutral-800 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
 							connect={(input: HTMLInputElement) => {
 								input.focus();
 							}}
@@ -136,63 +95,23 @@ export function CreateProjectDialog(
 					</div>
 
 					{error && (
-						<div
-							css={{
-								marginBottom: "16px",
-								padding: "8px 12px",
-								backgroundColor: "rgba(239, 68, 68, 0.1)",
-								border: "1px solid #ef4444",
-								borderRadius: "4px",
-								color: "#ef4444",
-								fontSize: "13px",
-							}}
-						>
+						<div class="mb-4 rounded border border-red-500 bg-red-500/10 px-3 py-2 text-sm text-red-500">
 							{error}
 						</div>
 					)}
 
-					<div
-						css={{
-							display: "flex",
-							justifyContent: "flex-end",
-							gap: "8px",
-						}}
-					>
+					<div class="flex justify-end gap-2">
 						<button
 							type="button"
-							css={{
-								padding: "8px 16px",
-								backgroundColor: "transparent",
-								border: "1px solid #444",
-								borderRadius: "4px",
-								color: "#999",
-								fontSize: "13px",
-								cursor: "pointer",
-								"&:hover": {
-									backgroundColor: "#2d2d2d",
-									color: "#fff",
-								},
-							}}
-							on={{ click: renderProps.onClose }}
+							class="cursor-pointer rounded border border-neutral-600 bg-transparent px-4 py-2 text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white"
+							on={{ click: props.onClose }}
 						>
 							Cancel
 						</button>
 						<button
 							type="submit"
 							disabled={isSubmitting}
-							css={{
-								padding: "8px 16px",
-								backgroundColor: "#3b82f6",
-								border: "none",
-								borderRadius: "4px",
-								color: "#fff",
-								fontSize: "13px",
-								cursor: isSubmitting ? "not-allowed" : "pointer",
-								opacity: isSubmitting ? 0.6 : 1,
-								"&:hover": {
-									backgroundColor: isSubmitting ? "#3b82f6" : "#2563eb",
-								},
-							}}
+							class="cursor-pointer rounded border-none bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-blue-500"
 						>
 							{isSubmitting ? "Creating..." : "Create Project"}
 						</button>

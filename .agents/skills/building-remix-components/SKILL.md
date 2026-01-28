@@ -1,25 +1,15 @@
-- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- Only use bun as the package manager
-- If a dependency is only used by one package then install it in the package locally otherwise use catalog for version consistency
-- Default to using Bun instead of Node.js.
+---
+name: building-remix-components
+description: Creates Remix UI components with correct setup/render patterns. Use when building new components, converting React to Remix, or debugging component state issues.
+---
 
-## Linting
+# Building Remix Components
 
-Always run `bun run lint` before you're done working to fix any lint issues.
+Remix components use a **setup/render pattern** that differs from React. Understanding this pattern is critical for correct component behavior.
 
-## Formatting
+## Getting Started
 
-Always run `bun run fmt` before you're done working to fix any formatting issues.
-
-## No React
-
-This application does NOT use React. We use `remix/component` for UI components. Do not introduce React, Preact, or any other UI framework.
-
-## Remix Component Guide
-
-### Getting Started
-
-To start using Remix Component, create a root and render your top-level component:
+### Creating a Root
 
 ```tsx
 import { createRoot } from '@remix-run/component'
@@ -44,7 +34,7 @@ root.render(<App />)
 - **`flush()`** - Synchronously flushes all pending updates and tasks
 - **`remove()`** - Removes the component tree and cleans up
 
-### Component Structure
+## Component Structure
 
 All components follow a two-phase structure:
 
@@ -115,6 +105,31 @@ function Counter(handle: Handle) {
 }
 ```
 
+With a task:
+
+```tsx
+function Player(handle: Handle) {
+  let isPlaying = false
+  let stopButton: HTMLButtonElement
+
+  return () => (
+    <button
+      disabled={isPlaying}
+      on={{
+        click() {
+          isPlaying = true
+          handle.update(() => {
+            stopButton.focus()
+          })
+        },
+      }}
+    >
+      Play
+    </button>
+  )
+}
+```
+
 ### `handle.queueTask(task)`
 
 Schedules a task to run after the next update. The task receives an `AbortSignal` that's aborted when:
@@ -149,6 +164,77 @@ function Form(handle: Handle) {
         <section connect={(node) => (detailsSection = node)}>Details content</section>
       )}
     </form>
+  )
+}
+```
+
+**Use `queueTask` for work that needs to be reactive to prop changes:**
+
+```tsx
+function DataLoader(handle: Handle) {
+  let data: any = null
+  let loading = true
+
+  return (props: { url: string }) => {
+    handle.queueTask(async (signal) => {
+      let response = await fetch(props.url, { signal })
+      let json = await response.json()
+      if (signal.aborted) return
+      data = json
+      loading = false
+      handle.update()
+    })
+
+    if (loading) return <div>Loading...</div>
+    return <div>{JSON.stringify(data)}</div>
+  }
+}
+```
+
+**❌ Anti-pattern: Don't create states as values to "react to" on the next render with `queueTask`:**
+
+```tsx
+// ❌ Avoid: Creating state just to react to it in queueTask
+function BadExample(handle: Handle) {
+  let shouldLoad = false
+
+  return () => (
+    <div>
+      <button
+        on={{
+          click() {
+            shouldLoad = true
+            handle.update()
+            handle.queueTask(() => {
+              if (shouldLoad) {
+                // Do work
+              }
+            })
+          },
+        }}
+      >
+        Load
+      </button>
+    </div>
+  )
+}
+
+// ✅ Prefer: Do the work directly in the event handler or queueTask
+function GoodExample(handle: Handle) {
+  return () => (
+    <div>
+      <button
+        on={{
+          click() {
+            handle.queueTask(() => {
+              // Do work directly - no intermediate state needed
+            })
+          },
+        }}
+      >
+        Load
+      </button>
+    </div>
   )
 }
 ```
@@ -340,8 +426,6 @@ function SearchForm(handle: Handle) {
 
 ## CSS Prop
 
-Use tailwind v4, always reference available theme vars in `@packages/app/src/style.css`
-
 ### Performance: CSS Prop vs Style Prop
 
 The `css` prop produces static styles as CSS rules, while the `style` prop applies styles directly. For **dynamic styles**, use the `style` prop:
@@ -362,7 +446,7 @@ function ProgressBar(handle: Handle) {
 }
 ```
 
-### Pseudo-Selectors and Nested Selectors
+### Pseudo-Selectors
 
 Use `&` to reference the current element:
 
@@ -374,6 +458,8 @@ function Button() {
         backgroundColor: 'blue',
         '&:hover': { backgroundColor: 'darkblue' },
         '&:active': { transform: 'scale(0.98)' },
+        '&:focus': { outline: '2px solid yellow' },
+        '&:disabled': { opacity: 0.5 },
       }}
     >
       Click me
@@ -382,10 +468,55 @@ function Button() {
 }
 ```
 
+### Pseudo-Elements
+
+```tsx
+function Badge() {
+  return (props: { count: number }) => (
+    <div
+      css={{
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: '-4px',
+          right: '-4px',
+          width: '8px',
+          height: '8px',
+          backgroundColor: 'red',
+          borderRadius: '50%',
+        },
+      }}
+    >
+      {props.count > 0 && <span>{props.count}</span>}
+    </div>
+  )
+}
+```
+
+### Nested Selectors
+
 **Use nested selectors when parent state affects children** (prefer this over JavaScript state management):
 
 ```tsx
-// ✅ CSS nested selectors handle state declaratively
+// ❌ Avoid: Managing hover state in JavaScript
+function CardWithJSState(handle: Handle) {
+  let isHovered = false
+
+  return (props: { children: RemixNode }) => (
+    <div
+      on={{
+        mouseenter() { isHovered = true; handle.update() },
+        mouseleave() { isHovered = false; handle.update() },
+      }}
+      css={{ border: `1px solid ${isHovered ? 'blue' : '#ddd'}` }}
+    >
+      <div className="title" css={{ color: isHovered ? 'blue' : '#333' }}>Title</div>
+    </div>
+  )
+}
+
+// ✅ Prefer: CSS nested selectors handle state declaratively
 function Card(handle: Handle) {
   return (props: { children: RemixNode }) => (
     <div
@@ -399,6 +530,30 @@ function Card(handle: Handle) {
       }}
     >
       <div className="title">Title</div>
+    </div>
+  )
+}
+```
+
+### Media Queries
+
+```tsx
+function ResponsiveGrid() {
+  return (props: { children: RemixNode }) => (
+    <div
+      css={{
+        display: 'grid',
+        gap: '16px',
+        gridTemplateColumns: '1fr',
+        '@media (min-width: 768px)': {
+          gridTemplateColumns: 'repeat(2, 1fr)',
+        },
+        '@media (min-width: 1024px)': {
+          gridTemplateColumns: 'repeat(3, 1fr)',
+        },
+      }}
+    >
+      {props.children}
     </div>
   )
 }
@@ -469,6 +624,11 @@ function TodoList(handle: Handle) {
 }
 ```
 
+Keys ensure:
+- **DOM nodes are reused** - Elements with matching keys are moved, not recreated
+- **Component state is preserved** - Component instances persist across reorders
+- **Focus and selection are maintained** - Input focus stays with the same element
+
 ## Controlled vs Uncontrolled Inputs
 
 Only control an input's value when something besides the user's interaction can also control its state.
@@ -532,6 +692,8 @@ function SlugForm(handle: Handle) {
 
 ### Using Event Handler Signals for Race Conditions
 
+Event handlers receive an `AbortSignal` that's aborted when the handler is re-entered or the component is removed:
+
 ```tsx
 function SearchInput(handle: Handle) {
   let results: string[] = []
@@ -563,73 +725,170 @@ function SearchInput(handle: Handle) {
 }
 ```
 
-### Using queueTask for Reactive Data Loading
+### Using Setup Scope for Initial Data
 
 ```tsx
-function DataLoader(handle: Handle) {
-  let data: any = null
+function UserProfile(handle: Handle, setup: { userId: string }) {
+  let user: User | null = null
   let loading = true
 
-  return (props: { url: string }) => {
-    handle.queueTask(async (signal) => {
-      let response = await fetch(props.url, { signal })
-      let json = await response.json()
-      if (signal.aborted) return
-      data = json
-      loading = false
-      handle.update()
-    })
+  handle.queueTask(async (signal) => {
+    let response = await fetch(`/api/users/${setup.userId}`, { signal })
+    let data = await response.json()
+    if (signal.aborted) return
+    user = data
+    loading = false
+    handle.update()
+  })
 
-    if (loading) return <div>Loading...</div>
-    return <div>{JSON.stringify(data)}</div>
+  return (props: { showEmail?: boolean }) => {
+    if (loading) return <div>Loading user...</div>
+
+    return (
+      <div>
+        <h1>{user.name}</h1>
+        {props.showEmail && <p>{user.email}</p>}
+      </div>
+    )
   }
 }
 ```
 
-## Fragments
+## Setup Scope Use Cases
 
-Use `Fragment` to group elements without adding extra DOM nodes:
+The setup scope is perfect for one-time initialization:
+
+### Third-Party SDKs
 
 ```tsx
-function List(handle: Handle) {
+function Analytics(handle: Handle, setup: { apiKey: string }) {
+  let analytics = new AnalyticsSDK(setup.apiKey)
+
+  handle.signal.addEventListener('abort', () => {
+    analytics.disconnect()
+  })
+
+  return (props: { event: string; data?: any }) => {
+    return <div>Tracking: {props.event}</div>
+  }
+}
+```
+
+### Window/Document Event Handling
+
+```tsx
+function WindowResizeTracker(handle: Handle) {
+  let width = window.innerWidth
+  let height = window.innerHeight
+
+  handle.on(window, {
+    resize() {
+      width = window.innerWidth
+      height = window.innerHeight
+      handle.update()
+    },
+  })
+
+  return () => <div>Window size: {width} × {height}</div>
+}
+```
+
+## Focus and Scroll Management
+
+Use `handle.queueTask()` in event handlers for DOM operations that need to happen after the DOM has changed:
+
+```tsx
+function Modal(handle: Handle) {
+  let isOpen = false
+  let closeButton: HTMLButtonElement
+  let openButton: HTMLButtonElement
+
   return () => (
-    <>
-      <li>Item 1</li>
-      <li>Item 2</li>
-    </>
+    <div>
+      <button
+        connect={(node) => (openButton = node)}
+        on={{
+          click() {
+            isOpen = true
+            handle.update()
+            handle.queueTask(() => {
+              closeButton.focus()
+            })
+          },
+        }}
+      >
+        Open Modal
+      </button>
+
+      {isOpen && (
+        <div role="dialog">
+          <button
+            connect={(node) => (closeButton = node)}
+            on={{
+              click() {
+                isOpen = false
+                handle.update()
+                handle.queueTask(() => {
+                  openButton.focus()
+                })
+              },
+            }}
+          >
+            Close
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 ```
 
-## Wrapping Components
+## Component Checklist
 
-- use `Props<'div'>`
-- use `RemixNode` not JSX.Element, etc.
+Before finishing a component, verify:
 
-## File naming
+- [ ] Dynamic values (controlled state) are in render props, not setup props
+- [ ] Setup props are only for initialization (`defaultValue`, config)
+- [ ] `handle.update()` is called after state changes
+- [ ] Context is set in setup phase, not render phase
+- [ ] DOM operations use `connect` prop
+- [ ] Event handlers use `on` prop with object syntax
+- [ ] Cleanup uses `handle.signal`
+- [ ] Types use `Props<'element'>` for extending native elements
+- [ ] Return type uses `RemixNode`
 
-Always name files using kebab-case with lowercase
+## File Conventions
+
+- Use kebab-case for file names: `my-component.tsx`
+- Export both individual components and compound component object:
+
+```tsx
+export function TabsRoot() { ... }
+export function TabsTab() { ... }
+
+export const Tabs = {
+  Root: TabsRoot,
+  Tab: TabsTab,
+}
+```
 
 ## Testing Components
 
-**Follow TDD (Test-Driven Development):**
-1. Write tests first for the component behavior you want
-2. Run tests and verify they fail
-3. Implement the component
-4. Run tests and verify they pass
+**Follow TDD (Test-Driven Development):** Write tests first, ensure they fail, then implement the component.
 
 ### Running Tests
 
 ```bash
-# Run all tests in a package
-cd packages/app && bun test
+# Run all tests in the app package
+bun test
 
 # Run a specific test file
 bun test src/components/__tests__/my-component.test.tsx
-
-# Run all tests from root
-bun run test
 ```
+
+### Test Setup
+
+Tests use happy-dom for DOM simulation. The setup is in `packages/app/src/__tests__/setup.ts` and configured in `packages/app/bunfig.toml`.
 
 ### Test Pattern
 
@@ -639,34 +898,91 @@ import { createRoot } from "@remix-run/component";
 import { MyComponent } from "../my-component";
 
 describe("MyComponent", () => {
-  it("renders correctly", () => {
+  it("renders children", () => {
     const container = document.createElement("div");
     const root = createRoot(container);
 
-    root.render(<MyComponent setup={{}} />);
-    root.flush(); // Always flush after render
+    root.render(
+      <MyComponent setup={{ defaultValue: "test" }}>
+        <span class="child">Content</span>
+      </MyComponent>,
+    );
+    root.flush();
 
-    expect(container.querySelector(".my-element")).not.toBeNull();
+    const child = container.querySelector(".child");
+    expect(child).not.toBeNull();
+    expect(child?.textContent).toBe("Content");
   });
 
-  it("updates on click", () => {
+  it("handles click events", () => {
     const container = document.createElement("div");
     const root = createRoot(container);
 
     root.render(<MyComponent setup={{}} />);
     root.flush();
 
-    container.querySelector("button")?.click();
-    root.flush(); // Flush after events that call handle.update()
+    const button = container.querySelector("button");
+    button?.click();
+    root.flush();
 
     expect(container.querySelector("[data-active]")).not.toBeNull();
+  });
+
+  it("handles focus/blur with events", () => {
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    root.render(<MyComponent setup={{}} />);
+    root.flush();
+
+    const input = container.querySelector("input");
+    input?.dispatchEvent(new Event("focus", { bubbles: true }));
+    root.flush();
+
+    expect(container.querySelector("[data-focused]")).not.toBeNull();
   });
 });
 ```
 
-### Key Points
+### Key Testing Points
 
-- Always provide `setup` prop (even if empty `setup={{}}`) for components that define a setup parameter
-- Call `root.flush()` after `render()` and after events that trigger updates
-- Use `dispatchEvent` for focus/blur events in happy-dom
-- Test files go in `__tests__/` directory with `.test.tsx` extension
+1. **Always call `root.flush()`** after `render()` and after events that trigger `handle.update()`
+2. **Provide `setup` props** for components that require them (even if empty `setup={{}}`)
+3. **Use `dispatchEvent`** for focus/blur events in happy-dom
+4. **Query the DOM** to verify rendered output and state changes
+5. **Test data attributes** (`data-active`, `data-disabled`, etc.) for state verification
+
+### Test File Location
+
+Place tests in `packages/app/src/components/__tests__/` with `.test.tsx` extension:
+- Component: `packages/app/src/components/my-component.tsx`
+- Test: `packages/app/src/components/__tests__/my-component.test.tsx`
+
+## Reference Examples
+
+Look at existing components in `packages/app/src/components/ui/`:
+- `field.tsx` - Form field with validation
+- `tabs.tsx` - Tabbed interface with controlled/uncontrolled support
+- `popover.tsx` - Popover component
+
+Look at existing tests in `packages/app/src/components/__tests__/`:
+- `tabs.test.tsx` - Tests for compound component with context
+- `field.test.tsx` - Tests for form field with focus/blur handling
+- `popover.test.tsx` - Tests for toggle behavior and portals
+
+## Summary
+
+- **Components** have two phases: setup (runs once) and render (runs after setup and on updates)
+- **State** is managed with plain JavaScript variables
+- **Updates** are explicit via `handle.update()`
+- **Setup prop** initialization values and excluded from props
+- **Context** enables indirect composition without prop drilling
+- **TypedEventTarget** provides granular updates for better performance
+- **State management best practices:**
+  - Use minimal component state - derive computed values, don't store input state you don't need
+  - Do as much work as possible in event handlers - use event handler scope for transient state, only capture to component state if used for rendering
+- **queueTask** patterns:
+  - Use in event handlers when work needs to happen after DOM changes from the next update
+  - Use in render function for work that needs to be reactive to prop changes
+  - Don't create states as values to "react to" on the next render with queueTask
+- **AbortSignals** in events and tasks manage interruptions and disconnects - always check `signal.aborted` or pass to async APIs

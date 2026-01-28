@@ -1,5 +1,5 @@
 import { getAtom, getAtomValue, Result } from "@daw/atom-remix";
-import type { Project } from "@daw/core";
+import type * as Project from "@daw/core/domain/project";
 import type { Handle, RemixNode } from "@remix-run/component";
 import { Cause, DateTime } from "effect";
 import { ApiClient } from "../api/client";
@@ -7,7 +7,7 @@ import { tabsAtom } from "../state/tabs";
 
 type ProjectSummary = Project.ProjectSummary;
 
-function ProjectCard(handle: Handle, _setupProps: { project: ProjectSummary }) {
+function ProjectCard(handle: Handle, _setup: { project: ProjectSummary }) {
 	const [, setTabs] = getAtom(handle, tabsAtom);
 
 	const handleClick = (project: ProjectSummary) => {
@@ -26,40 +26,18 @@ function ProjectCard(handle: Handle, _setupProps: { project: ProjectSummary }) {
 		});
 	};
 
-	return (renderProps: { project: ProjectSummary }) => {
-		const { project } = renderProps;
+	return (props: { project: ProjectSummary }) => {
+		const { project } = props;
 
 		return (
 			<div
-				css={{
-					padding: "16px",
-					backgroundColor: "#2d2d2d",
-					borderRadius: "8px",
-					border: "1px solid #444",
-					cursor: "pointer",
-					transition: "border-color 0.15s",
-					"&:hover": {
-						borderColor: "#3b82f6",
-					},
-				}}
+				class="cursor-pointer rounded-lg border border-neutral-600 bg-neutral-800 p-4 transition-colors hover:border-blue-500"
 				on={{ click: () => handleClick(project) }}
 			>
-				<h3
-					css={{
-						margin: "0 0 8px 0",
-						fontSize: "15px",
-						color: "#fff",
-						fontWeight: 500,
-					}}
-				>
+				<h3 class="m-0 mb-2 text-[15px] font-medium text-white">
 					{project.name}
 				</h3>
-				<div
-					css={{
-						fontSize: "12px",
-						color: "#666",
-					}}
-				>
+				<div class="text-xs text-neutral-500">
 					Last modified:{" "}
 					{DateTime.toDate(project.updatedAt).toLocaleDateString()}
 				</div>
@@ -68,65 +46,18 @@ function ProjectCard(handle: Handle, _setupProps: { project: ProjectSummary }) {
 	};
 }
 
-function EmptyState(
-	_handle: Handle,
-	_setupProps: { onCreateProject: () => void },
-) {
-	return (renderProps: { onCreateProject: () => void }) => (
-		<div
-			css={{
-				display: "flex",
-				flexDirection: "column",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: "64px 24px",
-				textAlign: "center",
-			}}
-		>
-			<div
-				css={{
-					fontSize: "48px",
-					marginBottom: "16px",
-					opacity: 0.5,
-				}}
-			>
-				🎵
-			</div>
-			<h2
-				css={{
-					margin: "0 0 8px 0",
-					fontSize: "20px",
-					color: "#fff",
-					fontWeight: 500,
-				}}
-			>
-				No projects yet
-			</h2>
-			<p
-				css={{
-					margin: "0 0 24px 0",
-					fontSize: "14px",
-					color: "#666",
-				}}
-			>
+function EmptyState(_handle: Handle, _setup: { onCreateProject: () => void }) {
+	return (props: { onCreateProject: () => void }) => (
+		<div class="flex flex-col items-center justify-center px-6 py-16 text-center">
+			<div class="mb-4 text-5xl opacity-50">🎵</div>
+			<h2 class="m-0 mb-2 text-xl font-medium text-white">No projects yet</h2>
+			<p class="m-0 mb-6 text-sm text-neutral-500">
 				Create your first project to get started
 			</p>
 			<button
 				type="button"
-				css={{
-					padding: "12px 24px",
-					backgroundColor: "#3b82f6",
-					border: "none",
-					borderRadius: "6px",
-					color: "#fff",
-					fontSize: "14px",
-					fontWeight: 500,
-					cursor: "pointer",
-					"&:hover": {
-						backgroundColor: "#2563eb",
-					},
-				}}
-				on={{ click: renderProps.onCreateProject }}
+				class="cursor-pointer rounded-md border-none bg-blue-500 px-6 py-3 text-sm font-medium text-white hover:bg-blue-600"
+				on={{ click: props.onCreateProject }}
 			>
 				Create Project
 			</button>
@@ -136,27 +67,19 @@ function EmptyState(
 
 export function ProjectListView(
 	handle: Handle,
-	_setupProps: { onCreateProject: () => void },
+	_setup: { onCreateProject: () => void },
 ) {
 	const getResult = getAtomValue(
 		handle,
 		ApiClient.query("project", "list", { reactivityKeys: ["projects"] }),
 	);
 
-	return (renderProps: { onCreateProject: () => void }) => {
+	return (props: { onCreateProject: () => void }) => {
 		const result = getResult();
 
 		return Result.builder(result)
 			.onInitial(() => (
-				<div
-					css={{
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						padding: "64px",
-						color: "#666",
-					}}
-				>
+				<div class="flex items-center justify-center p-16 text-neutral-500">
 					Loading projects...
 				</div>
 			))
@@ -164,59 +87,26 @@ export function ProjectListView(
 				if (projects.length === 0) {
 					return (
 						<EmptyState
-							setup={{ onCreateProject: renderProps.onCreateProject }}
-							onCreateProject={renderProps.onCreateProject}
+							setup={{ onCreateProject: props.onCreateProject }}
+							onCreateProject={props.onCreateProject}
 						/>
 					);
 				}
 
 				return (
-					<div css={{ padding: "24px" }}>
-						<div
-							css={{
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "space-between",
-								marginBottom: "24px",
-							}}
-						>
-							<h2
-								css={{
-									margin: 0,
-									fontSize: "18px",
-									color: "#fff",
-									fontWeight: 500,
-								}}
-							>
-								Your Projects
-							</h2>
+					<div class="p-6">
+						<div class="mb-6 flex items-center justify-between">
+							<h2 class="m-0 text-lg font-medium text-white">Your Projects</h2>
 							<button
 								type="button"
-								css={{
-									padding: "8px 16px",
-									backgroundColor: "#3b82f6",
-									border: "none",
-									borderRadius: "4px",
-									color: "#fff",
-									fontSize: "13px",
-									cursor: "pointer",
-									"&:hover": {
-										backgroundColor: "#2563eb",
-									},
-								}}
-								on={{ click: renderProps.onCreateProject }}
+								class="cursor-pointer rounded border-none bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+								on={{ click: props.onCreateProject }}
 							>
 								New Project
 							</button>
 						</div>
 
-						<div
-							css={{
-								display: "grid",
-								gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-								gap: "16px",
-							}}
-						>
+						<div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
 							{projects.map((project) => (
 								<ProjectCard
 									key={project.id}
@@ -229,12 +119,7 @@ export function ProjectListView(
 				);
 			})
 			.onFailure((error) => (
-				<div
-					css={{
-						padding: "24px",
-						color: "#ef4444",
-					}}
-				>
+				<div class="p-6 text-red-500">
 					Error loading projects: {Cause.pretty(error)}
 				</div>
 			))

@@ -1,16 +1,17 @@
 import { getAtom } from "@daw/atom-remix";
-import type { Ids } from "@daw/core";
+import type * as Ids from "@daw/core/ids";
 import type { Handle } from "@remix-run/component";
 import { tabsAtom } from "../state/tabs";
+import { cn } from "../utils/cn";
 
 type ProjectId = Ids.ProjectId;
 
-function TabItem(handle: Handle, _setupProps: { tabId: ProjectId }) {
+function TabItem(handle: Handle, _setup: { tabId: ProjectId }) {
 	const [getTabs, setTabs] = getAtom(handle, tabsAtom);
 
-	return (renderProps: { tabId: ProjectId }) => {
+	return (props: { tabId: ProjectId }) => {
 		const { openTabs, activeTabId } = getTabs();
-		const tab = openTabs.find((t) => t.id === renderProps.tabId);
+		const tab = openTabs.find((t) => t.id === props.tabId);
 		if (!tab) return null;
 
 		const isActive = tab.id === activeTabId;
@@ -36,58 +37,26 @@ function TabItem(handle: Handle, _setupProps: { tabId: ProjectId }) {
 
 		return (
 			<div
-				css={{
-					display: "flex",
-					alignItems: "center",
-					gap: "8px",
-					padding: "8px 12px",
-					backgroundColor: isActive ? "#2d2d2d" : "#1a1a1a",
-					borderBottom: isActive
-						? "2px solid #3b82f6"
-						: "2px solid transparent",
-					cursor: "pointer",
-					userSelect: "none",
-					"&:hover": {
-						backgroundColor: isActive ? "#2d2d2d" : "#252525",
-					},
-				}}
+				class={cn(
+					"flex cursor-pointer items-center gap-2 select-none border-b-2 px-3 py-2",
+					isActive
+						? "border-blue-500 bg-neutral-800"
+						: "border-transparent bg-neutral-900 hover:bg-neutral-850",
+				)}
 				on={{ click: handleClick }}
 			>
 				<span
-					css={{
-						fontSize: "13px",
-						color: isActive ? "#fff" : "#999",
-						maxWidth: "120px",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-					}}
-				>
-					{tab.hasUnsavedChanges && (
-						<span css={{ color: "#f59e0b", marginRight: "4px" }}>●</span>
+					class={cn(
+						"max-w-30 overflow-hidden text-ellipsis whitespace-nowrap text-sm",
+						isActive ? "text-white" : "text-neutral-400",
 					)}
+				>
+					{tab.hasUnsavedChanges && <span class="mr-1 text-amber-500">●</span>}
 					{tab.name}
 				</span>
 				<button
 					type="button"
-					css={{
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						width: "16px",
-						height: "16px",
-						border: "none",
-						backgroundColor: "transparent",
-						color: "#666",
-						cursor: "pointer",
-						borderRadius: "2px",
-						fontSize: "14px",
-						lineHeight: 1,
-						"&:hover": {
-							backgroundColor: "#444",
-							color: "#fff",
-						},
-					}}
+					class="flex size-4 cursor-pointer items-center justify-center rounded-sm border-none bg-transparent text-sm leading-none text-neutral-500 hover:bg-neutral-600 hover:text-white"
 					on={{ click: handleClose }}
 				>
 					×
@@ -99,28 +68,13 @@ function TabItem(handle: Handle, _setupProps: { tabId: ProjectId }) {
 
 function NewTabButton(
 	_handle: Handle,
-	_setupProps: { onCreateProject: () => void },
+	_setup: { onCreateProject: () => void },
 ) {
-	return (renderProps: { onCreateProject: () => void }) => (
+	return (props: { onCreateProject: () => void }) => (
 		<button
 			type="button"
-			css={{
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				width: "32px",
-				height: "100%",
-				border: "none",
-				backgroundColor: "transparent",
-				color: "#666",
-				cursor: "pointer",
-				fontSize: "18px",
-				"&:hover": {
-					backgroundColor: "#252525",
-					color: "#fff",
-				},
-			}}
-			on={{ click: renderProps.onCreateProject }}
+			class="flex h-full w-8 cursor-pointer items-center justify-center border-none bg-transparent text-lg text-neutral-500 hover:bg-neutral-850 hover:text-white"
+			on={{ click: props.onCreateProject }}
 		>
 			+
 		</button>
@@ -129,29 +83,21 @@ function NewTabButton(
 
 export function TabBar(
 	handle: Handle,
-	_setupProps: { onCreateProject: () => void },
+	_setup: { onCreateProject: () => void },
 ) {
 	const [getTabs] = getAtom(handle, tabsAtom);
 
-	return (renderProps: { onCreateProject: () => void }) => {
+	return (props: { onCreateProject: () => void }) => {
 		const { openTabs } = getTabs();
 
 		return (
-			<div
-				css={{
-					display: "flex",
-					alignItems: "stretch",
-					backgroundColor: "#1a1a1a",
-					borderBottom: "1px solid #333",
-					height: "36px",
-				}}
-			>
+			<div class="flex h-9 items-stretch border-b border-neutral-700 bg-neutral-900">
 				{openTabs.map((tab) => (
 					<TabItem key={tab.id} setup={{ tabId: tab.id }} tabId={tab.id} />
 				))}
 				<NewTabButton
-					setup={{ onCreateProject: renderProps.onCreateProject }}
-					onCreateProject={renderProps.onCreateProject}
+					setup={{ onCreateProject: props.onCreateProject }}
+					onCreateProject={props.onCreateProject}
 				/>
 			</div>
 		);

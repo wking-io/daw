@@ -4,11 +4,11 @@ export type AsciiLoaderType = keyof typeof asciiLoaders;
 
 export function AsciiLoader(
 	handle: Handle,
-	setupProps: { loader: AsciiLoaderType },
+	setup: { loader: AsciiLoaderType },
 ) {
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 	let frame = 0;
-	let activeLoader: AsciiLoaderType = setupProps.loader;
+	let activeLoader: AsciiLoaderType = setup.loader;
 
 	function startInterval(loader: AsciiLoaderType) {
 		const { interval, frames } = asciiLoaders[loader];
@@ -32,14 +32,14 @@ export function AsciiLoader(
 	});
 
 	startInterval(activeLoader);
-	// Use renderProps for latest prop values
-	return (renderProps: { loader: AsciiLoaderType }) => {
-		if (renderProps.loader !== activeLoader) {
-			activeLoader = renderProps.loader;
+	// Use props for latest prop values
+	return (props: { loader: AsciiLoaderType }) => {
+		if (props.loader !== activeLoader) {
+			activeLoader = props.loader;
 			stopInterval();
-			startInterval(renderProps.loader);
+			startInterval(props.loader);
 		}
-		const currentFrames = asciiLoaders[renderProps.loader].frames;
+		const currentFrames = asciiLoaders[props.loader].frames;
 		return (
 			<pre class="font-mono">{currentFrames[frame % currentFrames.length]}</pre>
 		);

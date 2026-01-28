@@ -1,5 +1,5 @@
 import { AtomHttpApi } from "@daw/atom-remix";
-import { Api } from "@daw/core";
+import { Api } from "@daw/core/api/endpoints";
 import {
 	FetchHttpClient,
 	HttpClient,

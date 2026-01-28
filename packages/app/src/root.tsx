@@ -1,11 +1,17 @@
-import { Atom, getAtom, getAtomValue, RegistryProvider } from "@daw/atom-remix";
-
+import {
+	Atom,
+	getAtom,
+	getAtomValue,
+	RegistryProvider,
+	Result,
+} from "@daw/atom-remix";
 import type { Handle, RemixNode } from "@remix-run/component";
 import { Effect, Schedule } from "effect";
 import { ApiClient } from "./api/client";
 import { healthWithRetryAtom } from "./api/health";
 import { AppLoad } from "./components/app-load";
 import { CreateProjectDialog } from "./components/CreateProjectDialog";
+import { ControlBar } from "./components/control-bar";
 import { ControlPanel } from "./components/control-panel/panel";
 import { ProjectListView } from "./components/ProjectListView";
 import { ProjectView } from "./components/ProjectView";
@@ -30,7 +36,7 @@ export function Root(handle: Handle<{ theme: Theme }>) {
 	});
 
 	return () => (
-		<div class="h-screen font-sans text-foreground bg-background">
+		<div class="flex-1">
 			<RegistryProvider>
 				<ControlPanel.Root>
 					<App />
@@ -46,22 +52,11 @@ function App(handle: Handle) {
 	handle.on(ctx, { change: () => handle.update() });
 
 	return () => {
-		console.log("loaderType", ctx.loaderType);
-		return (
-			<>
-				<ControlPanel.Content />
-				<AppLoad
-					message="Connecting to server..."
-					loaderType={ctx.loaderType}
-				/>
-				;
-			</>
-		);
-		// return Result.builder(getHealthResult())
-		// 	.onInitial(() => <AppLoad message="Connecting to server..." />)
-		// 	.onSuccess(() => <MainApp />)
-		// 	.onFailure(() => <AppLoad message="Starting server..." />)
-		// 	.render() as RemixNode;
+		return Result.builder(getHealthResult())
+			.onInitial(() => <AppLoad message="Connecting to server..." />)
+			.onSuccess(() => <MainApp />)
+			.onFailure(() => <AppLoad message="Starting server..." />)
+			.render() as RemixNode;
 	};
 }
 
@@ -85,6 +80,17 @@ function MainApp(handle: Handle) {
 
 		return (
 			<>
+				<ControlBar.Root>
+					<ControlBar.Content class="pt-1">
+						<TabBar
+							setup={{ onCreateProject: openCreateDialog }}
+							onCreateProject={openCreateDialog}
+						/>
+					</ControlBar.Content>
+					<ControlBar.Content class="ml-auto pr-1 pt-1">
+						<ControlPanel.Content />
+					</ControlBar.Content>
+				</ControlBar.Root>
 				{hasTabs && (
 					<TabBar
 						setup={{ onCreateProject: openCreateDialog }}

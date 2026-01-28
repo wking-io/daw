@@ -1,5 +1,5 @@
 import { Atom } from "@daw/atom-remix";
-import type { Ids } from "@daw/core";
+import type * as Ids from "@daw/core/ids";
 
 export type ProjectId = Ids.ProjectId;
 
