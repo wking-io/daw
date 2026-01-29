@@ -21,7 +21,8 @@
 				"titleBarStyle": "Overlay",
 				"maximized": true,
 				"resizable": true,
-				"visible": true
+				"visible": true,
+				"zoomHotkeysEnabled": true
 			}
 		],
 		"withGlobalTauri": true,

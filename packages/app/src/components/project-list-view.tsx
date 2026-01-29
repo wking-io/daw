@@ -4,6 +4,7 @@ import type { Handle, RemixNode } from "@remix-run/component";
 import { Cause, DateTime } from "effect";
 import { ApiClient } from "../api/client";
 import { tabsAtom } from "../state/tabs";
+import { Button } from "./ui/button";
 
 type ProjectSummary = Project.ProjectSummary;
 
@@ -89,13 +90,7 @@ export function ProjectListView(handle: Handle) {
 					<div class="p-6">
 						<div class="mb-6 flex items-center justify-between">
 							<h2 class="m-0 text-lg font-medium text-white">Your Projects</h2>
-							<button
-								type="button"
-								class="cursor-pointer rounded border-none bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
-								on={{ click: props.onCreateProject }}
-							>
-								New Project
-							</button>
+							<Button on={{ click: props.onCreateProject }}>New Project</Button>
 						</div>
 
 						<div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">

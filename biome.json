@@ -6,7 +6,10 @@
 			"!!**/node_modules",
 			"!!**/dist",
 			"!!**/dist-types",
-			"!!**/target"
+			"!!**/target",
+			"!!**/src-tauri/gen",
+			"!!**/src-tauri/.daw-config.json",
+			"!!**/public/style.css"
 		]
 	},
 	"formatter": {
