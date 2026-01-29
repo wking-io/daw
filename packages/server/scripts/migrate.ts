@@ -10,7 +10,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { BunContext, BunRuntime } from "@effect/platform-bun";
 import { SqliteClient, SqliteMigrator } from "@effect/sql-sqlite-bun";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { getDefaultDBLocation } from "../src/db/get-default-db-location";
 
 const migrationsPath = resolve(import.meta.dirname, "../migrations");
@@ -55,7 +55,8 @@ await mkdir(dirname(dbPath), { recursive: true });
 
 BunRuntime.runMain(
 	program.pipe(
-		Effect.provide(BunContext.layer),
-		Effect.provide(SqliteClient.layer({ filename: dbPath })),
+		Effect.provide(
+			Layer.merge(BunContext.layer, SqliteClient.layer({ filename: dbPath })),
+		),
 	),
 );

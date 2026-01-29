@@ -7,6 +7,8 @@ import { AutomationOperation } from "./automation-ops";
 import { ClipOperation } from "./clip-ops";
 import { MidiOperation } from "./midi-ops";
 import { ProjectCreate, ProjectDelete, ProjectOperation } from "./project-ops";
+export { ProjectCreate, ProjectDelete };
+
 import { TrackOperation } from "./track-ops";
 
 export const CommandPayload = Schema.Union(

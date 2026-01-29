@@ -1,4 +1,4 @@
-import { Api } from "@daw/core";
+import { Api } from "@daw/core/api/endpoints";
 import { HttpApiClient, HttpClient, HttpClientRequest } from "@effect/platform";
 import { Effect, Redacted } from "effect";
 import { McpConfig, McpConfigLive } from "./config";

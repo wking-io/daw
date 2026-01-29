@@ -1,5 +1,7 @@
-import { Events, Ids, Versions } from "@daw/core";
 import { ProjectStored } from "@daw/core/domain/project-stored";
+import { EditorEvent } from "@daw/core/events/editor";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import { Model } from "@effect/sql";
 import { Schema } from "effect";
 
@@ -42,7 +44,7 @@ export class ProjectEventModel extends Model.Class<ProjectEventModel>(
 		"insert",
 		"update",
 	)(Versions.ProjectVersion),
-	data: Model.JsonFromString(Events.EditorEvent),
+	data: Model.JsonFromString(EditorEvent),
 	createdAt: Model.FieldOnly("select")(Schema.DateTimeUtc),
 	updatedAt: Model.FieldOnly("select")(Schema.DateTimeUtc),
 }) {}

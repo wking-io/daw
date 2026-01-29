@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { ApiError, Ids, type Project, Versions } from "@daw/core";
+import * as ApiError from "@daw/core/api/errors";
+import type * as Project from "@daw/core/domain/project";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
 import { Effect, Layer, Option } from "effect";
@@ -41,8 +44,7 @@ const makeTestLayer = () => {
 	const storeStack = Layer.mergeAll(
 		ProjectSnapshotStore.Default,
 		ProjectEventStore.Default,
-		sqlLayer,
-	).pipe(Layer.provide(SetupLayer), Layer.provide(sqlLayer));
+	).pipe(Layer.provide(SetupLayer), Layer.provideMerge(sqlLayer));
 
 	const projectStore = ProjectStore.Default.pipe(Layer.provide(storeStack));
 

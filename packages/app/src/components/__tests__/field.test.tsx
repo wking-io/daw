@@ -84,7 +84,7 @@ describe("Field", () => {
 
 			const label = container.querySelector("label");
 			const input = container.querySelector("input");
-			expect(label?.htmlFor).toBe(input?.id);
+			expect(label?.htmlFor).toBe(input?.id ?? "");
 		});
 	});
 

@@ -1,6 +1,8 @@
 import { Atom } from "@daw/atom-remix";
-import { Effect, Schedule } from "effect";
+import { Data, Effect, Schedule } from "effect";
 import { ApiClient } from "./client";
+
+class ServerNotHealthyError extends Data.TaggedError("ServerNotHealthyError") {}
 
 const MAX_RETRIES = 20;
 const RETRY_DELAY = 500;
@@ -13,7 +15,7 @@ export const healthWithRetryAtom = Atom.setIdleTTL(
 				Effect.flatMap((response) =>
 					response.healthy
 						? Effect.succeed(response)
-						: Effect.fail(new Error("Server not healthy")),
+						: Effect.fail(new ServerNotHealthyError()),
 				),
 				Effect.retry(
 					Schedule.intersect(

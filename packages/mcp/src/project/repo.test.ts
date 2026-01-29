@@ -1,11 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import {
-	ApiError,
-	type Commands,
-	Ids,
-	type Project,
-	Versions,
-} from "@daw/core";
+import * as ApiError from "@daw/core/api/errors";
+import type { ProjectCreateCommand } from "@daw/core/commands/command";
+import type * as Project from "@daw/core/domain/project";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import { DateTime, Effect, Layer, Option } from "effect";
 import { ProjectRepository } from "./repo";
 
@@ -42,7 +40,7 @@ const makeProjectSummary = (
 const makeCreateCommand = (
 	projectId: Ids.ProjectId,
 	name: string,
-): Commands.ProjectCreateCommand => ({
+): ProjectCreateCommand => ({
 	id: Ids.CommandId.make("cmd-1"),
 	expectedVersion: Versions.ProjectVersion.make(0),
 	actor: "ui",

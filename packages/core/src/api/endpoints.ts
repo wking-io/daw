@@ -7,8 +7,12 @@ import {
 	HttpApiSecurity,
 } from "@effect/platform";
 import { Schema } from "effect";
-import * as Commands from "../commands";
-import { Project } from "../domain";
+import {
+	ProjectCreateCommand,
+	ProjectDeleteCommand,
+} from "../commands/command";
+import { EditorCommand } from "../commands/editor-ops";
+import * as Project from "../domain/project";
 import { ProjectId } from "../ids";
 import * as ApiError from "./errors";
 
@@ -47,7 +51,7 @@ const projectGroup = HttpApiGroup.make("project")
 	)
 	.add(
 		HttpApiEndpoint.post("create", "/")
-			.setPayload(Commands.ProjectCreateCommand)
+			.setPayload(ProjectCreateCommand)
 			.addSuccess(Project.ProjectWithTimestamps),
 	)
 	.add(
@@ -60,7 +64,7 @@ const projectGroup = HttpApiGroup.make("project")
 	.add(
 		HttpApiEndpoint.post("edit", "/:projectId/edit")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.setPayload(Commands.EditorCommand)
+			.setPayload(EditorCommand)
 			.addSuccess(Project.ProjectWithTimestamps)
 			.addError(ApiError.NotFound),
 	)
@@ -85,7 +89,7 @@ const projectGroup = HttpApiGroup.make("project")
 	.add(
 		HttpApiEndpoint.del("delete", "/:projectId")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.setPayload(Commands.ProjectDeleteCommand)
+			.setPayload(ProjectDeleteCommand)
 			.addSuccess(Project.ProjectWithTimestamps)
 			.addError(ApiError.NotFound),
 	)

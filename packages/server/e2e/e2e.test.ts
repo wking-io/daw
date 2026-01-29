@@ -1,6 +1,12 @@
 import { Database } from "bun:sqlite";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { type Commands, Ids, Versions } from "@daw/core";
+import type {
+	ProjectCreateCommand,
+	ProjectDeleteCommand,
+} from "@daw/core/commands/command";
+import type { EditorCommand } from "@daw/core/commands/editor-ops";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -156,7 +162,7 @@ describe("HTTP e2e", () => {
 	}, 20000);
 
 	it("POST /api/projects creates a new project", async () => {
-		const command: Commands.ProjectCreateCommand = {
+		const command: ProjectCreateCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(0),
 			actor: "ui",
@@ -206,7 +212,7 @@ describe("HTTP e2e", () => {
 		});
 		const currentProject = (await getRes.json()) as ProjectResponse;
 
-		const command: Commands.EditorCommand = {
+		const command: EditorCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: currentProject.version as Versions.ProjectVersion,
 			actor: "ui",
@@ -259,7 +265,7 @@ describe("HTTP e2e", () => {
 	it("subscribe streams events when project is edited", async () => {
 		const streamProjectId = Ids.generate("ProjectId");
 
-		const createCommand: Commands.ProjectCreateCommand = {
+		const createCommand: ProjectCreateCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(0),
 			actor: "ui",
@@ -295,7 +301,7 @@ describe("HTTP e2e", () => {
 		const firstText = new TextDecoder().decode(firstChunk.value);
 		expect(firstText).toContain("project.subscribed");
 
-		const editCommand: Commands.EditorCommand = {
+		const editCommand: EditorCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(0),
 			actor: "ui",
@@ -350,7 +356,7 @@ describe("HTTP e2e", () => {
 		});
 		const currentProject = (await getRes.json()) as ProjectResponse;
 
-		const command: Commands.ProjectDeleteCommand = {
+		const command: ProjectDeleteCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: currentProject.version as Versions.ProjectVersion,
 			actor: "ui",
@@ -379,7 +385,7 @@ describe("HTTP e2e", () => {
 	}, 20000);
 
 	it("DELETE /api/projects/:projectId returns 404 for already deleted project", async () => {
-		const command: Commands.ProjectDeleteCommand = {
+		const command: ProjectDeleteCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(1),
 			actor: "ui",

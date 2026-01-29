@@ -1,7 +1,8 @@
 import { DateTime, Option, Schema } from "effect";
-import type { ProjectCreate } from "../commands";
 import type { EditorCommandPayload } from "../commands/editor-ops";
-import type { EditorEvent, ProjectCreated } from "../events";
+import type { ProjectCreate } from "../commands/project-ops";
+import type { EditorEvent } from "../events/editor";
+import type { ProjectCreated } from "../events/project";
 import { ProjectId } from "../ids";
 import { TimeSignature } from "../lib/time-signature";
 import { ProjectVersion } from "../versions";

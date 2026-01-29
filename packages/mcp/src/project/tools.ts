@@ -1,4 +1,11 @@
-import { ApiError, Commands, Ids, Project } from "@daw/core";
+import * as ApiError from "@daw/core/api/errors";
+import {
+	ProjectCreate,
+	ProjectCreateCommand,
+	ProjectDeleteCommand,
+} from "@daw/core/commands/command";
+import * as Project from "@daw/core/domain/project";
+import * as Ids from "@daw/core/ids";
 import { ProjectVersion } from "@daw/core/versions";
 import { Tool, Toolkit } from "@effect/ai";
 import { Effect, Schema } from "effect";
@@ -6,7 +13,7 @@ import { ProjectRepository } from "./repo";
 
 export const CreateProjectTool = Tool.make("daw.project.create", {
 	description: "Create a new project in the DAW",
-	parameters: Commands.ProjectCreate.fields,
+	parameters: ProjectCreate.fields,
 	success: Project.Project,
 	failure: ApiError.ApiError,
 	dependencies: [ProjectRepository],
@@ -27,10 +34,10 @@ export const ProjectToolkit = Toolkit.make(
 	DeleteProjectTool,
 );
 export const ProjectToolkitLive = ProjectToolkit.toLayer({
-	[CreateProjectTool.name]: (params: Commands.ProjectCreate) =>
+	[CreateProjectTool.name]: (params: ProjectCreate) =>
 		Effect.gen(function* () {
 			const repo = yield* ProjectRepository;
-			const command = Commands.ProjectCreateCommand.make({
+			const command = ProjectCreateCommand.make({
 				id: Ids.generate("CommandId"),
 				expectedVersion: ProjectVersion.make(0),
 				actor: "agent",
@@ -42,7 +49,7 @@ export const ProjectToolkitLive = ProjectToolkit.toLayer({
 		Effect.gen(function* () {
 			const repo = yield* ProjectRepository;
 			const project = yield* repo.get(params.projectId);
-			const command = Commands.ProjectDeleteCommand.make({
+			const command = ProjectDeleteCommand.make({
 				id: Ids.generate("CommandId"),
 				expectedVersion: project.version,
 				actor: "agent",

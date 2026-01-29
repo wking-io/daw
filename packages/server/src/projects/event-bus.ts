@@ -1,10 +1,12 @@
-import { Events, Ids, Versions } from "@daw/core";
+import { EditorEvent } from "@daw/core/events/editor";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import { Effect, PubSub, Schema, Stream } from "effect";
 
 export const ProjectEventMessage = Schema.Struct({
 	projectId: Ids.ProjectId,
 	version: Versions.ProjectVersion,
-	events: Schema.Array(Events.EditorEvent),
+	events: Schema.Array(EditorEvent),
 });
 export type ProjectEventMessage = Schema.Schema.Type<
 	typeof ProjectEventMessage
@@ -19,7 +21,7 @@ export class ProjectEventBus extends Effect.Service<ProjectEventBus>()(
 			const publish = (
 				projectId: Ids.ProjectId,
 				version: Versions.ProjectVersion,
-				events: ReadonlyArray<Events.EditorEvent>,
+				events: ReadonlyArray<EditorEvent>,
 			) => PubSub.publish(pubsub, { projectId, version, events: [...events] });
 
 			const subscribe = (projectId: Ids.ProjectId) =>

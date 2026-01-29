@@ -1,11 +1,10 @@
-import {
-	ApiError,
-	type Events,
-	type Ids,
-	Project,
-	ProjectStored,
-	Versions,
-} from "@daw/core";
+import * as ApiError from "@daw/core/api/errors";
+import * as Project from "@daw/core/domain/project";
+import * as ProjectStored from "@daw/core/domain/project-stored";
+import type { EditorEvent } from "@daw/core/events/editor";
+import type { ProjectCreated } from "@daw/core/events/project";
+import type * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import type { SqlError } from "@effect/sql/SqlError";
 import { Effect, Option } from "effect";
 import type { NoSuchElementException } from "effect/Cause";
@@ -17,7 +16,7 @@ import { ProjectSnapshotStore } from "./snapshot-store";
 const isDeleted = (project: Project.Project): boolean =>
 	Option.isSome(project.deletedAt);
 
-const containsDeletion = (events: ReadonlyArray<Events.EditorEvent>): boolean =>
+const containsDeletion = (events: ReadonlyArray<EditorEvent>): boolean =>
 	events.some((e) => e.t === "project.deleted");
 
 export class ProjectStore extends Effect.Service<ProjectStore>()(
@@ -31,7 +30,7 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 
 			const evolve = (
 				project: Project.Project,
-				events: ReadonlyArray<Events.EditorEvent>,
+				events: ReadonlyArray<EditorEvent>,
 			) => {
 				return events.reduce((s, event) => Project.evolve(s, event), project);
 			};
@@ -56,12 +55,10 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					const project = evolve(baseProject, events);
 
 					if (isDeleted(project)) {
-						return yield* Effect.fail(
-							new ApiError.Gone({
-								detail: `Project ${id} has been deleted`,
-								instance: `/api/projects/${id}`,
-							}),
-						);
+						return yield* new ApiError.Gone({
+							detail: `Project ${id} has been deleted`,
+							instance: `/api/projects/${id}`,
+						});
 					}
 
 					return {
@@ -72,7 +69,7 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 				});
 
 			const create = (
-				event: Events.ProjectCreated,
+				event: ProjectCreated,
 			): Effect.Effect<
 				Project.ProjectWithTimestamps,
 				SqlError | ParseError | NoSuchElementException,
@@ -95,7 +92,7 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 
 			const append = (
 				project: Project.ProjectWithTimestamps,
-				events: ReadonlyArray<Events.EditorEvent>,
+				events: ReadonlyArray<EditorEvent>,
 			): Effect.Effect<
 				Project.ProjectWithTimestamps,
 				SqlError | ParseError | NoSuchElementException,

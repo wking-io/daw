@@ -35,7 +35,7 @@ export function ControlPanelContent(handle: Handle) {
 	handle.on(ctx, { change: () => handle.update() });
 
 	return (props: { class?: string }) => (
-		<Popover.Root setup={{ onOpenChange: (open) => console.log(open) }}>
+		<Popover.Root setup={{}}>
 			<Popover.Trigger
 				class={cn(
 					"flex items-center justify-center font-mono whitespace-pre text-xl text-foreground-muted hover:text-foreground hover:bg-layer rounded-xl size-6",

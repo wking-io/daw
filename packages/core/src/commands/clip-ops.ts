@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { QNSpan } from "../domain";
+import { QNSpan } from "../domain/clip";
 import { AudioFileId, ClipId, PatternId, QN, TrackId } from "../ids";
 
 export const ClipCreateMidi = Schema.Struct({

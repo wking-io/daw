@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { QNSpan } from "../domain";
+import { QNSpan } from "../domain/clip";
 import { NoteId, PatternId } from "../ids";
 
 export const MidiPatternRename = Schema.Struct({

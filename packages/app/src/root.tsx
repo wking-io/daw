@@ -1,21 +1,18 @@
 import {
-	Atom,
 	getAtom,
 	getAtomValue,
 	RegistryProvider,
 	Result,
 } from "@daw/atom-remix";
 import type { Handle, RemixNode } from "@remix-run/component";
-import { Effect, Schedule } from "effect";
-import { ApiClient } from "./api/client";
 import { healthWithRetryAtom } from "./api/health";
 import { AppLoad } from "./components/app-load";
-import { CreateProjectDialog } from "./components/CreateProjectDialog";
 import { ControlBar } from "./components/control-bar";
 import { ControlPanel } from "./components/control-panel/panel";
-import { ProjectListView } from "./components/ProjectListView";
-import { ProjectView } from "./components/ProjectView";
-import { TabBar } from "./components/TabBar";
+import { CreateProjectDialog } from "./components/create-project-dialog";
+import { ProjectListView } from "./components/project-list-view";
+import { ProjectView } from "./components/project-view";
+import { TabBar } from "./components/tab-bar";
 import { tabsAtom } from "./state/tabs";
 
 type Theme = "light" | "dark";
@@ -82,21 +79,13 @@ function MainApp(handle: Handle) {
 			<>
 				<ControlBar.Root>
 					<ControlBar.Content class="pt-1">
-						<TabBar
-							setup={{ onCreateProject: openCreateDialog }}
-							onCreateProject={openCreateDialog}
-						/>
+						<TabBar onCreateProject={openCreateDialog} />
 					</ControlBar.Content>
 					<ControlBar.Content class="ml-auto pr-1 pt-1">
 						<ControlPanel.Content />
 					</ControlBar.Content>
 				</ControlBar.Root>
-				{hasTabs && (
-					<TabBar
-						setup={{ onCreateProject: openCreateDialog }}
-						onCreateProject={openCreateDialog}
-					/>
-				)}
+				{hasTabs && <TabBar onCreateProject={openCreateDialog} />}
 
 				<div css={{ flex: 1, overflow: "hidden" }}>
 					{activeTabId ? (
@@ -105,18 +94,12 @@ function MainApp(handle: Handle) {
 							projectId={activeTabId}
 						/>
 					) : (
-						<ProjectListView
-							setup={{ onCreateProject: openCreateDialog }}
-							onCreateProject={openCreateDialog}
-						/>
+						<ProjectListView onCreateProject={openCreateDialog} />
 					)}
 				</div>
 
 				{showCreateDialog && (
-					<CreateProjectDialog
-						setup={{ onClose: closeCreateDialog }}
-						onClose={closeCreateDialog}
-					/>
+					<CreateProjectDialog onClose={closeCreateDialog} />
 				)}
 			</>
 		);

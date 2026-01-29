@@ -1,4 +1,6 @@
-import { type Events, Ids, Versions } from "@daw/core";
+import type { EditorEvent } from "@daw/core/events/editor";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import { SqlClient, SqlSchema } from "@effect/sql";
 import { Effect, Schema } from "effect";
 import { ProjectEventModel } from "./models";
@@ -34,7 +36,7 @@ export class ProjectEventStore extends Effect.Service<ProjectEventStore>()(
 			const append = (
 				id: Ids.ProjectId,
 				version: Versions.ProjectVersion,
-				event: Events.EditorEvent,
+				event: EditorEvent,
 			) =>
 				insertEvent({ id, version, data: event }).pipe(
 					Effect.map(() => version),

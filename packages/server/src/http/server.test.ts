@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { type Commands, Ids, type Project, Versions } from "@daw/core";
+import type { ProjectCreateCommand } from "@daw/core/commands/command";
+import type { EditorCommand } from "@daw/core/commands/editor-ops";
+import type * as Project from "@daw/core/domain/project";
+import * as Ids from "@daw/core/ids";
+import * as Versions from "@daw/core/versions";
 import { HttpApiBuilder, HttpServer } from "@effect/platform";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
@@ -119,7 +123,7 @@ describe("HttpEndpoints", () => {
 		const { handler } = webHandler;
 
 		const projectId = Ids.generate("ProjectId");
-		const createCommand: Commands.ProjectCreateCommand = {
+		const createCommand: ProjectCreateCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(0),
 			actor: "ui",
@@ -170,7 +174,7 @@ describe("HttpEndpoints", () => {
 		const { handler } = webHandler;
 
 		const projectId = Ids.generate("ProjectId");
-		const createCommand: Commands.ProjectCreateCommand = {
+		const createCommand: ProjectCreateCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(0),
 			actor: "ui",
@@ -206,7 +210,7 @@ describe("HttpEndpoints", () => {
 
 		await reader.read();
 
-		const editCommand: Commands.EditorCommand = {
+		const editCommand: EditorCommand = {
 			id: Ids.generate("CommandId"),
 			expectedVersion: Versions.ProjectVersion.make(0),
 			actor: "ui",

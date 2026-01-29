@@ -1,10 +1,8 @@
-import {
-	Api,
-	ApiError,
-	Authorization,
-	Events,
-	HealthResponse,
-} from "@daw/core";
+import { Api, Authorization, HealthResponse } from "@daw/core/api/endpoints";
+import * as ApiError from "@daw/core/api/errors";
+import type * as Events from "@daw/core/events/editor";
+import { ProjectSubscribedEvent } from "@daw/core/events/project";
+import { ServerHeartbeatEvent } from "@daw/core/events/server";
 import {
 	HttpApiBuilder,
 	HttpApiMiddleware,
@@ -27,6 +25,8 @@ class RequestId extends HttpApiMiddleware.Tag<RequestId>()(
 export const RequestIdMiddleware = Layer.effect(
 	RequestId,
 	Effect.gen(function* () {
+		// effect(returnEffectInGen): Intentionally returning Effect as middleware implementation
+		// @effect-diagnostics-next-line returnEffectInGen:off
 		return Effect.gen(function* () {
 			const request = yield* HttpServerRequest.HttpServerRequest;
 			const requestId = request.headers["x-request-id"] ?? crypto.randomUUID();
@@ -112,10 +112,10 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				const commandHandler = yield* ProjectCommandHandler;
 				return yield* commandHandler.execute(path.projectId, payload);
 			}).pipe(
-				Effect.catchTags({
-					NotFound: () => Effect.fail(new ApiError.NotFound()),
+				Effect.mapError((e) => {
+					if (e._tag === "NotFound") return new ApiError.NotFound();
+					return new ApiError.InternalServerError();
 				}),
-				Effect.catchAll(() => Effect.fail(new ApiError.InternalServerError())),
 			),
 		)
 		.handle("subscribe", ({ path }) =>
@@ -125,7 +125,7 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				const project = yield* projectStore.load(projectId);
 
 				const connectedStream = Stream.make(
-					Events.ProjectSubscribedEvent.make({
+					ProjectSubscribedEvent.make({
 						t: "project.subscribed",
 						version: project.version,
 						timestamp: Date.now(),
@@ -135,7 +135,7 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				const heartbeatStream = Stream.repeatEffect(
 					Effect.delay(
 						Effect.sync(() =>
-							Events.ServerHeartbeatEvent.make({
+							ServerHeartbeatEvent.make({
 								t: "server.heartbeat",
 								timestamp: Date.now(),
 							}),

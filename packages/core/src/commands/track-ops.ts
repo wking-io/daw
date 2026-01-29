@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { TrackType } from "../domain";
+import { TrackType } from "../domain/track";
 import { ClipId, TrackId } from "../ids";
 
 export const TrackCreate = Schema.Struct({

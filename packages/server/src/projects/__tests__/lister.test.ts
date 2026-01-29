@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Ids } from "@daw/core";
+import * as Ids from "@daw/core/ids";
 import { ProjectVersion } from "@daw/core/versions";
 import * as SqlClient from "@effect/sql/SqlClient";
 import { SqliteClient } from "@effect/sql-sqlite-bun";
@@ -26,9 +26,9 @@ const SetupLayer = Layer.effectDiscard(
 const makeTestLayer = () => {
 	const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
 
-	return Layer.mergeAll(ProjectLister.Default, sqlLayer).pipe(
+	return ProjectLister.Default.pipe(
 		Layer.provide(SetupLayer),
-		Layer.provide(sqlLayer),
+		Layer.provideMerge(sqlLayer),
 	);
 };
 

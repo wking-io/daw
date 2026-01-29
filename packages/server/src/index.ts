@@ -1,3 +1,4 @@
+import { makeTracingLayer } from "@daw/core/tracing";
 import { HttpApiBuilder, HttpMiddleware, HttpServer } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { SqlClient } from "@effect/sql";
@@ -70,6 +71,8 @@ const runMigrations = Effect.gen(function* () {
 	yield* sql`CREATE INDEX IF NOT EXISTS idx_events_id_version ON events(id, version)`;
 });
 
+const TracingLive = makeTracingLayer("daw-server", "0.0.0");
+
 const Main = Effect.gen(function* () {
 	const config = yield* ServerConfig;
 	mkdirSync(path.dirname(config.db), { recursive: true });
@@ -80,7 +83,7 @@ const Main = Effect.gen(function* () {
 
 	const httpLayer = makeHttpLive(config).pipe(Layer.provide(sqlLayer));
 
-	yield* Layer.launch(httpLayer).pipe(Effect.scoped);
-}).pipe(Effect.provide(ServerConfigLive));
+	return yield* Layer.launch(httpLayer).pipe(Effect.scoped);
+}).pipe(Effect.provide(Layer.merge(ServerConfigLive, TracingLive)));
 
 BunRuntime.runMain(Main);

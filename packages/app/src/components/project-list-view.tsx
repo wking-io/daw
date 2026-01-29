@@ -7,7 +7,7 @@ import { tabsAtom } from "../state/tabs";
 
 type ProjectSummary = Project.ProjectSummary;
 
-function ProjectCard(handle: Handle, _setup: { project: ProjectSummary }) {
+function ProjectCard(handle: Handle) {
 	const [, setTabs] = getAtom(handle, tabsAtom);
 
 	const handleClick = (project: ProjectSummary) => {
@@ -46,7 +46,7 @@ function ProjectCard(handle: Handle, _setup: { project: ProjectSummary }) {
 	};
 }
 
-function EmptyState(_handle: Handle, _setup: { onCreateProject: () => void }) {
+function EmptyState(_handle: Handle) {
 	return (props: { onCreateProject: () => void }) => (
 		<div class="flex flex-col items-center justify-center px-6 py-16 text-center">
 			<div class="mb-4 text-5xl opacity-50">🎵</div>
@@ -65,10 +65,7 @@ function EmptyState(_handle: Handle, _setup: { onCreateProject: () => void }) {
 	);
 }
 
-export function ProjectListView(
-	handle: Handle,
-	_setup: { onCreateProject: () => void },
-) {
+export function ProjectListView(handle: Handle) {
 	const getResult = getAtomValue(
 		handle,
 		ApiClient.query("project", "list", { reactivityKeys: ["projects"] }),
@@ -85,12 +82,7 @@ export function ProjectListView(
 			))
 			.onSuccess((projects) => {
 				if (projects.length === 0) {
-					return (
-						<EmptyState
-							setup={{ onCreateProject: props.onCreateProject }}
-							onCreateProject={props.onCreateProject}
-						/>
-					);
+					return <EmptyState onCreateProject={props.onCreateProject} />;
 				}
 
 				return (
@@ -108,11 +100,7 @@ export function ProjectListView(
 
 						<div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
 							{projects.map((project) => (
-								<ProjectCard
-									key={project.id}
-									setup={{ project }}
-									project={project}
-								/>
+								<ProjectCard key={project.id} project={project} />
 							))}
 						</div>
 					</div>

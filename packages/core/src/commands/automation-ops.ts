@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { AutomationCurve } from "../domain";
+import { AutomationCurve } from "../domain/automation";
 import { AutomationLaneId, AutomationPointId, QN, TrackId } from "../ids";
 
 export const AutomationCreateLane = Schema.Struct({

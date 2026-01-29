@@ -1,5 +1,9 @@
-import type { Commands, Ids } from "@daw/core";
-import { ApiError } from "@daw/core";
+import * as ApiError from "@daw/core/api/errors";
+import type {
+	ProjectCreateCommand,
+	ProjectDeleteCommand,
+} from "@daw/core/commands/command";
+import type * as Ids from "@daw/core/ids";
 import { Effect } from "effect";
 import { ApiClient } from "../api-client";
 
@@ -29,12 +33,12 @@ export class ProjectRepository extends Effect.Service<ProjectRepository>()(
 					.get({ path: { projectId } })
 					.pipe(Effect.mapError(mapError));
 
-			const create = (payload: Commands.ProjectCreateCommand) =>
+			const create = (payload: ProjectCreateCommand) =>
 				api.project.create({ payload }).pipe(Effect.mapError(mapError));
 
 			const remove = (
 				projectId: Ids.ProjectId,
-				payload: Commands.ProjectDeleteCommand,
+				payload: ProjectDeleteCommand,
 			) =>
 				api.project
 					.delete({ path: { projectId }, payload })

@@ -1,4 +1,4 @@
-import { AsciiLoader, type AsciiLoaderType } from "./ascii-loader";
+import { AsciiLoader } from "./ascii-loader";
 
 export function AppLoad() {
 	return (props: { message: string }) => {

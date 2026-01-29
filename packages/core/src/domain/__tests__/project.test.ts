@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { DateTime, Option, Schema } from "effect";
-import { Ids } from "../..";
 import type { EditorCommandPayload } from "../../commands/editor-ops";
-import type { EditorEvent } from "../../events";
+import type { EditorEvent } from "../../events/editor";
+import * as Ids from "../../ids";
 import {
 	AudioFileId,
 	AutomationLaneId,

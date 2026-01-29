@@ -6,7 +6,7 @@ import { cn } from "../utils/cn";
 
 type ProjectId = Ids.ProjectId;
 
-function TabItem(handle: Handle, _setup: { tabId: ProjectId }) {
+function TabItem(handle: Handle) {
 	const [getTabs, setTabs] = getAtom(handle, tabsAtom);
 
 	return (props: { tabId: ProjectId }) => {
@@ -66,10 +66,7 @@ function TabItem(handle: Handle, _setup: { tabId: ProjectId }) {
 	};
 }
 
-function NewTabButton(
-	_handle: Handle,
-	_setup: { onCreateProject: () => void },
-) {
+function NewTabButton(_handle: Handle) {
 	return (props: { onCreateProject: () => void }) => (
 		<button
 			type="button"
@@ -81,10 +78,7 @@ function NewTabButton(
 	);
 }
 
-export function TabBar(
-	handle: Handle,
-	_setup: { onCreateProject: () => void },
-) {
+export function TabBar(handle: Handle) {
 	const [getTabs] = getAtom(handle, tabsAtom);
 
 	return (props: { onCreateProject: () => void }) => {
@@ -93,12 +87,9 @@ export function TabBar(
 		return (
 			<div class="flex h-9 items-stretch border-b border-neutral-700 bg-neutral-900">
 				{openTabs.map((tab) => (
-					<TabItem key={tab.id} setup={{ tabId: tab.id }} tabId={tab.id} />
+					<TabItem key={tab.id} tabId={tab.id} />
 				))}
-				<NewTabButton
-					setup={{ onCreateProject: props.onCreateProject }}
-					onCreateProject={props.onCreateProject}
-				/>
+				<NewTabButton onCreateProject={props.onCreateProject} />
 			</div>
 		);
 	};

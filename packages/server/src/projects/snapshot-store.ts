@@ -1,4 +1,7 @@
-import { ApiError, Ids, type Project, ProjectStored } from "@daw/core";
+import * as ApiError from "@daw/core/api/errors";
+import type * as Project from "@daw/core/domain/project";
+import * as ProjectStored from "@daw/core/domain/project-stored";
+import * as Ids from "@daw/core/ids";
 import { SqlClient, SqlSchema } from "@effect/sql";
 import { Effect, Option, Schema } from "effect";
 import { ProjectSnapshotModel } from "./models";

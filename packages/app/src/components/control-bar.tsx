@@ -1,7 +1,7 @@
-import type { RemixNode } from "@remix-run/component";
+import type { Handle, RemixNode } from "@remix-run/component";
 import { cn } from "../utils/cn";
 
-export function ControlBarRoot() {
+export function ControlBarRoot(_handle: Handle) {
 	return (props: { children?: RemixNode }) => (
 		<div
 			data-tauri-drag-region
@@ -12,7 +12,7 @@ export function ControlBarRoot() {
 	);
 }
 
-export function ControlBarContent() {
+export function ControlBarContent(_handle: Handle) {
 	return (props: { children?: RemixNode; class?: string }) => (
 		<div class={cn("flex", props.class)}>{props.children}</div>
 	);

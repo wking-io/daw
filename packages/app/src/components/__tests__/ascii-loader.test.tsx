@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { createRoot, type Root } from "@remix-run/component";
+import { createRoot, type VirtualRoot } from "@remix-run/component";
 import { AsciiLoader, asciiOptions, isAsciiLoaderType } from "../ascii-loader";
 
 describe("AsciiLoader", () => {
 	let container: HTMLDivElement;
-	let root: Root;
+	let root: VirtualRoot;
 
 	beforeEach(() => {
 		container = document.createElement("div");
