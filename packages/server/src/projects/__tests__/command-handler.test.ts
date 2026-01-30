@@ -194,7 +194,12 @@ describe("ProjectCommandHandler", () => {
 		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
 		expect(snapshots.length).toBe(2);
-		const latestSnapshot = JSON.parse(snapshots[0].data as string);
+		const first = <T>(arr: readonly T[]): T => {
+			if (arr.length === 0) throw new Error("Array is empty");
+			// biome-ignore lint/style/noNonNullAssertion: We've checked that array is not empty
+			return arr[0]!;
+		};
+		const latestSnapshot = JSON.parse(first(snapshots).data as string);
 		expect(latestSnapshot.deletedAt).not.toBeNull();
 	});
 });

@@ -22,7 +22,7 @@ describe("atom-remix smoke test", () => {
 		const root = createRoot(container);
 
 		root.render(
-			<RegistryProvider setup={{}}>
+			<RegistryProvider>
 				<span class="child">Content</span>
 			</RegistryProvider>,
 		);
@@ -43,8 +43,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();
@@ -78,8 +78,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();
@@ -117,8 +117,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();
@@ -146,8 +146,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();
@@ -170,8 +170,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();
@@ -209,8 +209,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();
@@ -232,8 +232,8 @@ describe("atom-remix smoke test", () => {
 		}
 
 		root.render(
-			<RegistryProvider setup={{}}>
-				<TestComponent setup={{}} />
+			<RegistryProvider>
+				<TestComponent />
 			</RegistryProvider>,
 		);
 		root.flush();

@@ -114,6 +114,12 @@ const createAudioFile = (id: string): AudioFile => ({
 	channels: 2,
 });
 
+function first<T>(arr: readonly T[]): T {
+	if (arr.length === 0) throw new Error("Array is empty");
+	// biome-ignore lint/style/noNonNullAssertion: We've checked that array is not empty
+	return arr[0]!;
+}
+
 describe("Project schema", () => {
 	const validProjectJson: Schema.Schema.Encoded<typeof Project> = {
 		id: ProjectId.make("proj-123"),
@@ -255,7 +261,7 @@ describe("Project.evolve", () => {
 			const result = evolve(project, event);
 
 			expect(result.tracks).toHaveLength(1);
-			expect(result.tracks[0].id).toBe(TrackId.make("track-1"));
+			expect(first(result.tracks).id).toBe(TrackId.make("track-1"));
 		});
 
 		it("handles track.deleted", () => {
@@ -286,7 +292,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.tracks[0].name).toBe("New Name");
+			expect(first(result.tracks).name).toBe("New Name");
 		});
 
 		it("handles track.colorChanged", () => {
@@ -302,7 +308,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.tracks[0].color).toBe("#00ff00");
+			expect(first(result.tracks).color).toBe("#00ff00");
 		});
 
 		it("handles track.volumeChanged", () => {
@@ -318,7 +324,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.tracks[0].volumeDb).toBe(-6);
+			expect(first(result.tracks).volumeDb).toBe(-6);
 		});
 
 		it("handles track.panChanged", () => {
@@ -334,7 +340,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.tracks[0].pan).toBe(0.5);
+			expect(first(result.tracks).pan).toBe(0.5);
 		});
 
 		it("handles track.muteChanged", () => {
@@ -350,7 +356,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.tracks[0].mute).toBe(true);
+			expect(first(result.tracks).mute).toBe(true);
 		});
 
 		it("handles track.soloChanged", () => {
@@ -366,7 +372,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.tracks[0].solo).toBe(true);
+			expect(first(result.tracks).solo).toBe(true);
 		});
 
 		it("handles track.clipsReordered", () => {
@@ -412,7 +418,7 @@ describe("Project.evolve", () => {
 			const result = evolve(project, event);
 
 			expect(result.clips).toHaveLength(1);
-			expect(result.clips[0].id).toBe(ClipId.make("clip-1"));
+			expect(first(result.clips).id).toBe(ClipId.make("clip-1"));
 		});
 
 		it("handles clip.created with pattern", () => {
@@ -428,7 +434,7 @@ describe("Project.evolve", () => {
 
 			expect(result.clips).toHaveLength(1);
 			expect(result.midiPatterns).toHaveLength(1);
-			expect(result.midiPatterns[0].id).toBe(PatternId.make("pattern-1"));
+			expect(first(result.midiPatterns).id).toBe(PatternId.make("pattern-1"));
 		});
 
 		it("handles clip.deleted", () => {
@@ -459,7 +465,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.clips[0].span.start).toBe(QN.make(8));
+			expect(first(result.clips).span.start).toBe(QN.make(8));
 		});
 
 		it("handles clip.moved with track change", () => {
@@ -477,8 +483,8 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.clips[0].span.start).toBe(QN.make(8));
-			expect(result.clips[0].trackId).toBe(TrackId.make("track-2"));
+			expect(first(result.clips).span.start).toBe(QN.make(8));
+			expect(first(result.clips).trackId).toBe(TrackId.make("track-2"));
 		});
 
 		it("handles clip.resized", () => {
@@ -494,7 +500,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.clips[0].span.size).toBe(QN.make(8));
+			expect(first(result.clips).span.size).toBe(QN.make(8));
 		});
 
 		it("handles clip.loopChanged", () => {
@@ -511,8 +517,8 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.clips[0].loop.enabled).toBe(true);
-			expect(result.clips[0].loop.length).toBe(QN.make(2));
+			expect(first(result.clips).loop.enabled).toBe(true);
+			expect(first(result.clips).loop.length).toBe(QN.make(2));
 		});
 	});
 
@@ -530,7 +536,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.midiPatterns[0].name).toBe("New Name");
+			expect(first(result.midiPatterns).name).toBe("New Name");
 		});
 
 		it("handles midi.noteAdded", () => {
@@ -538,17 +544,17 @@ describe("Project.evolve", () => {
 				...createBaseProject(),
 				midiPatterns: [createMidiPattern("pattern-1")],
 			};
-			const note = createMidiNote("note-1");
 			const event: EditorEvent = {
 				t: "midi.noteAdded",
 				patternId: PatternId.make("pattern-1"),
-				note,
+				note: createMidiNote("note-1"),
 			};
 
 			const result = evolve(project, event);
+			const pattern = first(result.midiPatterns);
+			const note = first(pattern.notes);
 
-			expect(result.midiPatterns[0].notes).toHaveLength(1);
-			expect(result.midiPatterns[0].notes[0].id).toBe(NoteId.make("note-1"));
+			expect(note.id).toBe(NoteId.make("note-1"));
 		});
 
 		it("handles midi.noteDeleted", () => {
@@ -566,7 +572,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.midiPatterns[0].notes).toHaveLength(0);
+			expect(first(result.midiPatterns).notes).toHaveLength(0);
 		});
 
 		it("handles midi.noteMoved", () => {
@@ -584,9 +590,11 @@ describe("Project.evolve", () => {
 			};
 
 			const result = evolve(project, event);
+			const pattern = first(result.midiPatterns);
+			const note = first(pattern.notes);
 
-			expect(result.midiPatterns[0].notes[0].span.start).toBe(QN.make(4));
-			expect(result.midiPatterns[0].notes[0].span.size).toBe(QN.make(2));
+			expect(note.span.start).toBe(QN.make(4));
+			expect(note.span.size).toBe(QN.make(2));
 		});
 
 		it("handles midi.noteVelocityChanged", () => {
@@ -604,8 +612,10 @@ describe("Project.evolve", () => {
 			};
 
 			const result = evolve(project, event);
+			const pattern = first(result.midiPatterns);
+			const note = first(pattern.notes);
 
-			expect(result.midiPatterns[0].notes[0].velocity).toBe(80);
+			expect(note.velocity).toBe(80);
 		});
 
 		it("handles midi.notePitchChanged", () => {
@@ -623,8 +633,10 @@ describe("Project.evolve", () => {
 			};
 
 			const result = evolve(project, event);
+			const pattern = first(result.midiPatterns);
+			const note = first(pattern.notes);
 
-			expect(result.midiPatterns[0].notes[0].pitch).toBe(72);
+			expect(note.pitch).toBe(72);
 		});
 	});
 
@@ -640,7 +652,7 @@ describe("Project.evolve", () => {
 			const result = evolve(project, event);
 
 			expect(result.automationLanes).toHaveLength(1);
-			expect(result.automationLanes[0].id).toBe(
+			expect(first(result.automationLanes).id).toBe(
 				AutomationLaneId.make("lane-1"),
 			);
 		});
@@ -665,19 +677,18 @@ describe("Project.evolve", () => {
 				...createBaseProject(),
 				automationLanes: [createAutomationLane("lane-1", "track-1")],
 			};
-			const point = createAutomationPoint("point-1");
 			const event: EditorEvent = {
 				t: "automation.pointAdded",
 				laneId: AutomationLaneId.make("lane-1"),
-				point,
+				point: createAutomationPoint("point-1"),
 			};
 
 			const result = evolve(project, event);
+			const lane = first(result.automationLanes);
+			const point = first(lane.points);
 
-			expect(result.automationLanes[0].points).toHaveLength(1);
-			expect(result.automationLanes[0].points[0].id).toBe(
-				AutomationPointId.make("point-1"),
-			);
+			expect(first(result.automationLanes).points).toHaveLength(1);
+			expect(point.id).toBe(AutomationPointId.make("point-1"));
 		});
 
 		it("handles automation.pointDeleted", () => {
@@ -697,7 +708,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.automationLanes[0].points).toHaveLength(0);
+			expect(first(result.automationLanes).points).toHaveLength(0);
 		});
 
 		it("handles automation.pointMoved with both time and value", () => {
@@ -718,9 +729,11 @@ describe("Project.evolve", () => {
 			};
 
 			const result = evolve(project, event);
+			const lane = first(result.automationLanes);
+			const point = first(lane.points);
 
-			expect(result.automationLanes[0].points[0].timeQN).toBe(QN.make(4));
-			expect(result.automationLanes[0].points[0].value).toBe(0.8);
+			expect(point.timeQN).toBe(QN.make(4));
+			expect(point.value).toBe(0.8);
 		});
 
 		it("handles automation.pointMoved with time only", () => {
@@ -740,9 +753,11 @@ describe("Project.evolve", () => {
 			};
 
 			const result = evolve(project, event);
+			const lane = first(result.automationLanes);
+			const point = first(lane.points);
 
-			expect(result.automationLanes[0].points[0].timeQN).toBe(QN.make(4));
-			expect(result.automationLanes[0].points[0].value).toBe(0.5);
+			expect(point.timeQN).toBe(QN.make(4));
+			expect(point.value).toBe(0.5);
 		});
 
 		it("handles automation.pointCurveChanged", () => {
@@ -762,8 +777,10 @@ describe("Project.evolve", () => {
 			};
 
 			const result = evolve(project, event);
+			const lane = first(result.automationLanes);
+			const point = first(lane.points);
 
-			expect(result.automationLanes[0].points[0].curve).toBe("expo");
+			expect(point.curve).toBe("expo");
 		});
 	});
 
@@ -776,7 +793,7 @@ describe("Project.evolve", () => {
 			const result = evolve(project, event);
 
 			expect(result.audioFiles).toHaveLength(1);
-			expect(result.audioFiles[0].id).toBe(AudioFileId.make("audio-1"));
+			expect(first(result.audioFiles).id).toBe(AudioFileId.make("audio-1"));
 		});
 
 		it("handles audioFile.unregistered", () => {
@@ -807,7 +824,7 @@ describe("Project.evolve", () => {
 
 			const result = evolve(project, event);
 
-			expect(result.audioFiles[0].name).toBe("new-name.wav");
+			expect(first(result.audioFiles).name).toBe("new-name.wav");
 		});
 	});
 });
@@ -908,11 +925,12 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("track.created");
-			if (events[0].t === "track.created") {
-				expect(events[0].track.name).toBe("New Track");
-				expect(events[0].track.type).toBe("midi");
-				expect(events[0].track.color).toBe("#00ff00");
+			const event0 = first(events);
+			expect(event0.t).toBe("track.created");
+			if (event0.t === "track.created") {
+				expect(event0.track.name).toBe("New Track");
+				expect(event0.track.type).toBe("midi");
+				expect(event0.track.color).toBe("#00ff00");
 			}
 		});
 
@@ -1100,10 +1118,11 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("clip.created");
-			if (events[0].t === "clip.created") {
-				expect(events[0].clip.trackId).toBe(TrackId.make("track-1"));
-				expect(events[0].pattern).toBeDefined();
+			const event0 = first(events);
+			expect(event0.t).toBe("clip.created");
+			if (event0.t === "clip.created") {
+				expect(event0.clip.trackId).toBe(TrackId.make("track-1"));
+				expect(event0.pattern).toBeDefined();
 			}
 		});
 
@@ -1124,9 +1143,10 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("clip.created");
-			if (events[0].t === "clip.created") {
-				expect(events[0].clip.payload.kind).toBe("audio");
+			const event0 = first(events);
+			expect(event0.t).toBe("clip.created");
+			if (event0.t === "clip.created") {
+				expect(event0.clip.payload.kind).toBe("audio");
 			}
 		});
 
@@ -1254,10 +1274,11 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("midi.noteAdded");
-			if (events[0].t === "midi.noteAdded") {
-				expect(events[0].note.pitch).toBe(60);
-				expect(events[0].note.velocity).toBe(100);
+			const event0 = first(events);
+			expect(event0.t).toBe("midi.noteAdded");
+			if (event0.t === "midi.noteAdded") {
+				expect(event0.note.pitch).toBe(60);
+				expect(event0.note.velocity).toBe(100);
 			}
 		});
 
@@ -1376,10 +1397,11 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("automation.laneCreated");
-			if (events[0].t === "automation.laneCreated") {
-				expect(events[0].lane.trackId).toBe(TrackId.make("track-1"));
-				expect(events[0].lane.paramPath).toBe("volume");
+			const event0 = first(events);
+			expect(event0.t).toBe("automation.laneCreated");
+			if (event0.t === "automation.laneCreated") {
+				expect(event0.lane.trackId).toBe(TrackId.make("track-1"));
+				expect(event0.lane.paramPath).toBe("volume");
 			}
 		});
 
@@ -1419,11 +1441,12 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("automation.pointAdded");
-			if (events[0].t === "automation.pointAdded") {
-				expect(events[0].point.timeQN).toBe(QN.make(4));
-				expect(events[0].point.value).toBe(0.8);
-				expect(events[0].point.curve).toBe("expo");
+			const event0 = first(events);
+			expect(event0.t).toBe("automation.pointAdded");
+			if (event0.t === "automation.pointAdded") {
+				expect(event0.point.timeQN).toBe(QN.make(4));
+				expect(event0.point.value).toBe(0.8);
+				expect(event0.point.curve).toBe("expo");
 			}
 		});
 
@@ -1522,10 +1545,11 @@ describe("Project.decide", () => {
 			const events = decide(project, command);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].t).toBe("audioFile.registered");
-			if (events[0].t === "audioFile.registered") {
-				expect(events[0].audioFile.originalPath).toBe("/path/to/audio.wav");
-				expect(events[0].audioFile.name).toBe("audio.wav");
+			const event0 = first(events);
+			expect(event0.t).toBe("audioFile.registered");
+			if (event0.t === "audioFile.registered") {
+				expect(event0.audioFile.originalPath).toBe("/path/to/audio.wav");
+				expect(event0.audioFile.name).toBe("audio.wav");
 			}
 		});
 

@@ -8,7 +8,7 @@ describe("Positioner", () => {
 		const root = createRoot(container);
 
 		root.render(
-			<Positioner setup={{}} anchor={null}>
+			<Positioner anchor={null}>
 				<span class="test-child">Content</span>
 			</Positioner>,
 		);
@@ -24,7 +24,7 @@ describe("Positioner", () => {
 		const root = createRoot(container);
 
 		root.render(
-			<Positioner setup={{}} anchor={null} side="top">
+			<Positioner anchor={null} side="top">
 				<span>Content</span>
 			</Positioner>,
 		);
@@ -40,7 +40,7 @@ describe("Positioner", () => {
 		const root = createRoot(container);
 
 		root.render(
-			<Positioner setup={{}} anchor={null} align="start">
+			<Positioner anchor={null} align="start">
 				<span>Content</span>
 			</Positioner>,
 		);
@@ -56,11 +56,10 @@ describe("Positioner", () => {
 		const root = createRoot(container);
 
 		root.render(
-			<Positioner setup={{}} anchor={null}>
+			<Positioner anchor={null}>
 				<span>Content</span>
 			</Positioner>,
 		);
-		root.flush();
 
 		const el = container.querySelector("[data-side]") as HTMLElement;
 		expect(el).not.toBeNull();
@@ -72,7 +71,7 @@ describe("Positioner", () => {
 		const root = createRoot(container);
 
 		root.render(
-			<Positioner setup={{}} anchor={null} class="custom-positioner">
+			<Positioner anchor={null} class="custom-positioner">
 				<span>Content</span>
 			</Positioner>,
 		);
@@ -88,8 +87,8 @@ describe("Positioner", () => {
 			const root = createRoot(container);
 
 			root.render(
-				<Positioner setup={{}} anchor={null}>
-					<PositionerArrow setup={{}} class="arrow" />
+				<Positioner anchor={null}>
+					<PositionerArrow class="arrow" />
 				</Positioner>,
 			);
 			root.flush();
