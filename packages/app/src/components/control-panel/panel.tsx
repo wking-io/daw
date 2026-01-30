@@ -48,7 +48,7 @@ export function ControlPanelContent(handle: Handle) {
 				<Popover.Backdrop class="fixed inset-0 z-40" />
 				<Popover.Positioner side="bottom" align="end" class="z-50">
 					<Popover.Content class="outline-none bg-linear-to-b from-foreground/50 to-foreground/20 rounded-xl p-px">
-						<div class="bg-linear-to-b from-layer to-background rounded-[11px] p-px">
+						<div class="bg-linear-to-b from-layer-2 to-layer-1 rounded-[11px] p-px">
 							<div class="rounded-[10px] bg-layer p-3">
 								<Field.Root
 									setup={{ name: "loaderType" }}

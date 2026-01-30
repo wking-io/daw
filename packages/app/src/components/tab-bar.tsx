@@ -1,15 +1,12 @@
 import { getAtom } from "@daw/atom-remix";
-import type * as Ids from "@daw/core/ids";
 import type { Handle } from "@remix-run/component";
-import { tabsAtom } from "../state/tabs";
+import { type Tab, tabsAtom } from "../state/tabs";
 import { cn } from "../utils/cn";
-
-type ProjectId = Ids.ProjectId;
 
 function TabItem(handle: Handle) {
 	const [getTabs, setTabs] = getAtom(handle, tabsAtom);
 
-	return (props: { tabId: ProjectId }) => {
+	return (props: { tabId: Tab["id"] }) => {
 		const { openTabs, activeTabId } = getTabs();
 		const tab = openTabs.find((t) => t.id === props.tabId);
 		if (!tab) return null;
@@ -29,7 +26,8 @@ function TabItem(handle: Handle) {
 					const closedIndex = current.openTabs.findIndex(
 						(t) => t.id === tab.id,
 					);
-					newActiveId = newTabs[closedIndex - 1]?.id ?? newTabs[0]?.id ?? null;
+					newActiveId =
+						newTabs[closedIndex - 1]?.id ?? newTabs[0]?.id ?? "home";
 				}
 				return { openTabs: newTabs, activeTabId: newActiveId };
 			});
@@ -51,7 +49,7 @@ function TabItem(handle: Handle) {
 						isActive ? "text-white" : "text-neutral-400",
 					)}
 				>
-					{tab.hasUnsavedChanges && <span class="mr-1 text-amber-500">●</span>}
+					{tab.state !== "idle" && <span class="mr-1 text-amber-500">●</span>}
 					{tab.name}
 				</span>
 				<button

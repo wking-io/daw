@@ -1,6 +1,6 @@
 import type { Handle, Props, RemixNode } from "@remix-run/component";
 
-export type TabValue = string | number;
+export type TabValue = string | number | (string & {});
 export type Orientation = "horizontal" | "vertical";
 export type ActivationDirection = "left" | "right" | "up" | "down" | "none";
 
@@ -86,13 +86,13 @@ function getPanelDataAttributes(state: TabPanelState): Record<string, string> {
 
 export function TabsRoot(
 	handle: Handle<TabsContextValue>,
-	setup: {
+	setup?: {
 		defaultValue?: TabValue;
 		orientation?: Orientation;
 	},
 ) {
-	const orientation = setup.orientation ?? "horizontal";
-	let internalValue: TabValue | null = setup.defaultValue ?? null;
+	const orientation = setup?.orientation ?? "horizontal";
+	let internalValue: TabValue | null = setup?.defaultValue ?? null;
 	let activationDirection: ActivationDirection = "none";
 	const tabs: Map<TabValue, TabMetadata> = new Map();
 	const panels: Map<TabValue, PanelMetadata> = new Map();
@@ -234,7 +234,7 @@ export function TabsRoot(
 
 export function TabsList(
 	handle: Handle<TabsListContextValue>,
-	setup: {
+	setup?: {
 		activateOnFocus?: boolean;
 		loop?: boolean;
 	},
@@ -243,8 +243,8 @@ export function TabsList(
 	let highlightedIndex = -1;
 	let listElement: HTMLElement | null = null;
 
-	const activateOnFocus = setup.activateOnFocus ?? true;
-	const loop = setup.loop ?? true;
+	const activateOnFocus = setup?.activateOnFocus ?? true;
+	const loop = setup?.loop ?? true;
 
 	const setHighlightedIndex = (index: number) => {
 		highlightedIndex = index;
@@ -422,6 +422,12 @@ export function TabsTab(
 							ctx.onValueChange(setup.value);
 						}
 					},
+					keydown: (event: KeyboardEvent) => {
+						if (event.key === "Enter" && !isDisabled) {
+							event.preventDefault();
+							ctx.onValueChange(setup.value);
+						}
+					},
 					focus: () => {
 						if (listCtx?.activateOnFocus && !isDisabled) {
 							ctx.onValueChange(setup.value);
@@ -545,6 +551,12 @@ export function TabsIndicator(handle: Handle) {
 		position = { left, right, top, bottom };
 		size = { width: tabRect.width, height: tabRect.height };
 	};
+
+	// Recalculate after tabs connect to DOM
+	handle.queueTask(() => {
+		calculatePosition();
+		handle.update();
+	});
 
 	return (props: Props<"span"> & { class?: string }) => {
 		const { class: className, ...rest } = props;

@@ -20,7 +20,7 @@ function ProjectCard(handle: Handle) {
 			return {
 				openTabs: [
 					...current.openTabs,
-					{ id: project.id, name: project.name, hasUnsavedChanges: false },
+					{ id: project.id, name: project.name, state: "idle" },
 				],
 				activeTabId: project.id,
 			};

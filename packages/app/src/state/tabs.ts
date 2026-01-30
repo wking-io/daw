@@ -1,22 +1,32 @@
 import { Atom } from "@daw/atom-remix";
-import type * as Ids from "@daw/core/ids";
-
-export type ProjectId = Ids.ProjectId;
+import * as Ids from "@daw/core/ids";
 
 export interface Tab {
-	id: ProjectId;
+	id: "home" | Ids.ProjectId;
 	name: string;
-	hasUnsavedChanges: boolean;
+	state: "idle" | "dirty" | "error" | "loading" | "pending" | "working";
 }
+
+const homeTab: Tab = {
+	id: "home",
+	name: "Home",
+	state: "idle",
+};
+
+const testTab: Tab = {
+	id: Ids.generate("ProjectId"),
+	name: "Test Song",
+	state: "idle",
+};
 
 export interface TabsState {
 	openTabs: Array<Tab>;
-	activeTabId: ProjectId | null;
+	activeTabId: Tab["id"];
 }
 
 const initialState: TabsState = {
-	openTabs: [],
-	activeTabId: null,
+	openTabs: [homeTab, testTab],
+	activeTabId: "home",
 };
 
 export const tabsAtom = Atom.make(initialState);

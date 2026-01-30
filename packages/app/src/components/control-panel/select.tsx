@@ -86,7 +86,7 @@ export function Select(
 							),
 					}}
 					class={cn(
-						"border-foreground bg-layer text-foreground flex size-6 items-center justify-center border bg-clip-padding select-none rounded-l-md",
+						"border-foreground bg-layer-2 text-foreground flex size-6 items-center justify-center border bg-clip-padding select-none rounded-l-md",
 						disabled
 							? "cursor-not-allowed opacity-50"
 							: "hover:bg-layer-2 active:bg-layer-2",

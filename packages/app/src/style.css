@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+	--font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 	--shadow-input:
 		0px 1px 0px -1px var(--tw-shadow-color),
 		0px 1px 1px -1px var(--tw-shadow-color),
@@ -305,7 +306,7 @@
 	--color-blush-12: oklch(0% 0.0501 340);
 
 	--color-background: var(--color-oatmeal-3);
-	--color-layer: var(--color-oatmeal-2);
+	--color-layer-1: var(--color-oatmeal-2);
 	--color-layer-2: var(--color-oatmeal-1);
 	--color-layer-3: var(--color-oatmeal-0);
 	--color-foreground: var(--color-oatmeal-12);
@@ -318,7 +319,7 @@
 
 .dark {
 	--color-background: var(--color-oatmeal-12);
-	--color-layer: var(--color-oatmeal-11);
+	--color-layer-1: var(--color-oatmeal-11);
 	--color-layer-2: var(--color-oatmeal-10);
 	--color-layer-3: var(--color-oatmeal-9);
 	--color-foreground: var(--color-oatmeal-0);
@@ -335,7 +336,7 @@
 }
 
 body {
-	background-color: var(--color-background);
+	background-color: var(--color-layer-2);
 	color: var(--color-foreground);
 	display: flex;
 	flex-direction: column;

@@ -51,10 +51,7 @@ export function CreateProjectDialog(handle: Handle) {
 		});
 
 		setTabs((current) => ({
-			openTabs: [
-				...current.openTabs,
-				{ id: projectId, name, hasUnsavedChanges: false },
-			],
+			openTabs: [...current.openTabs, { id: projectId, name, state: "idle" }],
 			activeTabId: projectId,
 		}));
 
