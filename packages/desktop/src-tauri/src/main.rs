@@ -8,6 +8,10 @@ use std::{
     },
     time::Duration,
 };
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    Manager,
+};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
@@ -120,6 +124,62 @@ fn main() {
         .setup(move |app| {
             let sidecar_handles = sidecar_handles.clone();
             let shutdown_flag = shutdown_flag.clone();
+
+            // Create View menu with zoom controls
+            let zoom_in = MenuItemBuilder::with_id("zoom_in", "Zoom In")
+                .accelerator("CmdOrCtrl+=")
+                .build(app)?;
+            let zoom_out = MenuItemBuilder::with_id("zoom_out", "Zoom Out")
+                .accelerator("CmdOrCtrl+-")
+                .build(app)?;
+            let actual_size = MenuItemBuilder::with_id("actual_size", "Actual Size")
+                .accelerator("CmdOrCtrl+0")
+                .build(app)?;
+
+            let view_menu = SubmenuBuilder::new(app, "View")
+                .item(&zoom_in)
+                .item(&zoom_out)
+                .separator()
+                .item(&actual_size)
+                .build()?;
+
+            let menu = MenuBuilder::new(app)
+                .item(&PredefinedMenuItem::services(app, None)?)
+                .item(&view_menu)
+                .item(&PredefinedMenuItem::separator(app)?)
+                .item(&PredefinedMenuItem::hide(app, None)?)
+                .item(&PredefinedMenuItem::hide_others(app, None)?)
+                .item(&PredefinedMenuItem::show_all(app, None)?)
+                .item(&PredefinedMenuItem::separator(app)?)
+                .item(&PredefinedMenuItem::quit(app, None)?)
+                .build()?;
+
+            app.set_menu(menu)?;
+
+            // Handle zoom menu events with shared zoom state
+            let zoom_level = Arc::new(Mutex::new(1.0f64));
+            let zoom_level_clone = zoom_level.clone();
+            
+            app.on_menu_event(move |app_handle, event| {
+                if let Some(webview) = app_handle.get_webview_window("main") {
+                    let mut zoom = zoom_level_clone.lock().unwrap();
+                    match event.id().as_ref() {
+                        "zoom_in" => {
+                            *zoom = (*zoom + 0.1).min(5.0);
+                            let _ = webview.set_zoom(*zoom);
+                        }
+                        "zoom_out" => {
+                            *zoom = (*zoom - 0.1).max(0.2);
+                            let _ = webview.set_zoom(*zoom);
+                        }
+                        "actual_size" => {
+                            *zoom = 1.0;
+                            let _ = webview.set_zoom(1.0);
+                        }
+                        _ => {}
+                    }
+                }
+            });
 
             // Load config from JSON file written by predev.ts
             let config = DawConfig::load();
