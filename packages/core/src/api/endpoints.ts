@@ -43,6 +43,28 @@ const healthGroup = HttpApiGroup.make("health")
 	.add(HttpApiEndpoint.get("health", "/").addSuccess(HealthResponse))
 	.prefix("/health");
 
+const eventsGroup = HttpApiGroup.make("events")
+	.add(
+		HttpApiEndpoint.get("subscribe", "/subscribe")
+			.setUrlParams(
+				Schema.Struct({
+					fromVersion: Schema.optional(Schema.NumberFromString),
+					projectId: Schema.optional(ProjectId),
+				}),
+			)
+			.addSuccess(
+				Schema.String.pipe(
+					HttpApiSchema.withEncoding({
+						kind: "Text",
+						contentType: "text/event-stream",
+					}),
+				),
+			),
+	)
+	.addError(ApiError.Unauthorized)
+	.middleware(Authorization)
+	.prefix("/events");
+
 const projectGroup = HttpApiGroup.make("project")
 	.add(
 		HttpApiEndpoint.get("list", "/").addSuccess(
@@ -69,24 +91,6 @@ const projectGroup = HttpApiGroup.make("project")
 			.addError(ApiError.NotFound),
 	)
 	.add(
-		HttpApiEndpoint.get("subscribe", "/:projectId/subscribe")
-			.setPath(Schema.Struct({ projectId: ProjectId }))
-			.setUrlParams(
-				Schema.Struct({
-					fromVersion: Schema.optional(Schema.NumberFromString),
-				}),
-			)
-			.addSuccess(
-				Schema.String.pipe(
-					HttpApiSchema.withEncoding({
-						kind: "Text",
-						contentType: "text/event-stream",
-					}),
-				),
-			)
-			.addError(ApiError.NotFound),
-	)
-	.add(
 		HttpApiEndpoint.del("delete", "/:projectId")
 			.setPath(Schema.Struct({ projectId: ProjectId }))
 			.setPayload(ProjectDeleteCommand)
@@ -99,6 +103,7 @@ const projectGroup = HttpApiGroup.make("project")
 
 export const Api = HttpApi.make("api")
 	.add(healthGroup)
+	.add(eventsGroup)
 	.add(projectGroup)
 	.addError(ApiError.InternalServerError)
 	.addError(ApiError.BadRequest)

@@ -1,8 +1,11 @@
 import { Api, Authorization, HealthResponse } from "@daw/core/api/endpoints";
 import * as ApiError from "@daw/core/api/errors";
-import type * as Events from "@daw/core/events/editor";
-import { ProjectSubscribedEvent } from "@daw/core/events/project";
-import { ServerHeartbeatEvent } from "@daw/core/events/server";
+import type { EditorEventBatch } from "@daw/core/events/editor";
+import {
+	ServerHeartbeatEvent,
+	ServerSubscribedEvent,
+} from "@daw/core/events/server";
+import type { ProjectId } from "@daw/core/ids";
 import {
 	HttpApiBuilder,
 	HttpApiMiddleware,
@@ -68,6 +71,65 @@ const AuthorizationLive = Layer.effect(
 	}),
 );
 
+const makeSubscribeStream = (options: { projectId?: ProjectId }) =>
+	Effect.gen(function* () {
+		const projectStore = yield* ProjectStore;
+
+		const connectedStream = Stream.make(
+			ServerSubscribedEvent.make({
+				t: "server.subscribed",
+				timestamp: Date.now(),
+			}),
+		);
+
+		const heartbeatStream = Stream.repeatEffect(
+			Effect.delay(
+				Effect.sync(() =>
+					ServerHeartbeatEvent.make({
+						t: "server.heartbeat",
+						timestamp: Date.now(),
+					}),
+				),
+				Duration.millis(HEARTBEAT_INTERVAL_MS),
+			),
+		);
+
+		const eventSource = options.projectId
+			? projectStore.subscribe(options.projectId)
+			: projectStore.subscribeAll();
+
+		const eventBatchStream = eventSource.pipe(
+			Stream.map(
+				(msg): EditorEventBatch => ({
+					t: "events",
+					projectId: msg.projectId,
+					version: msg.version,
+					events: msg.events,
+				}),
+			),
+		);
+
+		const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
+
+		const stream = Stream.concat(connectedStream, combinedStream).pipe(
+			Stream.map((event) => new TextEncoder().encode(formatEventStream(event))),
+		);
+
+		return HttpServerResponse.stream(stream, {
+			contentType: "text/event-stream",
+			headers: {
+				"cache-control": "no-cache",
+				connection: "keep-alive",
+			},
+		});
+	});
+
+const eventsGroupLive = HttpApiBuilder.group(Api, "events", (handlers) =>
+	handlers.handle("subscribe", ({ urlParams }) =>
+		makeSubscribeStream({ projectId: urlParams.projectId }),
+	),
+).pipe(Layer.provide(AuthorizationLive));
+
 const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 	handlers
 		.handle("list", () =>
@@ -118,63 +180,6 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 				}),
 			),
 		)
-		.handle("subscribe", ({ path }) =>
-			Effect.gen(function* () {
-				const projectStore = yield* ProjectStore;
-				const projectId = path.projectId;
-				const project = yield* projectStore.load(projectId);
-
-				const connectedStream = Stream.make(
-					ProjectSubscribedEvent.make({
-						t: "project.subscribed",
-						version: project.version,
-						timestamp: Date.now(),
-					}),
-				);
-
-				const heartbeatStream = Stream.repeatEffect(
-					Effect.delay(
-						Effect.sync(() =>
-							ServerHeartbeatEvent.make({
-								t: "server.heartbeat",
-								timestamp: Date.now(),
-							}),
-						),
-						Duration.millis(HEARTBEAT_INTERVAL_MS),
-					),
-				);
-
-				const eventBatchStream = projectStore.subscribe(projectId).pipe(
-					Stream.map(
-						(msg): Events.EditorEventBatch => ({
-							t: "events",
-							version: msg.version,
-							events: msg.events,
-						}),
-					),
-				);
-
-				const combinedStream = Stream.merge(eventBatchStream, heartbeatStream);
-
-				const stream = Stream.concat(connectedStream, combinedStream).pipe(
-					Stream.map((event) =>
-						new TextEncoder().encode(formatEventStream(event)),
-					),
-				);
-
-				return HttpServerResponse.stream(stream, {
-					contentType: "text/event-stream",
-					headers: {
-						"cache-control": "no-cache",
-						connection: "keep-alive",
-					},
-				});
-			}).pipe(
-				Effect.catchAllCause((_) =>
-					Effect.fail(new ApiError.InternalServerError()),
-				),
-			),
-		)
 		.handle("delete", ({ path, payload }) =>
 			Effect.gen(function* () {
 				const commandHandler = yield* ProjectCommandHandler;
@@ -191,5 +196,6 @@ const projectGroupLive = HttpApiBuilder.group(Api, "project", (handlers) =>
 
 export const ApiLive = HttpApiBuilder.api(Api).pipe(
 	Layer.provide(healthGroupLive),
+	Layer.provide(eventsGroupLive),
 	Layer.provide(projectGroupLive),
 );

@@ -10,6 +10,7 @@ import { AppLoad } from "./components/app-load";
 import { ControlBar } from "./components/control-bar";
 import { ControlPanel } from "./components/control-panel/panel";
 import { CreateProjectDialog } from "./components/create-project-dialog";
+import { NavButton } from "./components/nav/button";
 import { Indicator } from "./components/nav/indicator";
 import { ProjectListView } from "./components/project-list-view";
 import { ProjectView } from "./components/project-view";
@@ -98,16 +99,16 @@ function MainApp(handle: Handle) {
 			>
 				<ControlBar.Root>
 					<ControlBar.Content class="py-1">
-						<div class="flex items-center h-6">
+						<div class="flex items-center h-6 gap-1">
 							<Tabs.List
 								setup={{ activateOnFocus: false }}
-								class="flex relative bg-layer-1 rounded-[5px] shadow-[inset_0_0.5px_1px_1px_rgba(0,0,0,0.2)] dark:shadow-[inset_0_0.5px_2px_1px_#000]"
+								class="flex relative bg-layer-1 rounded-[5px] shadow-recess"
 							>
 								{openTabs.map((t) => (
 									<Tabs.Tab
 										key={t.id}
 										setup={{ value: t.id }}
-										class="h-6 px-2.5 focus:outline-none text-xs flex items-center gap-1.5 relative z-1 text-foreground/50 data-active:text-foreground rounded-[5px] focus:ring-2 focus:ring-denim-5/50"
+										class="h-6 px-2.5 focus:outline-none text-xs flex items-center gap-1.5 relative z-1 text-foreground/50 data-active:text-foreground rounded-[5px] focus-visible:ring-1 focus-visible:ring-denim-5/50"
 									>
 										{t.id === "home" ? (
 											<span class="block -mt-0.5">⌂</span>
@@ -121,6 +122,16 @@ function MainApp(handle: Handle) {
 								))}
 								<Indicator />
 							</Tabs.List>
+							<div class="flex relative bg-layer-1 rounded-[5px] shadow-recess">
+								<NavButton
+									class="size-6"
+									on={{
+										click: openCreateDialog,
+									}}
+								>
+									<span class="block -mt-0.5">+</span>
+								</NavButton>
+							</div>
 						</div>
 					</ControlBar.Content>
 					<ControlBar.Content class="ml-auto pr-1 pt-1">

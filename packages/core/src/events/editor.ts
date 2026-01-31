@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { ProjectId } from "../ids";
 import { AudioFileEvent } from "./audio";
 import { AutomationEvent } from "./automation";
 import { ClipEvent } from "./clip";
@@ -25,5 +26,6 @@ export type EditorEvent = Schema.Schema.Type<typeof EditorEvent>;
 
 import { EventBatch } from "./event-batch";
 
-export const EditorEventBatch = EventBatch("ProjectVersion", EditorEvent);
+const EditorEventBatch = EventBatch("ProjectId", "ProjectVersion", EditorEvent);
+
 export type EditorEventBatch = Schema.Schema.Type<typeof EditorEventBatch>;

@@ -104,7 +104,7 @@ type SseTestResult = {
 };
 
 const createSseStream = (fromVersion: number) => {
-	const url = new URL(`${baseUrl}/api/events`);
+	const url = new URL(`${baseUrl}/api/events/subscribe`);
 	url.searchParams.set("fromVersion", String(fromVersion));
 	if (token) {
 		url.searchParams.set("token", token);

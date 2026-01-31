@@ -117,7 +117,7 @@ describe("HttpEndpoints", () => {
 		expect(projects.length).toBe(0);
 	});
 
-	it("subscribe endpoint returns project.subscribed event", async () => {
+	it("subscribe endpoint returns server.subscribed event", async () => {
 		const webHandler = HttpApiBuilder.toWebHandler(makeLayer());
 		dispose = webHandler.dispose;
 		const { handler } = webHandler;
@@ -147,7 +147,7 @@ describe("HttpEndpoints", () => {
 
 		const res = await handler(
 			new Request(
-				`http://localhost/api/projects/${projectId}/subscribe?fromVersion=0`,
+				`http://localhost/api/events/subscribe?fromVersion=0&projectId=${projectId}`,
 				{
 					headers: { Authorization: `Bearer ${TEST_TOKEN}` },
 				},
@@ -164,7 +164,7 @@ describe("HttpEndpoints", () => {
 		const { value, done } = await reader.read();
 		expect(done).toBe(false);
 		const text = new TextDecoder().decode(value);
-		expect(text).toContain("project.subscribed");
+		expect(text).toContain("server.subscribed");
 		await reader.cancel();
 	});
 
@@ -198,7 +198,7 @@ describe("HttpEndpoints", () => {
 
 		const subscribeRes = await handler(
 			new Request(
-				`http://localhost/api/projects/${projectId}/subscribe?fromVersion=0`,
+				`http://localhost/api/events/subscribe?fromVersion=0&projectId=${projectId}`,
 				{
 					headers: { Authorization: `Bearer ${TEST_TOKEN}` },
 				},

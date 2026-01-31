@@ -21,6 +21,7 @@ export function Indicator(_handle: Handle) {
     after:inset-px
     after:rounded-sm
     after:shadow-highlight
+after:shadow-layer-3/40
     dark:after:shadow-foreground/5
     after:transition
     origin-left

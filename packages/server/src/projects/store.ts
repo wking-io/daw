@@ -135,7 +135,13 @@ export class ProjectStore extends Effect.Service<ProjectStore>()(
 					};
 				});
 
-			return { load, append, create, subscribe: eventBus.subscribe };
+			return {
+				load,
+				append,
+				create,
+				subscribe: eventBus.subscribe,
+				subscribeAll: eventBus.subscribeAll,
+			};
 		}),
 		dependencies: [
 			ProjectEventStore.Default,

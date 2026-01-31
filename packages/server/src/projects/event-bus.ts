@@ -23,13 +23,14 @@ export class ProjectEventBus extends Effect.Service<ProjectEventBus>()(
 				version: Versions.ProjectVersion,
 				events: ReadonlyArray<EditorEvent>,
 			) => PubSub.publish(pubsub, { projectId, version, events: [...events] });
-
 			const subscribe = (projectId: Ids.ProjectId) =>
 				Stream.fromPubSub(pubsub).pipe(
 					Stream.filter((msg) => msg.projectId === projectId),
 				);
 
-			return { publish, subscribe };
+			const subscribeAll = () => Stream.fromPubSub(pubsub);
+
+			return { publish, subscribe, subscribeAll };
 		}),
 	},
 ) {}

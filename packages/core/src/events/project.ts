@@ -2,16 +2,6 @@ import { Schema } from "effect";
 import { Project } from "../domain/project";
 import * as Ids from "../ids";
 import { TimeSignature } from "../lib/time-signature";
-import { ProjectVersion } from "../versions";
-
-export const ProjectSubscribedEvent = Schema.Struct({
-	t: Schema.Literal("project.subscribed"),
-	version: ProjectVersion,
-	timestamp: Schema.Number,
-});
-export type ProjectSubscribedEvent = Schema.Schema.Type<
-	typeof ProjectSubscribedEvent
->;
 
 // Project events
 export const ProjectCreated = Schema.Struct({

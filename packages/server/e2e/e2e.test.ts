@@ -237,9 +237,9 @@ describe("HTTP e2e", () => {
 		expect(project.version).toBe(1);
 	}, 20000);
 
-	it("GET /api/projects/:projectId/subscribe returns event stream", async () => {
+	it("GET /api/events/subscribe returns event stream", async () => {
 		const res = await fetch(
-			`${baseUrl}/api/projects/${testProjectId}/subscribe?fromVersion=0`,
+			`${baseUrl}/api/events/subscribe?fromVersion=0&projectId=${testProjectId}`,
 			{
 				headers: { Authorization: `Bearer ${authToken}` },
 			},
@@ -251,13 +251,13 @@ describe("HTTP e2e", () => {
 		expect(reader).toBeDefined();
 		if (!reader) throw new Error("Reader is null");
 
-		// Read first chunk (should be project.subscribed event)
+		// Read first chunk (should be server.subscribed event)
 		const { value, done } = await reader.read();
 		expect(done).toBe(false);
 
 		const text = new TextDecoder().decode(value);
 		expect(text).toContain("data:");
-		expect(text).toContain("project.subscribed");
+		expect(text).toContain("server.subscribed");
 
 		await reader.cancel();
 	}, 20000);
@@ -287,7 +287,7 @@ describe("HTTP e2e", () => {
 		expect(createRes.ok).toBe(true);
 
 		const subscribeRes = await fetch(
-			`${baseUrl}/api/projects/${streamProjectId}/subscribe?fromVersion=0`,
+			`${baseUrl}/api/events/subscribe?fromVersion=0&projectId=${streamProjectId}`,
 			{
 				headers: { Authorization: `Bearer ${authToken}` },
 			},
@@ -299,7 +299,7 @@ describe("HTTP e2e", () => {
 
 		const firstChunk = await reader.read();
 		const firstText = new TextDecoder().decode(firstChunk.value);
-		expect(firstText).toContain("project.subscribed");
+		expect(firstText).toContain("server.subscribed");
 
 		const editCommand: EditorCommand = {
 			id: Ids.generate("CommandId"),
