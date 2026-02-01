@@ -16,35 +16,35 @@ import { ProjectSnapshotStore } from "./projects/snapshot-store";
 import { ProjectStore } from "./projects/store";
 
 const makeHttpLive = (config: ServerConfigService) =>
-	HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
-		Layer.provide(
-			HttpApiBuilder.middlewareCors({
-				allowedOrigins: ["*"],
-				allowedMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-				allowedHeaders: ["*"],
-				credentials: false,
-			}),
-		),
-		Layer.provide(RequestIdMiddleware),
-		HttpServer.withLogAddress,
-		Layer.provide(ApiLive),
-		Layer.provide(ProjectCommandHandler.Default),
-		Layer.provide(ProjectLister.Default),
-		Layer.provide(ProjectSnapshotStore.Default),
-		Layer.provide(ProjectEventStore.Default),
-		Layer.provide(ProjectStore.Default),
-		Layer.provide(
-			BunHttpServer.layer({
-				port: config.port,
-				idleTimeout: 0,
-			}),
-		),
-	);
+  HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
+    Layer.provide(
+      HttpApiBuilder.middlewareCors({
+        allowedOrigins: ["*"],
+        allowedMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allowedHeaders: ["*"],
+        credentials: false,
+      }),
+    ),
+    Layer.provide(RequestIdMiddleware),
+    HttpServer.withLogAddress,
+    Layer.provide(ApiLive),
+    Layer.provide(ProjectCommandHandler.Default),
+    Layer.provide(ProjectLister.Default),
+    Layer.provide(ProjectSnapshotStore.Default),
+    Layer.provide(ProjectEventStore.Default),
+    Layer.provide(ProjectStore.Default),
+    Layer.provide(
+      BunHttpServer.layer({
+        port: config.port,
+        idleTimeout: 0,
+      }),
+    ),
+  );
 
 const runMigrations = Effect.gen(function* () {
-	const sql = yield* SqlClient.SqlClient;
+  const sql = yield* SqlClient.SqlClient;
 
-	yield* sql`
+  yield* sql`
 		CREATE TABLE IF NOT EXISTS snapshots (
 			id TEXT NOT NULL,
 			name TEXT NOT NULL DEFAULT '',
@@ -56,7 +56,7 @@ const runMigrations = Effect.gen(function* () {
 		)
 	`;
 
-	yield* sql`
+  yield* sql`
 		CREATE TABLE IF NOT EXISTS events (
 			id TEXT NOT NULL,
 			version INTEGER NOT NULL,
@@ -67,23 +67,23 @@ const runMigrations = Effect.gen(function* () {
 		)
 	`;
 
-	yield* sql`CREATE INDEX IF NOT EXISTS idx_snapshots_id_version ON snapshots(id, version)`;
-	yield* sql`CREATE INDEX IF NOT EXISTS idx_events_id_version ON events(id, version)`;
+  yield* sql`CREATE INDEX IF NOT EXISTS idx_snapshots_id_version ON snapshots(id, version)`;
+  yield* sql`CREATE INDEX IF NOT EXISTS idx_events_id_version ON events(id, version)`;
 });
 
 const TracingLive = makeTracingLayer("daw-server", "0.0.0");
 
 const Main = Effect.gen(function* () {
-	const config = yield* ServerConfig;
-	mkdirSync(path.dirname(config.db), { recursive: true });
+  const config = yield* ServerConfig;
+  mkdirSync(path.dirname(config.db), { recursive: true });
 
-	const sqlLayer = SqliteClient.layer({ filename: config.db });
+  const sqlLayer = SqliteClient.layer({ filename: config.db });
 
-	yield* runMigrations.pipe(Effect.provide(sqlLayer));
+  yield* runMigrations.pipe(Effect.provide(sqlLayer));
 
-	const httpLayer = makeHttpLive(config).pipe(Layer.provide(sqlLayer));
+  const httpLayer = makeHttpLive(config).pipe(Layer.provide(sqlLayer));
 
-	return yield* Layer.launch(httpLayer).pipe(Effect.scoped);
+  return yield* Layer.launch(httpLayer).pipe(Effect.scoped);
 }).pipe(Effect.provide(Layer.merge(ServerConfigLive, TracingLive)));
 
 BunRuntime.runMain(Main);

@@ -1,0 +1,31 @@
+# Auto-generated config
+.env.local
+.daw-config.json
+
+# Build output
+dist/
+out/
+release/
+
+# Sidecars (built binaries)
+resources/sidecars/*
+!resources/sidecars/.gitkeep
+
+# Dependencies
+node_modules/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+
+# Electron / electron-vite
+.electron/
+.electron-vite/
+
+# Logs
+*.log
+
+# OS
+.DS_Store

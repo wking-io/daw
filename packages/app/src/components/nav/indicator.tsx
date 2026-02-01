@@ -2,9 +2,9 @@ import type { Handle } from "@remix-run/component";
 import { Tabs } from "../ui/tabs";
 
 export function Indicator(_handle: Handle) {
-	return () => (
-		<Tabs.Indicator
-			class="
+  return () => (
+    <Tabs.Indicator
+      class="
     absolute
     left-0
     top-0
@@ -26,9 +26,9 @@ after:shadow-layer-3/40
     after:transition
     origin-left
   "
-		>
-			<span
-				class="
+    >
+      <span
+        class="
 				transition
       absolute
       inset-0                       /* fills the transformed parent */
@@ -52,7 +52,7 @@ after:shadow-layer-3/40
       outline-none
       bg-clip-padding
     "
-			/>
-		</Tabs.Indicator>
-	);
+      />
+    </Tabs.Indicator>
+  );
 }

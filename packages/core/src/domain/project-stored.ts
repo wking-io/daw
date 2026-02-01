@@ -22,17 +22,17 @@ export type SchemaVersion = Schema.Schema.Type<typeof SchemaVersion>;
  * This matches the current Project structure.
  */
 export const ProjectStoredV1 = Schema.Struct({
-	schemaVersion: Schema.Literal(1),
-	id: ProjectId,
-	name: Schema.String,
-	bpm: Schema.Number.pipe(Schema.between(20, 999)),
-	timeSignature: TimeSignature,
-	tracks: Schema.Array(Track),
-	clips: Schema.Array(Clip),
-	midiPatterns: Schema.Array(MidiPattern),
-	automationLanes: Schema.Array(AutomationLane),
-	audioFiles: Schema.Array(AudioFile),
-	deletedAt: Schema.OptionFromNullOr(Schema.DateTimeUtc),
+  schemaVersion: Schema.Literal(1),
+  id: ProjectId,
+  name: Schema.String,
+  bpm: Schema.Number.pipe(Schema.between(20, 999)),
+  timeSignature: TimeSignature,
+  tracks: Schema.Array(Track),
+  clips: Schema.Array(Clip),
+  midiPatterns: Schema.Array(MidiPattern),
+  automationLanes: Schema.Array(AutomationLane),
+  audioFiles: Schema.Array(AudioFile),
+  deletedAt: Schema.OptionFromNullOr(Schema.DateTimeUtc),
 });
 export type ProjectStoredV1 = Schema.Schema.Type<typeof ProjectStoredV1>;
 
@@ -48,11 +48,11 @@ export type ProjectStored = Schema.Schema.Type<typeof ProjectStored>;
  * Strips the runtime `version` field and adds `schemaVersion` for storage.
  */
 export function toStored(project: Project): ProjectStoredV1 {
-	const { version: _, ...rest } = project;
-	return {
-		...rest,
-		schemaVersion: CURRENT_SCHEMA_VERSION,
-	};
+  const { version: _, ...rest } = project;
+  return {
+    ...rest,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+  };
 }
 
 /**
@@ -60,17 +60,17 @@ export function toStored(project: Project): ProjectStoredV1 {
  * Migrates older schema versions to the current version if needed.
  */
 export function fromStored(stored: ProjectStored, version: number): Project {
-	switch (stored.schemaVersion) {
-		case 1: {
-			const { schemaVersion: _, ...rest } = stored;
-			return {
-				...rest,
-				version: version as Project["version"],
-			};
-		}
-		default: {
-			const _exhaustive: never = stored.schemaVersion;
-			throw new Error(`Unknown schema version: ${stored.schemaVersion}`);
-		}
-	}
+  switch (stored.schemaVersion) {
+    case 1: {
+      const { schemaVersion: _, ...rest } = stored;
+      return {
+        ...rest,
+        version: version as Project["version"],
+      };
+    }
+    default: {
+      const _exhaustive: never = stored.schemaVersion;
+      throw new Error(`Unknown schema version: ${stored.schemaVersion}`);
+    }
+  }
 }

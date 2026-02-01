@@ -12,9 +12,9 @@ import { ProjectSnapshotStore } from "../snapshot-store";
 import { ProjectStore } from "../store";
 
 const SetupLayer = Layer.effectDiscard(
-	Effect.gen(function* () {
-		const sql = yield* SqlClient.SqlClient;
-		yield* sql`
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
 			CREATE TABLE IF NOT EXISTS snapshots (
 				id TEXT NOT NULL,
 				name TEXT NOT NULL,
@@ -25,7 +25,7 @@ const SetupLayer = Layer.effectDiscard(
 				PRIMARY KEY (id, version)
 			)
 		`;
-		yield* sql`
+    yield* sql`
 			CREATE TABLE IF NOT EXISTS events (
 				id TEXT NOT NULL,
 				version INTEGER NOT NULL,
@@ -35,171 +35,171 @@ const SetupLayer = Layer.effectDiscard(
 				PRIMARY KEY (id, version)
 			)
 		`;
-	}),
+  }),
 );
 
 const makeTestLayer = () => {
-	const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
+  const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
 
-	const storeStack = Layer.mergeAll(
-		ProjectSnapshotStore.Default,
-		ProjectEventStore.Default,
-	).pipe(Layer.provide(SetupLayer), Layer.provideMerge(sqlLayer));
+  const storeStack = Layer.mergeAll(ProjectSnapshotStore.Default, ProjectEventStore.Default).pipe(
+    Layer.provide(SetupLayer),
+    Layer.provideMerge(sqlLayer),
+  );
 
-	const projectStore = ProjectStore.Default.pipe(Layer.provide(storeStack));
+  const projectStore = ProjectStore.Default.pipe(Layer.provide(storeStack));
 
-	const commandHandler = ProjectCommandHandler.Default.pipe(
-		Layer.provide(projectStore),
-		Layer.provide(storeStack),
-	);
+  const commandHandler = ProjectCommandHandler.Default.pipe(
+    Layer.provide(projectStore),
+    Layer.provide(storeStack),
+  );
 
-	return Layer.mergeAll(commandHandler, projectStore, storeStack);
+  return Layer.mergeAll(commandHandler, projectStore, storeStack);
 };
 
 const createTestProject = (id: string): Project.Project => ({
-	id: Ids.ProjectId.make(id),
-	name: "Test Project",
-	version: Versions.ProjectVersion.make(1),
-	bpm: 120,
-	timeSignature: { numerator: 4, denominator: 4 },
-	tracks: [],
-	clips: [],
-	midiPatterns: [],
-	automationLanes: [],
-	audioFiles: [],
-	deletedAt: Option.none(),
+  id: Ids.ProjectId.make(id),
+  name: "Test Project",
+  version: Versions.ProjectVersion.make(1),
+  bpm: 120,
+  timeSignature: { numerator: 4, denominator: 4 },
+  tracks: [],
+  clips: [],
+  midiPatterns: [],
+  automationLanes: [],
+  audioFiles: [],
+  deletedAt: Option.none(),
 });
 
 describe("ProjectCommandHandler", () => {
-	it("executes a rename command and returns updated project", async () => {
-		const projectId = Ids.ProjectId.make("test-project");
+  it("executes a rename command and returns updated project", async () => {
+    const projectId = Ids.ProjectId.make("test-project");
 
-		const result = await Effect.gen(function* () {
-			const snapshotStore = yield* ProjectSnapshotStore;
-			const commandHandler = yield* ProjectCommandHandler;
+    const result = await Effect.gen(function* () {
+      const snapshotStore = yield* ProjectSnapshotStore;
+      const commandHandler = yield* ProjectCommandHandler;
 
-			const project = createTestProject("test-project");
-			yield* snapshotStore.append(project);
+      const project = createTestProject("test-project");
+      yield* snapshotStore.append(project);
 
-			return yield* commandHandler.execute(projectId, {
-				id: Ids.generate("CommandId"),
-				expectedVersion: Versions.ProjectVersion.make(1),
-				actor: "ui",
-				payload: {
-					t: "project.rename",
-					name: "Renamed Project",
-				},
-			});
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+      return yield* commandHandler.execute(projectId, {
+        id: Ids.generate("CommandId"),
+        expectedVersion: Versions.ProjectVersion.make(1),
+        actor: "ui",
+        payload: {
+          t: "project.rename",
+          name: "Renamed Project",
+        },
+      });
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(result.name).toBe("Renamed Project");
-	});
+    expect(result.name).toBe("Renamed Project");
+  });
 
-	it("returns unchanged project when command results in no change", async () => {
-		const projectId = Ids.ProjectId.make("test-project");
+  it("returns unchanged project when command results in no change", async () => {
+    const projectId = Ids.ProjectId.make("test-project");
 
-		const result = await Effect.gen(function* () {
-			const snapshotStore = yield* ProjectSnapshotStore;
-			const commandHandler = yield* ProjectCommandHandler;
+    const result = await Effect.gen(function* () {
+      const snapshotStore = yield* ProjectSnapshotStore;
+      const commandHandler = yield* ProjectCommandHandler;
 
-			const project = createTestProject("test-project");
-			yield* snapshotStore.append(project);
+      const project = createTestProject("test-project");
+      yield* snapshotStore.append(project);
 
-			return yield* commandHandler.execute(projectId, {
-				id: Ids.generate("CommandId"),
-				expectedVersion: Versions.ProjectVersion.make(1),
-				actor: "ui",
-				payload: {
-					t: "project.rename",
-					name: "Test Project",
-				},
-			});
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+      return yield* commandHandler.execute(projectId, {
+        id: Ids.generate("CommandId"),
+        expectedVersion: Versions.ProjectVersion.make(1),
+        actor: "ui",
+        payload: {
+          t: "project.rename",
+          name: "Test Project",
+        },
+      });
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(result.name).toBe("Test Project");
-	});
+    expect(result.name).toBe("Test Project");
+  });
 
-	it("deletes a project and sets deletedAt", async () => {
-		const projectId = Ids.ProjectId.make("test-project");
+  it("deletes a project and sets deletedAt", async () => {
+    const projectId = Ids.ProjectId.make("test-project");
 
-		const result = await Effect.gen(function* () {
-			const snapshotStore = yield* ProjectSnapshotStore;
-			const commandHandler = yield* ProjectCommandHandler;
+    const result = await Effect.gen(function* () {
+      const snapshotStore = yield* ProjectSnapshotStore;
+      const commandHandler = yield* ProjectCommandHandler;
 
-			const project = createTestProject("test-project");
-			yield* snapshotStore.append(project);
+      const project = createTestProject("test-project");
+      yield* snapshotStore.append(project);
 
-			return yield* commandHandler.execute(projectId, {
-				id: Ids.generate("CommandId"),
-				expectedVersion: Versions.ProjectVersion.make(1),
-				actor: "ui",
-				payload: {
-					t: "project.delete",
-				},
-			});
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+      return yield* commandHandler.execute(projectId, {
+        id: Ids.generate("CommandId"),
+        expectedVersion: Versions.ProjectVersion.make(1),
+        actor: "ui",
+        payload: {
+          t: "project.delete",
+        },
+      });
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(Option.isSome(result.deletedAt)).toBe(true);
-	});
+    expect(Option.isSome(result.deletedAt)).toBe(true);
+  });
 
-	it("returns Gone error when loading a deleted project", async () => {
-		const projectId = Ids.ProjectId.make("test-project");
+  it("returns Gone error when loading a deleted project", async () => {
+    const projectId = Ids.ProjectId.make("test-project");
 
-		const error = await Effect.gen(function* () {
-			const snapshotStore = yield* ProjectSnapshotStore;
-			const commandHandler = yield* ProjectCommandHandler;
-			const projectStore = yield* ProjectStore;
+    const error = await Effect.gen(function* () {
+      const snapshotStore = yield* ProjectSnapshotStore;
+      const commandHandler = yield* ProjectCommandHandler;
+      const projectStore = yield* ProjectStore;
 
-			const project = createTestProject("test-project");
-			yield* snapshotStore.append(project);
+      const project = createTestProject("test-project");
+      yield* snapshotStore.append(project);
 
-			yield* commandHandler.execute(projectId, {
-				id: Ids.generate("CommandId"),
-				expectedVersion: Versions.ProjectVersion.make(1),
-				actor: "ui",
-				payload: {
-					t: "project.delete",
-				},
-			});
+      yield* commandHandler.execute(projectId, {
+        id: Ids.generate("CommandId"),
+        expectedVersion: Versions.ProjectVersion.make(1),
+        actor: "ui",
+        payload: {
+          t: "project.delete",
+        },
+      });
 
-			return yield* projectStore.load(projectId).pipe(Effect.flip);
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+      return yield* projectStore.load(projectId).pipe(Effect.flip);
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(error).toBeInstanceOf(ApiError.Gone);
-	});
+    expect(error).toBeInstanceOf(ApiError.Gone);
+  });
 
-	it("creates a snapshot when project is deleted", async () => {
-		const projectId = Ids.ProjectId.make("test-project");
+  it("creates a snapshot when project is deleted", async () => {
+    const projectId = Ids.ProjectId.make("test-project");
 
-		const snapshots = await Effect.gen(function* () {
-			const snapshotStore = yield* ProjectSnapshotStore;
-			const commandHandler = yield* ProjectCommandHandler;
-			const sql = yield* SqlClient.SqlClient;
+    const snapshots = await Effect.gen(function* () {
+      const snapshotStore = yield* ProjectSnapshotStore;
+      const commandHandler = yield* ProjectCommandHandler;
+      const sql = yield* SqlClient.SqlClient;
 
-			const project = createTestProject("test-project");
-			yield* snapshotStore.append(project);
+      const project = createTestProject("test-project");
+      yield* snapshotStore.append(project);
 
-			yield* commandHandler.execute(projectId, {
-				id: Ids.generate("CommandId"),
-				expectedVersion: Versions.ProjectVersion.make(1),
-				actor: "ui",
-				payload: {
-					t: "project.delete",
-				},
-			});
+      yield* commandHandler.execute(projectId, {
+        id: Ids.generate("CommandId"),
+        expectedVersion: Versions.ProjectVersion.make(1),
+        actor: "ui",
+        payload: {
+          t: "project.delete",
+        },
+      });
 
-			const rows =
-				yield* sql`SELECT * FROM snapshots WHERE id = ${projectId} ORDER BY version DESC`;
-			return rows;
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+      const rows =
+        yield* sql`SELECT * FROM snapshots WHERE id = ${projectId} ORDER BY version DESC`;
+      return rows;
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(snapshots.length).toBe(2);
-		const first = <T>(arr: readonly T[]): T => {
-			if (arr.length === 0) throw new Error("Array is empty");
-			// biome-ignore lint/style/noNonNullAssertion: We've checked that array is not empty
-			return arr[0]!;
-		};
-		const latestSnapshot = JSON.parse(first(snapshots).data as string);
-		expect(latestSnapshot.deletedAt).not.toBeNull();
-	});
+    expect(snapshots.length).toBe(2);
+    const first = <T>(arr: readonly T[]): T => {
+      if (arr.length === 0) throw new Error("Array is empty");
+      // biome-ignore lint/style/noNonNullAssertion: We've checked that array is not empty
+      return arr[0]!;
+    };
+    const latestSnapshot = JSON.parse(first(snapshots).data as string);
+    expect(latestSnapshot.deletedAt).not.toBeNull();
+  });
 });

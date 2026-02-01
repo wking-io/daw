@@ -5,25 +5,22 @@ import { ulid } from "ulid";
 export { QN } from "./domain/qn";
 
 export type ValidId =
-	| "ProjectId"
-	| "TrackId"
-	| "ClipId"
-	| "PatternId"
-	| "NoteId"
-	| "AutomationLaneId"
-	| "AutomationPointId"
-	| "AudioFileId"
-	| "DeviceId"
-	| "CommandId";
+  | "ProjectId"
+  | "TrackId"
+  | "ClipId"
+  | "PatternId"
+  | "NoteId"
+  | "AutomationLaneId"
+  | "AutomationPointId"
+  | "AudioFileId"
+  | "DeviceId"
+  | "CommandId";
 
-export const Id = <B extends ValidId>(brand: B) =>
-	Schema.String.pipe(Schema.brand(brand));
-export type IdOf<B extends ValidId> = Schema.Schema.Type<
-	ReturnType<typeof Id<B>>
->;
+export const Id = <B extends ValidId>(brand: B) => Schema.String.pipe(Schema.brand(brand));
+export type IdOf<B extends ValidId> = Schema.Schema.Type<ReturnType<typeof Id<B>>>;
 
 export const generate = <B extends ValidId>(brand: B) => {
-	return Schema.decodeUnknownSync(Id(brand))(ulid());
+  return Schema.decodeUnknownSync(Id(brand))(ulid());
 };
 
 // Entity IDs (ULIDs)

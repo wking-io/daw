@@ -13,29 +13,25 @@ await $`bun run --cwd ../.. cleanup:orphans`.quiet().nothrow();
 
 // Generate token and find available ports
 function findAvailablePort(preferred: number): Promise<number> {
-	return new Promise((resolve, reject) => {
-		const server = createServer();
-		server.listen(preferred, "127.0.0.1", () => {
-			server.close(() => resolve(preferred));
-		});
-		server.on("error", () => {
-			// Port in use, try next
-			const next = preferred + 1;
-			if (next > preferred + 100) {
-				reject(new Error(`Could not find available port near ${preferred}`));
-			} else {
-				findAvailablePort(next).then(resolve, reject);
-			}
-		});
-	});
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.listen(preferred, "127.0.0.1", () => {
+      server.close(() => resolve(preferred));
+    });
+    server.on("error", () => {
+      // Port in use, try next
+      const next = preferred + 1;
+      if (next > preferred + 100) {
+        reject(new Error(`Could not find available port near ${preferred}`));
+      } else {
+        findAvailablePort(next).then(resolve, reject);
+      }
+    });
+  });
 }
 
-const statePort = await findAvailablePort(
-	Number.parseInt(Bun.env.DAW_STATE_PORT ?? "43125", 10),
-);
-const mcpPort = await findAvailablePort(
-	Number.parseInt(Bun.env.DAW_MCP_PORT ?? "43124", 10),
-);
+const statePort = await findAvailablePort(Number.parseInt(Bun.env.DAW_STATE_PORT ?? "43125", 10));
+const mcpPort = await findAvailablePort(Number.parseInt(Bun.env.DAW_MCP_PORT ?? "43124", 10));
 const stateToken = randomUUID();
 
 console.log(`[predev] Using ports: MCP=${mcpPort} STATE=${statePort}`);
@@ -50,20 +46,20 @@ await Bun.write(".env.local", envContent);
 
 // Write JSON config for Rust to read
 const configJson = JSON.stringify(
-	{
-		statePort,
-		mcpPort,
-		stateToken,
-	},
-	null,
-	2,
+  {
+    statePort,
+    mcpPort,
+    stateToken,
+  },
+  null,
+  2,
 );
 await Bun.write("src-tauri/.daw-config.json", configJson);
 
 const RUST_TARGET =
-	process.env.TAURI_ENV_TARGET_TRIPLE ??
-	process.env.RUST_TARGET ??
-	(await $`rustc --print host-tuple`.text()).trim();
+  process.env.TAURI_ENV_TARGET_TRIPLE ??
+  process.env.RUST_TARGET ??
+  (await $`rustc --print host-tuple`.text()).trim();
 
 const mcpConfig = getCurrentSidecar("daw-mcp", RUST_TARGET);
 const serverConfig = getCurrentSidecar("daw-server", RUST_TARGET);

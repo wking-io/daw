@@ -41,23 +41,20 @@ export type AtomInitialValue = readonly [Atom.Atom<unknown>, unknown];
  * @since 1.0.0
  * @category types
  */
-export function atomInitialValue<A>(
-	atom: Atom.Atom<A>,
-	value: A,
-): AtomInitialValue {
-	return [atom, value];
+export function atomInitialValue<A>(atom: Atom.Atom<A>, value: A): AtomInitialValue {
+  return [atom, value];
 }
 
 interface AtomStore<A> {
-	readonly subscribe: (listener: () => void) => () => void;
-	readonly get: () => A;
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly get: () => A;
 }
 
 type AnyStore = AtomStore<unknown>;
 
 const storeRegistry = globalValue(
-	"@effect-atom/atom-remix/storeRegistry",
-	() => new WeakMap<Registry.Registry, WeakMap<AnyAtom, AnyStore>>(),
+  "@effect-atom/atom-remix/storeRegistry",
+  () => new WeakMap<Registry.Registry, WeakMap<AnyAtom, AnyStore>>(),
 );
 
 /**
@@ -66,32 +63,29 @@ const storeRegistry = globalValue(
  * @since 1.0.0
  * @category internal
  */
-function makeStore<A>(
-	registry: Registry.Registry,
-	atom: Atom.Atom<A>,
-): AtomStore<A> {
-	let stores = storeRegistry.get(registry);
-	if (stores === undefined) {
-		stores = new WeakMap<AnyAtom, AnyStore>();
-		storeRegistry.set(registry, stores);
-	}
+function makeStore<A>(registry: Registry.Registry, atom: Atom.Atom<A>): AtomStore<A> {
+  let stores = storeRegistry.get(registry);
+  if (stores === undefined) {
+    stores = new WeakMap<AnyAtom, AnyStore>();
+    storeRegistry.set(registry, stores);
+  }
 
-	const existing = stores.get(atom as AnyAtom);
-	if (existing !== undefined) {
-		return existing as AtomStore<A>;
-	}
+  const existing = stores.get(atom as AnyAtom);
+  if (existing !== undefined) {
+    return existing as AtomStore<A>;
+  }
 
-	const store: AtomStore<A> = {
-		subscribe(listener) {
-			return registry.subscribe(atom, listener);
-		},
-		get() {
-			return registry.get(atom);
-		},
-	};
+  const store: AtomStore<A> = {
+    subscribe(listener) {
+      return registry.subscribe(atom, listener);
+    },
+    get() {
+      return registry.get(atom);
+    },
+  };
 
-	stores.set(atom as AnyAtom, store as AnyStore);
-	return store;
+  stores.set(atom as AnyAtom, store as AnyStore);
+  return store;
 }
 
 /**
@@ -103,8 +97,8 @@ function makeStore<A>(
  * @category context
  */
 function getRegistry(handle: Handle): Registry.Registry {
-	const { registry } = handle.context.get(RegistryProvider);
-	return registry;
+  const { registry } = handle.context.get(RegistryProvider);
+  return registry;
 }
 
 /**
@@ -114,8 +108,8 @@ function getRegistry(handle: Handle): Registry.Registry {
  * @category internal
  */
 const mountedAtoms = globalValue(
-	"@effect-atom/atom-remix/mountedAtoms",
-	() => new WeakMap<Registry.Registry, WeakSet<AnyAtom>>(),
+  "@effect-atom/atom-remix/mountedAtoms",
+  () => new WeakMap<Registry.Registry, WeakSet<AnyAtom>>(),
 );
 
 /**
@@ -124,19 +118,16 @@ const mountedAtoms = globalValue(
  * @since 1.0.0
  * @category internal
  */
-function mountAtomOnce<A>(
-	registry: Registry.Registry,
-	atom: Atom.Atom<A>,
-): void {
-	let set = mountedAtoms.get(registry);
-	if (set === undefined) {
-		set = new WeakSet<AnyAtom>();
-		mountedAtoms.set(registry, set);
-	}
-	if (!set.has(atom as AnyAtom)) {
-		set.add(atom as AnyAtom);
-		registry.mount(atom);
-	}
+function mountAtomOnce<A>(registry: Registry.Registry, atom: Atom.Atom<A>): void {
+  let set = mountedAtoms.get(registry);
+  if (set === undefined) {
+    set = new WeakSet<AnyAtom>();
+    mountedAtoms.set(registry, set);
+  }
+  if (!set.has(atom as AnyAtom)) {
+    set.add(atom as AnyAtom);
+    registry.mount(atom);
+  }
 }
 
 /**
@@ -147,8 +138,8 @@ function mountAtomOnce<A>(
  * @category internal
  */
 const initialValuesSet = globalValue(
-	"@effect-atom/atom-remix/initialValuesSet",
-	() => new WeakMap<Registry.Registry, WeakSet<AnyAtom>>(),
+  "@effect-atom/atom-remix/initialValuesSet",
+  () => new WeakMap<Registry.Registry, WeakSet<AnyAtom>>(),
 );
 
 /**
@@ -159,7 +150,7 @@ const initialValuesSet = globalValue(
  * @category internal
  */
 interface EnsureNodeCapable {
-	ensureNode<A>(atom: Atom.Atom<A>): { setValue(value: A): void };
+  ensureNode<A>(atom: Atom.Atom<A>): { setValue(value: A): void };
 }
 
 /**
@@ -169,10 +160,10 @@ interface EnsureNodeCapable {
  * @category internal
  */
 function ensureNode<A>(
-	registry: Registry.Registry,
-	atom: Atom.Atom<A>,
+  registry: Registry.Registry,
+  atom: Atom.Atom<A>,
 ): { setValue(value: A): void } {
-	return (registry as unknown as EnsureNodeCapable).ensureNode(atom);
+  return (registry as unknown as EnsureNodeCapable).ensureNode(atom);
 }
 
 /**
@@ -196,21 +187,21 @@ function ensureNode<A>(
  * @category hooks
  */
 export function getAtomInitialValues(
-	handle: Handle,
-	initialValues: Iterable<AtomInitialValue>,
+  handle: Handle,
+  initialValues: Iterable<AtomInitialValue>,
 ): void {
-	const registry = getRegistry(handle);
-	let set = initialValuesSet.get(registry);
-	if (set === undefined) {
-		set = new WeakSet<AnyAtom>();
-		initialValuesSet.set(registry, set);
-	}
-	for (const [atom, value] of initialValues) {
-		if (!set.has(atom)) {
-			set.add(atom);
-			ensureNode(registry, atom).setValue(value);
-		}
-	}
+  const registry = getRegistry(handle);
+  let set = initialValuesSet.get(registry);
+  if (set === undefined) {
+    set = new WeakSet<AnyAtom>();
+    initialValuesSet.set(registry, set);
+  }
+  for (const [atom, value] of initialValues) {
+    if (!set.has(atom)) {
+      set.add(atom);
+      ensureNode(registry, atom).setValue(value);
+    }
+  }
 }
 
 /**
@@ -232,34 +223,28 @@ export function getAtomInitialValues(
  * @category hooks
  */
 export function getAtomValue<A>(handle: Handle, atom: Atom.Atom<A>): () => A;
-export function getAtomValue<A>(
-	handle: Handle,
-	atom: Atom.Atom<A>,
-	f: (_: A) => A,
-): () => A;
+export function getAtomValue<A>(handle: Handle, atom: Atom.Atom<A>, f: (_: A) => A): () => A;
 export function getAtomValue<A, B = A>(
-	handle: Handle,
-	atom: Atom.Atom<A>,
-	f?: (_: A) => B,
+  handle: Handle,
+  atom: Atom.Atom<A>,
+  f?: (_: A) => B,
 ): () => B {
-	const registry = getRegistry(handle);
-	const baseAtom: Atom.Atom<B> = f
-		? Atom.map(atom, f)
-		: (atom as unknown as Atom.Atom<B>);
-	mountAtomOnce(registry, baseAtom);
+  const registry = getRegistry(handle);
+  const baseAtom: Atom.Atom<B> = f ? Atom.map(atom, f) : (atom as unknown as Atom.Atom<B>);
+  mountAtomOnce(registry, baseAtom);
 
-	const store = makeStore(registry, baseAtom);
+  const store = makeStore(registry, baseAtom);
 
-	let value = store.get();
+  let value = store.get();
 
-	const unsubscribe = store.subscribe(() => {
-		value = store.get();
-		handle.update();
-	});
+  const unsubscribe = store.subscribe(() => {
+    value = store.get();
+    handle.update();
+  });
 
-	handle.signal.addEventListener("abort", unsubscribe, { once: true });
+  handle.signal.addEventListener("abort", unsubscribe, { once: true });
 
-	return () => value;
+  return () => value;
 }
 
 type SetValue<R, W> = (value: W | ((value: R) => W)) => void;
@@ -278,59 +263,57 @@ type SetPromiseExit<A, E> = (value: unknown) => Promise<Exit.Exit<A, E>>;
  * @category internal
  */
 function makeSetAtom<R, W>(
-	registry: Registry.Registry,
-	atom: Atom.Writable<R, W>,
-	options?: { readonly mode?: "value" },
+  registry: Registry.Registry,
+  atom: Atom.Writable<R, W>,
+  options?: { readonly mode?: "value" },
 ): SetValue<R, W>;
 function makeSetAtom<R extends Result.Result<unknown, unknown>, W>(
-	registry: Registry.Registry,
-	atom: Atom.Writable<R, W>,
-	options: { readonly mode: "promise" },
+  registry: Registry.Registry,
+  atom: Atom.Writable<R, W>,
+  options: { readonly mode: "promise" },
 ): SetPromise<Result.Result.Success<R>>;
 function makeSetAtom<R extends Result.Result<unknown, unknown>, W>(
-	registry: Registry.Registry,
-	atom: Atom.Writable<R, W>,
-	options: { readonly mode: "promiseExit" },
+  registry: Registry.Registry,
+  atom: Atom.Writable<R, W>,
+  options: { readonly mode: "promiseExit" },
 ): SetPromiseExit<Result.Result.Success<R>, Result.Result.Failure<R>>;
 function makeSetAtom<R, W>(
-	registry: Registry.Registry,
-	atom: Atom.Writable<R, W>,
-	options?: { readonly mode?: "value" | "promise" | "promiseExit" },
+  registry: Registry.Registry,
+  atom: Atom.Writable<R, W>,
+  options?: { readonly mode?: "value" | "promise" | "promiseExit" },
 ): unknown {
-	if (options?.mode === "promise") {
-		return (value: W) => {
-			registry.set(atom, value);
-			return Effect.runPromiseExit(
-				Registry.getResult(
-					registry,
-					atom as unknown as Atom.Atom<Result.Result<unknown, unknown>>,
-					{ suspendOnWaiting: true },
-				),
-			).then(flattenExit);
-		};
-	}
+  if (options?.mode === "promise") {
+    return (value: W) => {
+      registry.set(atom, value);
+      return Effect.runPromiseExit(
+        Registry.getResult(
+          registry,
+          atom as unknown as Atom.Atom<Result.Result<unknown, unknown>>,
+          { suspendOnWaiting: true },
+        ),
+      ).then(flattenExit);
+    };
+  }
 
-	if (options?.mode === "promiseExit") {
-		return (value: W) => {
-			registry.set(atom, value);
-			return Effect.runPromiseExit(
-				Registry.getResult(
-					registry,
-					atom as unknown as Atom.Atom<Result.Result<unknown, unknown>>,
-					{ suspendOnWaiting: true },
-				),
-			);
-		};
-	}
+  if (options?.mode === "promiseExit") {
+    return (value: W) => {
+      registry.set(atom, value);
+      return Effect.runPromiseExit(
+        Registry.getResult(
+          registry,
+          atom as unknown as Atom.Atom<Result.Result<unknown, unknown>>,
+          { suspendOnWaiting: true },
+        ),
+      );
+    };
+  }
 
-	return (value: W | ((value: R) => W)) => {
-		registry.set(
-			atom,
-			typeof value === "function"
-				? (value as (current: R) => W)(registry.get(atom))
-				: value,
-		);
-	};
+  return (value: W | ((value: R) => W)) => {
+    registry.set(
+      atom,
+      typeof value === "function" ? (value as (current: R) => W)(registry.get(atom)) : value,
+    );
+  };
 }
 
 /**
@@ -340,8 +323,8 @@ function makeSetAtom<R, W>(
  * @category internal
  */
 function flattenExit<A, E>(exit: Exit.Exit<A, E>): A {
-	if (Exit.isSuccess(exit)) return exit.value;
-	throw Cause.squash(exit.cause);
+  if (Exit.isSuccess(exit)) return exit.value;
+  throw Cause.squash(exit.cause);
 }
 
 /**
@@ -371,42 +354,38 @@ function flattenExit<A, E>(exit: Exit.Exit<A, E>): A {
  * @category hooks
  */
 export function getAtomSet<R, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options?: { readonly mode?: "value" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options?: { readonly mode?: "value" },
 ): SetValue<R, W>;
 export function getAtomSet<R extends Result.Result<unknown, unknown>, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options: { readonly mode: "promise" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options: { readonly mode: "promise" },
 ): SetPromise<Result.Result.Success<R>>;
 export function getAtomSet<R extends Result.Result<unknown, unknown>, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options: { readonly mode: "promiseExit" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options: { readonly mode: "promiseExit" },
 ): SetPromiseExit<Result.Result.Success<R>, Result.Result.Failure<R>>;
 export function getAtomSet<R, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options?: { readonly mode?: "value" | "promise" | "promiseExit" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options?: { readonly mode?: "value" | "promise" | "promiseExit" },
 ): SetValue<R, W> | SetPromise<unknown> | SetPromiseExit<unknown, unknown> {
-	const registry = getRegistry(handle);
-	mountAtomOnce(registry, atom);
-	if (options?.mode === "promise") {
-		return makeSetAtom(
-			registry,
-			atom as Atom.Writable<Result.Result<unknown, unknown>, W>,
-			{ mode: "promise" },
-		);
-	}
-	if (options?.mode === "promiseExit") {
-		return makeSetAtom(
-			registry,
-			atom as Atom.Writable<Result.Result<unknown, unknown>, W>,
-			{ mode: "promiseExit" },
-		);
-	}
-	return makeSetAtom(registry, atom);
+  const registry = getRegistry(handle);
+  mountAtomOnce(registry, atom);
+  if (options?.mode === "promise") {
+    return makeSetAtom(registry, atom as Atom.Writable<Result.Result<unknown, unknown>, W>, {
+      mode: "promise",
+    });
+  }
+  if (options?.mode === "promiseExit") {
+    return makeSetAtom(registry, atom as Atom.Writable<Result.Result<unknown, unknown>, W>, {
+      mode: "promiseExit",
+    });
+  }
+  return makeSetAtom(registry, atom);
 }
 
 /**
@@ -438,52 +417,45 @@ export function getAtomSet<R, W>(
  * @category hooks
  */
 export function getAtom<R, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options?: { readonly mode?: "value" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options?: { readonly mode?: "value" },
 ): readonly [get: () => R, set: SetValue<R, W>];
 export function getAtom<R extends Result.Result<unknown, unknown>, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options: { readonly mode: "promise" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options: { readonly mode: "promise" },
 ): readonly [get: () => R, set: SetPromise<Result.Result.Success<R>>];
 export function getAtom<R extends Result.Result<unknown, unknown>, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options: { readonly mode: "promiseExit" },
-): readonly [
-	get: () => R,
-	set: SetPromiseExit<Result.Result.Success<R>, Result.Result.Failure<R>>,
-];
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options: { readonly mode: "promiseExit" },
+): readonly [get: () => R, set: SetPromiseExit<Result.Result.Success<R>, Result.Result.Failure<R>>];
 export function getAtom<R, W>(
-	handle: Handle,
-	atom: Atom.Writable<R, W>,
-	options?: { readonly mode?: "value" | "promise" | "promiseExit" },
+  handle: Handle,
+  atom: Atom.Writable<R, W>,
+  options?: { readonly mode?: "value" | "promise" | "promiseExit" },
 ): readonly [
-	get: () => R,
-	set: SetValue<R, W> | SetPromise<unknown> | SetPromiseExit<unknown, unknown>,
+  get: () => R,
+  set: SetValue<R, W> | SetPromise<unknown> | SetPromiseExit<unknown, unknown>,
 ] {
-	const registry = getRegistry(handle);
-	mountAtomOnce(registry, atom);
-	const get = getAtomValue(handle, atom);
-	if (options?.mode === "promise") {
-		const set = makeSetAtom(
-			registry,
-			atom as Atom.Writable<Result.Result<unknown, unknown>, W>,
-			{ mode: "promise" },
-		);
-		return [get, set] as const;
-	}
-	if (options?.mode === "promiseExit") {
-		const set = makeSetAtom(
-			registry,
-			atom as Atom.Writable<Result.Result<unknown, unknown>, W>,
-			{ mode: "promiseExit" },
-		);
-		return [get, set] as const;
-	}
-	const set = makeSetAtom(registry, atom);
-	return [get, set] as const;
+  const registry = getRegistry(handle);
+  mountAtomOnce(registry, atom);
+  const get = getAtomValue(handle, atom);
+  if (options?.mode === "promise") {
+    const set = makeSetAtom(registry, atom as Atom.Writable<Result.Result<unknown, unknown>, W>, {
+      mode: "promise",
+    });
+    return [get, set] as const;
+  }
+  if (options?.mode === "promiseExit") {
+    const set = makeSetAtom(registry, atom as Atom.Writable<Result.Result<unknown, unknown>, W>, {
+      mode: "promiseExit",
+    });
+    return [get, set] as const;
+  }
+  const set = makeSetAtom(registry, atom);
+  return [get, set] as const;
 }
 
 /**
@@ -495,13 +467,10 @@ export function getAtom<R, W>(
  * @since 1.0.0
  * @category hooks
  */
-export function getAtomRefresh<A>(
-	handle: Handle,
-	atom: Atom.Atom<A>,
-): () => void {
-	const registry = getRegistry(handle);
-	mountAtomOnce(registry, atom);
-	return () => registry.refresh(atom);
+export function getAtomRefresh<A>(handle: Handle, atom: Atom.Atom<A>): () => void {
+  const registry = getRegistry(handle);
+  mountAtomOnce(registry, atom);
+  return () => registry.refresh(atom);
 }
 
 /**
@@ -526,16 +495,16 @@ export function getAtomRefresh<A>(
  * @category hooks
  */
 export function getAtomSubscribe<A>(
-	handle: Handle,
-	atom: Atom.Atom<A>,
-	f: (_: A) => void,
-	options?: { readonly immediate?: boolean },
+  handle: Handle,
+  atom: Atom.Atom<A>,
+  f: (_: A) => void,
+  options?: { readonly immediate?: boolean },
 ): void {
-	const registry = getRegistry(handle);
-	const dispose = registry.subscribe(atom, f, options);
-	handle.signal.addEventListener("abort", dispose, { once: true });
+  const registry = getRegistry(handle);
+  const dispose = registry.subscribe(atom, f, options);
+  handle.signal.addEventListener("abort", dispose, { once: true });
 
-	if (options?.immediate) {
-		f(registry.get(atom));
-	}
+  if (options?.immediate) {
+    f(registry.get(atom));
+  }
 }

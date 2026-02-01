@@ -14,49 +14,45 @@ import { Effect, Layer } from "effect";
 import { getDefaultDBLocation } from "../src/db/get-default-db-location";
 
 const migrationsPath = resolve(import.meta.dirname, "../migrations");
-const dbPath = Bun.env.DB_PATH
-	? resolve(Bun.env.DB_PATH)
-	: getDefaultDBLocation();
+const dbPath = Bun.env.DB_PATH ? resolve(Bun.env.DB_PATH) : getDefaultDBLocation();
 
 const shouldClean = Bun.argv.includes("--clean");
 
 const program = Effect.gen(function* () {
-	console.log(`Database: ${dbPath}`);
-	console.log("Running database migrations...");
+  console.log(`Database: ${dbPath}`);
+  console.log("Running database migrations...");
 
-	const migrations = yield* SqliteMigrator.run({
-		loader: SqliteMigrator.fromFileSystem(migrationsPath),
-		schemaDirectory: "migrations",
-	});
+  const migrations = yield* SqliteMigrator.run({
+    loader: SqliteMigrator.fromFileSystem(migrationsPath),
+    schemaDirectory: "migrations",
+  });
 
-	if (migrations.length === 0) {
-		console.log("No new migrations to apply");
-	} else {
-		for (const [id, name] of migrations) {
-			console.log(`Applied: ${id}_${name}`);
-		}
-		console.log(`Applied ${migrations.length} migration(s)`);
-	}
+  if (migrations.length === 0) {
+    console.log("No new migrations to apply");
+  } else {
+    for (const [id, name] of migrations) {
+      console.log(`Applied: ${id}_${name}`);
+    }
+    console.log(`Applied ${migrations.length} migration(s)`);
+  }
 });
 
 // Clean existing database if --clean flag is provided
 if (shouldClean) {
-	const filesToDelete = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
-	for (const file of filesToDelete) {
-		if (existsSync(file)) {
-			console.log(`Deleting: ${file}`);
-			await rm(file);
-		}
-	}
+  const filesToDelete = [dbPath, `${dbPath}-wal`, `${dbPath}-shm`];
+  for (const file of filesToDelete) {
+    if (existsSync(file)) {
+      console.log(`Deleting: ${file}`);
+      await rm(file);
+    }
+  }
 }
 
 // Ensure DB directory exists, then run migrations
 await mkdir(dirname(dbPath), { recursive: true });
 
 BunRuntime.runMain(
-	program.pipe(
-		Effect.provide(
-			Layer.merge(BunContext.layer, SqliteClient.layer({ filename: dbPath })),
-		),
-	),
+  program.pipe(
+    Effect.provide(Layer.merge(BunContext.layer, SqliteClient.layer({ filename: dbPath }))),
+  ),
 );

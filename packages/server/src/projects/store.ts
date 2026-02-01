@@ -13,140 +13,122 @@ import { ProjectEventBus } from "./event-bus";
 import { ProjectEventStore } from "./event-store";
 import { ProjectSnapshotStore } from "./snapshot-store";
 
-const isDeleted = (project: Project.Project): boolean =>
-	Option.isSome(project.deletedAt);
+const isDeleted = (project: Project.Project): boolean => Option.isSome(project.deletedAt);
 
 const containsDeletion = (events: ReadonlyArray<EditorEvent>): boolean =>
-	events.some((e) => e.t === "project.deleted");
+  events.some((e) => e.t === "project.deleted");
 
-export class ProjectStore extends Effect.Service<ProjectStore>()(
-	"ProjectStore",
-	{
-		effect: Effect.gen(function* () {
-			const eventStore = yield* ProjectEventStore;
-			const snapshotStore = yield* ProjectSnapshotStore;
-			const eventBus = yield* ProjectEventBus;
-			const CHANGE_THRESHOLD = 20; // TODO: Make this configurable
+export class ProjectStore extends Effect.Service<ProjectStore>()("ProjectStore", {
+  effect: Effect.gen(function* () {
+    const eventStore = yield* ProjectEventStore;
+    const snapshotStore = yield* ProjectSnapshotStore;
+    const eventBus = yield* ProjectEventBus;
+    const CHANGE_THRESHOLD = 20; // TODO: Make this configurable
 
-			const evolve = (
-				project: Project.Project,
-				events: ReadonlyArray<EditorEvent>,
-			) => {
-				return events.reduce((s, event) => Project.evolve(s, event), project);
-			};
+    const evolve = (project: Project.Project, events: ReadonlyArray<EditorEvent>) => {
+      return events.reduce((s, event) => Project.evolve(s, event), project);
+    };
 
-			const load = (id: Ids.ProjectId) =>
-				Effect.gen(function* () {
-					const [snapshot, createdAt] = yield* Effect.all([
-						snapshotStore.load(id),
-						snapshotStore
-							.load(id, "ASC")
-							.pipe(Effect.map((snapshot) => snapshot.createdAt)),
-					]);
+    const load = (id: Ids.ProjectId) =>
+      Effect.gen(function* () {
+        const [snapshot, createdAt] = yield* Effect.all([
+          snapshotStore.load(id),
+          snapshotStore.load(id, "ASC").pipe(Effect.map((snapshot) => snapshot.createdAt)),
+        ]);
 
-					const events = yield* eventStore
-						.load(id, snapshot.version)
-						.pipe(Effect.map((events) => events.map((event) => event.data)));
+        const events = yield* eventStore
+          .load(id, snapshot.version)
+          .pipe(Effect.map((events) => events.map((event) => event.data)));
 
-					const baseProject = ProjectStored.fromStored(
-						snapshot.data,
-						snapshot.version,
-					);
-					const project = evolve(baseProject, events);
+        const baseProject = ProjectStored.fromStored(snapshot.data, snapshot.version);
+        const project = evolve(baseProject, events);
 
-					if (isDeleted(project)) {
-						return yield* new ApiError.Gone({
-							detail: `Project ${id} has been deleted`,
-							instance: `/api/projects/${id}`,
-						});
-					}
+        if (isDeleted(project)) {
+          return yield* new ApiError.Gone({
+            detail: `Project ${id} has been deleted`,
+            instance: `/api/projects/${id}`,
+          });
+        }
 
-					return {
-						...project,
-						updatedAt: snapshot.createdAt,
-						createdAt,
-					};
-				});
+        return {
+          ...project,
+          updatedAt: snapshot.createdAt,
+          createdAt,
+        };
+      });
 
-			const create = (
-				event: ProjectCreated,
-			): Effect.Effect<
-				Project.ProjectWithTimestamps,
-				SqlError | ParseError | NoSuchElementException,
-				never
-			> =>
-				Effect.gen(function* () {
-					const [saved] = yield* Effect.all([
-						snapshotStore.append(event.project),
-						eventStore.append(event.project.id, event.project.version, event),
-					]);
-					yield* eventBus.publish(event.project.id, event.project.version, [
-						event,
-					]);
-					return {
-						...event.project,
-						createdAt: saved.createdAt,
-						updatedAt: saved.createdAt,
-					};
-				});
+    const create = (
+      event: ProjectCreated,
+    ): Effect.Effect<
+      Project.ProjectWithTimestamps,
+      SqlError | ParseError | NoSuchElementException,
+      never
+    > =>
+      Effect.gen(function* () {
+        const [saved] = yield* Effect.all([
+          snapshotStore.append(event.project),
+          eventStore.append(event.project.id, event.project.version, event),
+        ]);
+        yield* eventBus.publish(event.project.id, event.project.version, [event]);
+        return {
+          ...event.project,
+          createdAt: saved.createdAt,
+          updatedAt: saved.createdAt,
+        };
+      });
 
-			const append = (
-				project: Project.ProjectWithTimestamps,
-				events: ReadonlyArray<EditorEvent>,
-			): Effect.Effect<
-				Project.ProjectWithTimestamps,
-				SqlError | ParseError | NoSuchElementException,
-				never
-			> =>
-				Effect.gen(function* () {
-					const version = yield* Effect.all(
-						events.map((event, idx) =>
-							eventStore.append(
-								project.id,
-								Versions.add("ProjectVersion", project.version, 1 + idx),
-								event,
-							),
-						),
-					).pipe(Effect.map((versions) => versions.at(-1) ?? project.version));
+    const append = (
+      project: Project.ProjectWithTimestamps,
+      events: ReadonlyArray<EditorEvent>,
+    ): Effect.Effect<
+      Project.ProjectWithTimestamps,
+      SqlError | ParseError | NoSuchElementException,
+      never
+    > =>
+      Effect.gen(function* () {
+        const version = yield* Effect.all(
+          events.map((event, idx) =>
+            eventStore.append(
+              project.id,
+              Versions.add("ProjectVersion", project.version, 1 + idx),
+              event,
+            ),
+          ),
+        ).pipe(Effect.map((versions) => versions.at(-1) ?? project.version));
 
-					yield* eventBus.publish(project.id, version, events);
+        yield* eventBus.publish(project.id, version, events);
 
-					const evolved = evolve(project, events);
-					const updatedProject = { ...evolved, version };
+        const evolved = evolve(project, events);
+        const updatedProject = { ...evolved, version };
 
-					const shouldSnapshot =
-						project.version === 0 ||
-						version - project.version > CHANGE_THRESHOLD ||
-						containsDeletion(events);
+        const shouldSnapshot =
+          project.version === 0 ||
+          version - project.version > CHANGE_THRESHOLD ||
+          containsDeletion(events);
 
-					if (shouldSnapshot) {
-						const saved = yield* snapshotStore.append(updatedProject);
-						return {
-							...updatedProject,
-							createdAt: saved.createdAt,
-							updatedAt: saved.createdAt,
-						};
-					}
+        if (shouldSnapshot) {
+          const saved = yield* snapshotStore.append(updatedProject);
+          return {
+            ...updatedProject,
+            createdAt: saved.createdAt,
+            updatedAt: saved.createdAt,
+          };
+        }
 
-					return {
-						...updatedProject,
-						createdAt: project.createdAt,
-						updatedAt: project.updatedAt,
-					};
-				});
+        return {
+          ...updatedProject,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
+        };
+      });
 
-			return {
-				load,
-				append,
-				create,
-				subscribe: eventBus.subscribe,
-				subscribeAll: eventBus.subscribeAll,
-			};
-		}),
-		dependencies: [
-			ProjectEventStore.Default,
-			ProjectSnapshotStore.Default,
-			ProjectEventBus.Default,
-		],
-	},
-) {}
+    return {
+      load,
+      append,
+      create,
+      subscribe: eventBus.subscribe,
+      subscribeAll: eventBus.subscribeAll,
+    };
+  }),
+  dependencies: [ProjectEventStore.Default, ProjectSnapshotStore.Default, ProjectEventBus.Default],
+}) {}

@@ -1,0 +1,63 @@
+{
+  $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  appId: "com.daw.desktop",
+  productName: "DAW",
+  directories: {
+    output: "release",
+    buildResources: "build",
+  },
+  files: ["dist/**/*"],
+  extraResources: [
+    {
+      from: "resources/sidecars",
+      to: "sidecars",
+      filter: ["**/*"],
+    },
+  ],
+  mac: {
+    target: [
+      {
+        target: "dmg",
+        arch: ["arm64", "x64"],
+      },
+      {
+        target: "zip",
+        arch: ["arm64", "x64"],
+      },
+    ],
+    hardenedRuntime: true,
+    gatekeeperAssess: false,
+    entitlements: "build/entitlements.mac.plist",
+    entitlementsInherit: "build/entitlements.mac.plist",
+  },
+  win: {
+    target: [
+      {
+        target: "nsis",
+        arch: ["x64"],
+      },
+      {
+        target: "zip",
+        arch: ["x64"],
+      },
+    ],
+  },
+  linux: {
+    target: [
+      {
+        target: "AppImage",
+        arch: ["x64", "arm64"],
+      },
+      {
+        target: "deb",
+        arch: ["x64", "arm64"],
+      },
+    ],
+    category: "Audio",
+  },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowToChangeInstallationDirectory: true,
+  },
+}

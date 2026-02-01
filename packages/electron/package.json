@@ -1,0 +1,36 @@
+{
+  "name": "@daw/electron",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "predev": "bun ./scripts/predev.ts",
+    "prebuild": "bun ./scripts/predev.ts",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "electron-vite build && electron-builder",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "fmt": "oxfmt",
+    "test:e2e": "bun ./scripts/predev.ts && electron-vite build && playwright test"
+  },
+  "dependencies": {
+    "@daw/app": "workspace:*",
+    "@remix-run/component": "catalog:",
+    "@remix-run/interaction": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "@tailwindcss/vite": "catalog:",
+    "@types/bun": "catalog:",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.0.0",
+    "electron-vite": "^5.0.0",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

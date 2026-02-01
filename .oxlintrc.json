@@ -1,0 +1,25 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"pedantic": "off",
+		"perf": "warn",
+		"style": "off"
+	},
+	"plugins": ["typescript", "import"],
+	"rules": {
+		"import/no-nodejs-modules": "off",
+		"eslint/require-yield": "off",
+		"eslint/no-await-in-loop": "off"
+	},
+	"ignorePatterns": [
+		"node_modules",
+		"dist",
+		"dist-types",
+		"target",
+		"src-tauri/gen",
+		"src-tauri/.daw-config.json",
+		"public/style.css"
+	]
+}

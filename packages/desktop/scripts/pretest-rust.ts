@@ -20,12 +20,12 @@ await $`mkdir -p src-tauri/sidecars`;
 // Create a tiny stub executable if missing.
 // (Enough for tauri-build resource validation during tests.)
 try {
-	await $`test -f ${dest}`;
+  await $`test -f ${dest}`;
 } catch {
-	if (process.platform === "win32") {
-		await $`cmd /c type nul > ${dest}`;
-	} else {
-		await Bun.write(dest, "#!/bin/sh\nexit 0\n");
-		await $`chmod +x ${dest}`;
-	}
+  if (process.platform === "win32") {
+    await $`cmd /c type nul > ${dest}`;
+  } else {
+    await Bun.write(dest, "#!/bin/sh\nexit 0\n");
+    await $`chmod +x ${dest}`;
+  }
 }

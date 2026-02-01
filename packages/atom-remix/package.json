@@ -1,26 +1,27 @@
 {
-	"name": "@daw/atom-remix",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
-	"exports": {
-		".": "./src/index.ts",
-		"./*": "./src/*.ts"
-	},
-	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"test": "bun test",
-		"lint": "biome check .",
-		"fmt": "biome check --write ."
-	},
-	"dependencies": {
-		"@effect-atom/atom": "catalog:",
-		"@remix-run/component": "catalog:",
-		"effect": "catalog:"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "catalog:",
-		"@types/bun": "catalog:",
-		"happy-dom": "20.4.0"
-	}
+  "name": "@daw/atom-remix",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "lint": "oxlint",
+    "fmt": "oxfmt"
+  },
+  "dependencies": {
+    "@effect-atom/atom": "catalog:",
+    "@remix-run/component": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "happy-dom": "20.4.0",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:"
+  }
 }

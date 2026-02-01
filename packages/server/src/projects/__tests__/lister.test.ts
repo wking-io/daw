@@ -7,9 +7,9 @@ import { Effect, Layer } from "effect";
 import { ProjectLister } from "../lister";
 
 const SetupLayer = Layer.effectDiscard(
-	Effect.gen(function* () {
-		const sql = yield* SqlClient.SqlClient;
-		yield* sql`
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
 			CREATE TABLE IF NOT EXISTS snapshots (
 				id TEXT NOT NULL,
 				name TEXT NOT NULL,
@@ -20,43 +20,40 @@ const SetupLayer = Layer.effectDiscard(
 				PRIMARY KEY (id, version)
 			)
 		`;
-	}),
+  }),
 );
 
 const makeTestLayer = () => {
-	const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
+  const sqlLayer = SqliteClient.layer({ filename: ":memory:" });
 
-	return ProjectLister.Default.pipe(
-		Layer.provide(SetupLayer),
-		Layer.provideMerge(sqlLayer),
-	);
+  return ProjectLister.Default.pipe(Layer.provide(SetupLayer), Layer.provideMerge(sqlLayer));
 };
 
 describe("ProjectLister", () => {
-	it("returns empty list when no projects exist", async () => {
-		const result = await Effect.gen(function* () {
-			const lister = yield* ProjectLister;
-			return yield* lister.list();
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+  it("returns empty list when no projects exist", async () => {
+    const result = await Effect.gen(function* () {
+      const lister = yield* ProjectLister;
+      return yield* lister.list();
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(result).toEqual([]);
-	});
+    expect(result).toEqual([]);
+  });
 
-	it("returns projects with metadata", async () => {
-		const result = await Effect.gen(function* () {
-			const sql = yield* SqlClient.SqlClient;
-			const lister = yield* ProjectLister;
+  it("returns projects with metadata", async () => {
+    const result = await Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const lister = yield* ProjectLister;
 
-			yield* sql`INSERT INTO snapshots (id, name, version, data) VALUES ('proj-1', 'My Project', 1, '{"bpm":140,"timeSignature":{"numerator":3,"denominator":4}}')`;
+      yield* sql`INSERT INTO snapshots (id, name, version, data) VALUES ('proj-1', 'My Project', 1, '{"bpm":140,"timeSignature":{"numerator":3,"denominator":4}}')`;
 
-			return yield* lister.list();
-		}).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
+      return yield* lister.list();
+    }).pipe(Effect.provide(makeTestLayer()), Effect.runPromise);
 
-		expect(result).toHaveLength(1);
-		if (!result[0]) throw new Error("No project found");
+    expect(result).toHaveLength(1);
+    if (!result[0]) throw new Error("No project found");
 
-		expect(result[0].id).toBe(Ids.ProjectId.make("proj-1"));
-		expect(result[0].name).toBe("My Project");
-		expect(result[0].version).toBe(ProjectVersion.make(1));
-	});
+    expect(result[0].id).toBe(Ids.ProjectId.make("proj-1"));
+    expect(result[0].name).toBe("My Project");
+    expect(result[0].version).toBe(ProjectVersion.make(1));
+  });
 });

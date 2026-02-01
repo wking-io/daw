@@ -7,16 +7,14 @@ import { ProjectOperation } from "./project-ops";
 import { TrackOperation } from "./track-ops";
 
 export const EditorCommandPayload = Schema.Union(
-	ProjectOperation,
-	TrackOperation,
-	ClipOperation,
-	MidiOperation,
-	AutomationOperation,
-	AudioFileOperation,
+  ProjectOperation,
+  TrackOperation,
+  ClipOperation,
+  MidiOperation,
+  AutomationOperation,
+  AudioFileOperation,
 );
-export type EditorCommandPayload = Schema.Schema.Type<
-	typeof EditorCommandPayload
->;
+export type EditorCommandPayload = Schema.Schema.Type<typeof EditorCommandPayload>;
 
 import { Command } from "./command";
 
