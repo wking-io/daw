@@ -1,5 +1,8 @@
 import { getAtom, getAtomSet } from "@daw/atom-remix";
-import { ProjectCreate, ProjectCreateCommand } from "@daw/core/commands/command";
+import {
+  ProjectCreate,
+  ProjectCreateCommand,
+} from "@daw/core/commands/command";
 import * as Ids from "@daw/core/ids";
 import { ProjectVersion } from "@daw/core/versions";
 import type { Handle } from "@remix-run/component";
@@ -16,6 +19,7 @@ export function CreateProjectDialog(handle: Handle) {
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     if (isSubmitting) return;
+
 
     const form = e.currentTarget as HTMLFormElement;
     const formData = new FormData(form);
@@ -74,7 +78,10 @@ export function CreateProjectDialog(handle: Handle) {
 
           <form on={{ submit: handleSubmit }}>
             <div class="mb-4">
-              <label for="project-name" class="mb-1.5 block text-sm text-neutral-400">
+              <label
+                for="project-name"
+                class="mb-1.5 block text-sm text-neutral-400"
+              >
                 Project Name
               </label>
               <input

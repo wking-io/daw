@@ -13,17 +13,15 @@
  *   they belong to this repo (cwd/command contains the repo root) OR are clearly
  *   the `daw-mcp` / `daw_desktop` binaries.
  */
-import * as path from "path";
-
 type KillSignal = "SIGTERM" | "SIGKILL";
 
-const repoRoot = path.resolve(import.meta.dir, "..");
+const repoRoot = `${import.meta.dirname}/..`;
 
-const args = new Set(process.argv.slice(2));
+const args = new Set(Bun.argv.slice(2));
 const dryRun = args.has("--dry-run") || args.has("-n");
 
 const parsePort = (key: string, fallback: number): number => {
-	const raw = process.env[key];
+	const raw = Bun.env[key];
 	if (!raw) return fallback;
 	const n = Number.parseInt(raw, 10);
 	return Number.isFinite(n) ? n : fallback;

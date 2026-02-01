@@ -5,7 +5,7 @@
  *
  * This runs on `preinstall` and fails fast if someone tries npm/yarn/pnpm.
  */
-const ua = process.env.npm_config_user_agent || "";
+const ua = Bun.env.npm_config_user_agent || "";
 
 // Example user agents:
 // - bun/1.1.0 (darwin arm64) ...

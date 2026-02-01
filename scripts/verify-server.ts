@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
-const port = Number(process.env.DAW_STATE_PORT ?? "43125");
-const baseUrl = process.env.DAW_STATE_URL ?? `http://127.0.0.1:${port}`;
-const token = process.env.DAW_STATE_TOKEN ?? "";
+const port = Number(Bun.env.DAW_STATE_PORT ?? "43125");
+const baseUrl = Bun.env.DAW_STATE_URL ?? `http://127.0.0.1:${port}`;
+const token = Bun.env.DAW_STATE_TOKEN ?? "";
 const authHeaders = token ? { authorization: `Bearer ${token}` } : {};
 
 const waitForHealth = async () => {
@@ -90,8 +90,8 @@ type SSEEvent =
 	| { t: "patch"; batch: { version: number; patches: unknown[] } };
 
 // Configuration for SSE tests
-const SSE_OP_COUNT = Number(process.env.SSE_OP_COUNT ?? "3");
-const SSE_WAIT_HEARTBEAT = process.env.SSE_WAIT_HEARTBEAT === "true";
+const SSE_OP_COUNT = Number(Bun.env.SSE_OP_COUNT ?? "3");
+const SSE_WAIT_HEARTBEAT = Bun.env.SSE_WAIT_HEARTBEAT === "true";
 const SSE_HEARTBEAT_TIMEOUT_MS = 35000; // Heartbeat is every 30s
 
 type SseTestResult = {
@@ -348,5 +348,5 @@ const run = async () => {
 
 run().catch((error) => {
 	console.error("verify-server failed:", error);
-	process.exitCode = 1;
+	process.exit(1);
 });

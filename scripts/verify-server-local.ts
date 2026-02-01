@@ -2,7 +2,7 @@
 
 import { createServer } from "node:net";
 
-const requestedPort = Number(process.env.DAW_STATE_PORT ?? "43135");
+const requestedPort = Number(Bun.env.DAW_STATE_PORT ?? "43135");
 
 const getAvailablePort = () =>
 	new Promise<number>((resolve, reject) => {
@@ -73,7 +73,7 @@ const probeSnapshot = async (port: number) => {
 const startServer = (port: number) => {
 	return Bun.spawn(["bun", "run", "--cwd", "packages/server", "dev"], {
 		env: {
-			...process.env,
+			...Bun.env,
 			DAW_STATE_PORT: String(port),
 		},
 		stdout: "inherit",
@@ -84,7 +84,7 @@ const startServer = (port: number) => {
 const runVerify = (port: number) => {
 	return Bun.spawn(["bun", "./scripts/verify-server.ts"], {
 		env: {
-			...process.env,
+			...Bun.env,
 			DAW_STATE_PORT: String(port),
 			DAW_STATE_URL: `http://127.0.0.1:${port}`,
 		},
@@ -108,7 +108,7 @@ const run = async () => {
 		const verify = runVerify(port);
 		const exitCode = await verify.exited;
 		if (exitCode !== 0) {
-			process.exitCode = exitCode;
+			process.exit(exitCode);
 		}
 	} finally {
 		server.kill("SIGTERM");
@@ -118,5 +118,5 @@ const run = async () => {
 
 run().catch((error) => {
 	console.error("verify-server-local failed:", error);
-	process.exitCode = 1;
+	process.exit(1);
 });
