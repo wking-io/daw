@@ -4,7 +4,7 @@ import type { Handle, RemixNode } from "@remix-run/component";
 import { Cause, DateTime } from "effect";
 import { ApiClient } from "../api/client";
 import { tabsAtom } from "../state/tabs";
-import { Button } from "./ui/button";
+import { Button } from "./button";
 
 type ProjectSummary = Project.ProjectSummary;
 
@@ -29,11 +29,11 @@ function ProjectCard(handle: Handle) {
 
     return (
       <div
-        class="cursor-pointer rounded-lg border border-neutral-600 bg-neutral-800 p-4 transition-colors hover:border-blue-500"
+        class="cursor-pointer rounded-lg border p-4 transition-colors hover:border-blue-500"
         on={{ click: () => handleClick(project) }}
       >
-        <h3 class="m-0 mb-2 text-[15px] font-medium text-white">{project.name}</h3>
-        <div class="text-xs text-neutral-500">
+        <h3 class="m-0 mb-2">{project.name}</h3>
+        <div class="text-xs text-foreground-muted">
           Last modified: {DateTime.toDate(project.updatedAt).toLocaleDateString()}
         </div>
       </div>
@@ -45,15 +45,9 @@ function EmptyState(_handle: Handle) {
   return (props: { onCreateProject: () => void }) => (
     <div class="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div class="mb-4 text-5xl opacity-50">🎵</div>
-      <h2 class="m-0 mb-2 text-xl font-medium text-white">No projects yet</h2>
-      <p class="m-0 mb-6 text-sm text-neutral-500">Create your first project to get started</p>
-      <button
-        type="button"
-        class="cursor-pointer rounded-md border-none bg-blue-500 px-6 py-3 text-sm font-medium text-white hover:bg-blue-600"
-        on={{ click: props.onCreateProject }}
-      >
-        Create Project
-      </button>
+      <h2 class="m-0 mb-2 text-xl">No projects yet</h2>
+      <p class="m-0 mb-6 text-sm">Create your first project to get started</p>
+      <Button on={{ click: props.onCreateProject }}>Create Project</Button>
     </div>
   );
 }
@@ -68,21 +62,17 @@ export function ProjectListView(handle: Handle) {
     const result = getResult();
 
     return Result.builder(result)
-      .onInitial(() => (
-        <div class="flex items-center justify-center p-16 text-neutral-500">
-          Loading projects...
-        </div>
-      ))
+      .onInitial(() => <div class="flex items-center justify-center p-16">Loading projects...</div>)
       .onSuccess((projects) => {
         if (projects.length === 0) {
           return <EmptyState onCreateProject={props.onCreateProject} />;
         }
 
         return (
-          <div class="p-6">
+          <div class="py-16 px-6">
             <div class="mb-6 flex items-center justify-between">
-              <h2 class="m-0 text-lg font-medium text-white">Your Projects</h2>
-              <Button on={{ click: props.onCreateProject }}>New Project</Button>
+              <h2 class="m-0 text-lg">Your Projects</h2>
+              {/* <Button on={{ click: props.onCreateProject }}>New Project</Button> */}
             </div>
 
             <div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">

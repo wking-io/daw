@@ -1,0 +1,32 @@
+{
+  "name": "@daw/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./button": "./src/button/index.ts",
+    "./dialog": "./src/dialog/index.ts",
+    "./field": "./src/field/index.ts",
+    "./popover": "./src/popover/index.ts",
+    "./tabs": "./src/tabs/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "lint": "oxlint",
+    "fmt": "oxfmt"
+  },
+  "dependencies": {
+    "@daw/utils": "workspace:*",
+    "@floating-ui/dom": "1.7.5",
+    "@remix-run/component": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "happy-dom": "20.4.0",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

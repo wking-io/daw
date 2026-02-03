@@ -1,20 +1,17 @@
 import type { Handle } from "@remix-run/component";
-import { Tabs } from "../ui/tabs";
+import { spring } from "@remix-run/component";
+import { Tabs } from "@base-ui/remix";
 
 export function Indicator(_handle: Handle) {
   return () => (
     <Tabs.Indicator
       class="
     absolute
-    left-0
+    left-(--active-tab-left)
     top-0
     block
     h-(--active-tab-height)
     w-(--active-tab-width)
-
-    transform-gpu
-    translate-x-(--active-tab-left)
-    transition-[transform,width,translate]
 
     after:pointer-events-none
     after:absolute
@@ -26,6 +23,9 @@ after:shadow-layer-3/40
     after:transition
     origin-left
   "
+      animate={{
+        layout: spring("snappy"),
+      }}
     >
       <span
         class="

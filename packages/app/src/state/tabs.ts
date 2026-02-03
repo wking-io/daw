@@ -19,13 +19,19 @@ const testTab: Tab = {
   state: "idle",
 };
 
+const test2Tab: Tab = {
+  id: Ids.generate("ProjectId"),
+  name: "Another Song",
+  state: "idle",
+};
+
 export interface TabsState {
   openTabs: Array<Tab>;
   activeTabId: Tab["id"];
 }
 
 const initialState: TabsState = {
-  openTabs: [homeTab, testTab],
+  openTabs: [homeTab, testTab, test2Tab],
   activeTabId: "home",
 };
 

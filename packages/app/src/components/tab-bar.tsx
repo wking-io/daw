@@ -1,7 +1,7 @@
 import { getAtom } from "@daw/atom-remix";
 import type { Handle } from "@remix-run/component";
+import { cn } from "@daw/utils";
 import { type Tab, tabsAtom } from "../state/tabs";
-import { cn } from "../utils/cn";
 
 function TabItem(handle: Handle) {
   const [getTabs, setTabs] = getAtom(handle, tabsAtom);

@@ -361,3 +361,11 @@ body {
 *::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--color-foreground) 40%, transparent);
 }
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}

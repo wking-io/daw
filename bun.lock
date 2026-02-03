@@ -18,8 +18,11 @@
       "name": "@daw/app",
       "version": "0.0.0",
       "dependencies": {
+        "@base-ui/remix": "file:../base-ui/packages/remix",
         "@daw/atom-remix": "workspace:*",
         "@daw/core": "workspace:*",
+        "@daw/ui": "workspace:*",
+        "@daw/utils": "workspace:*",
         "@effect/platform": "catalog:",
         "@floating-ui/dom": "1.7.5",
         "@remix-run/component": "catalog:",
@@ -83,25 +86,6 @@
         "@remix-run/interaction": "catalog:",
       },
       "devDependencies": {
-        "@tailwindcss/vite": "catalog:",
-        "@tauri-apps/cli": "catalog:",
-        "@types/bun": "catalog:",
-        "oxfmt": "catalog:",
-        "oxlint": "catalog:",
-        "tailwindcss": "catalog:",
-        "typescript": "catalog:",
-        "vite": "catalog:",
-      },
-    },
-    "packages/electron": {
-      "name": "@daw/electron",
-      "version": "0.0.0",
-      "dependencies": {
-        "@daw/app": "workspace:*",
-        "@remix-run/component": "catalog:",
-        "@remix-run/interaction": "catalog:",
-      },
-      "devDependencies": {
         "@playwright/test": "^1.50.1",
         "@tailwindcss/vite": "catalog:",
         "@types/bun": "catalog:",
@@ -113,6 +97,23 @@
         "tailwindcss": "catalog:",
         "typescript": "catalog:",
         "vite": "catalog:",
+      },
+    },
+    "packages/form": {
+      "name": "@daw/form",
+      "version": "0.0.0",
+      "dependencies": {
+        "@daw/atom-remix": "workspace:*",
+        "@remix-run/component": "catalog:",
+        "effect": "catalog:",
+        "ulid": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "happy-dom": "20.4.0",
+        "oxfmt": "catalog:",
+        "oxlint": "catalog:",
+        "typescript": "catalog:",
       },
     },
     "packages/mcp": {
@@ -157,6 +158,35 @@
         "typescript": "catalog:",
       },
     },
+    "packages/ui": {
+      "name": "@daw/ui",
+      "version": "0.0.0",
+      "dependencies": {
+        "@daw/utils": "workspace:*",
+        "@floating-ui/dom": "1.7.5",
+        "@remix-run/component": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "happy-dom": "20.4.0",
+        "oxfmt": "catalog:",
+        "oxlint": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/utils": {
+      "name": "@daw/utils",
+      "version": "0.0.0",
+      "dependencies": {
+        "ulid": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "oxfmt": "catalog:",
+        "oxlint": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
   },
   "catalog": {
     "@effect-atom/atom": "0.4.12",
@@ -176,9 +206,9 @@
     "@opentelemetry/sdk-trace-node": "1.30.1",
     "@opentelemetry/sdk-trace-web": "1.30.1",
     "@opentelemetry/semantic-conventions": "1.28.0",
-    "@remix-run/component": "0.3.0",
-    "@remix-run/interaction": "0.4.0",
-    "@remix-run/route-pattern": "0.17.0",
+    "@remix-run/component": "0.4.0",
+    "@remix-run/interaction": "0.5.0",
+    "@remix-run/route-pattern": "0.18.0",
     "@tailwindcss/cli": "4.1.18",
     "@tailwindcss/vite": "4.1.18",
     "@tauri-apps/api": "2.9.1",
@@ -273,11 +303,15 @@
 
     "@daw/desktop": ["@daw/desktop@workspace:packages/desktop"],
 
-    "@daw/electron": ["@daw/electron@workspace:packages/electron"],
+    "@daw/form": ["@daw/form@workspace:packages/form"],
 
     "@daw/mcp": ["@daw/mcp@workspace:packages/mcp"],
 
     "@daw/server": ["@daw/server@workspace:packages/server"],
+
+    "@daw/ui": ["@daw/ui@workspace:packages/ui"],
+
+    "@daw/utils": ["@daw/utils@workspace:packages/utils"],
 
     "@develar/schema-utils": ["@develar/schema-utils@2.6.5", "", { "dependencies": { "ajv": "^6.12.0", "ajv-keywords": "^3.4.1" } }, "sha512-0cp4PsWQ/9avqTVMCtZ+GirikIA36ikvjtHweU4/j8yLtgObI0+JUPhYFScgwlteveGB1rt3Cm8UhN04XayDig=="],
 
@@ -539,9 +573,9 @@
 
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.0", "", {}, "sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw=="],
 
-    "@remix-run/component": ["@remix-run/component@0.3.0", "", { "dependencies": { "@remix-run/interaction": "^0.4.0" } }, "sha512-Cq+izA+IzcE0/+1soho7ZMwkEvuU3jNnj4tV9nrt0UI6zqXN68QU5G497uXD4qXCeNCQaghdAAxK01/wdac4nA=="],
+    "@remix-run/component": ["@remix-run/component@0.4.0", "", { "dependencies": { "@remix-run/interaction": "^0.5.0" } }, "sha512-5xJLIrlH1Tcx6+h+ZG6BEpNkpt8upK4l82exE107Elw2QyToHf69v1aGlaTPQ8fpGr6Ke7gHta7s3fypJwaIsg=="],
 
-    "@remix-run/interaction": ["@remix-run/interaction@0.4.0", "", {}, "sha512-eXPPLR4TfLWkLyQtVCyqgpmwPJy5ZF6tbyyTqYbPIq8BCZkcKuyUZXrJDlAkiBNkVv3wrSLqm0Yt/cfOKyJq4Q=="],
+    "@remix-run/interaction": ["@remix-run/interaction@0.5.0", "", {}, "sha512-Z2ja9/7TfMHt/wzWq425GI2xj6QxW4E3OHZ8In81uytZKIuWaI6Pn3v8qyMrInwnBEaLcfcbeQVCiExgHU8D4A=="],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.55.1", "", { "os": "android", "cpu": "arm" }, "sha512-9R0DM/ykwfGIlNu6+2U09ga0WXeZ9MRC2Ter8jnz8415VbuIykVuc6bhdrbORFZANDmTDvq26mJrEVTl8TdnDg=="],
 
@@ -628,30 +662,6 @@
     "@tailwindcss/oxide-win32-x64-msvc": ["@tailwindcss/oxide-win32-x64-msvc@4.1.18", "", { "os": "win32", "cpu": "x64" }, "sha512-bJWbyYpUlqamC8dpR7pfjA0I7vdF6t5VpUGMWRkXVE3AXgIZjYUYAK7II1GNaxR8J1SSrSrppRar8G++JekE3Q=="],
 
     "@tailwindcss/vite": ["@tailwindcss/vite@4.1.18", "", { "dependencies": { "@tailwindcss/node": "4.1.18", "@tailwindcss/oxide": "4.1.18", "tailwindcss": "4.1.18" }, "peerDependencies": { "vite": "^5.2.0 || ^6 || ^7" } }, "sha512-jVA+/UpKL1vRLg6Hkao5jldawNmRo7mQYrZtNHMIVpLfLhDml5nMRUo/8MwoX2vNXvnaXNNMedrMfMugAVX1nA=="],
-
-    "@tauri-apps/cli": ["@tauri-apps/cli@2.9.6", "", { "optionalDependencies": { "@tauri-apps/cli-darwin-arm64": "2.9.6", "@tauri-apps/cli-darwin-x64": "2.9.6", "@tauri-apps/cli-linux-arm-gnueabihf": "2.9.6", "@tauri-apps/cli-linux-arm64-gnu": "2.9.6", "@tauri-apps/cli-linux-arm64-musl": "2.9.6", "@tauri-apps/cli-linux-riscv64-gnu": "2.9.6", "@tauri-apps/cli-linux-x64-gnu": "2.9.6", "@tauri-apps/cli-linux-x64-musl": "2.9.6", "@tauri-apps/cli-win32-arm64-msvc": "2.9.6", "@tauri-apps/cli-win32-ia32-msvc": "2.9.6", "@tauri-apps/cli-win32-x64-msvc": "2.9.6" }, "bin": { "tauri": "tauri.js" } }, "sha512-3xDdXL5omQ3sPfBfdC8fCtDKcnyV7OqyzQgfyT5P3+zY6lcPqIYKQBvUasNvppi21RSdfhy44ttvJmftb0PCDw=="],
-
-    "@tauri-apps/cli-darwin-arm64": ["@tauri-apps/cli-darwin-arm64@2.9.6", "", { "os": "darwin", "cpu": "arm64" }, "sha512-gf5no6N9FCk1qMrti4lfwP77JHP5haASZgVbBgpZG7BUepB3fhiLCXGUK8LvuOjP36HivXewjg72LTnPDScnQQ=="],
-
-    "@tauri-apps/cli-darwin-x64": ["@tauri-apps/cli-darwin-x64@2.9.6", "", { "os": "darwin", "cpu": "x64" }, "sha512-oWh74WmqbERwwrwcueJyY6HYhgCksUc6NT7WKeXyrlY/FPmNgdyQAgcLuTSkhRFuQ6zh4Np1HZpOqCTpeZBDcw=="],
-
-    "@tauri-apps/cli-linux-arm-gnueabihf": ["@tauri-apps/cli-linux-arm-gnueabihf@2.9.6", "", { "os": "linux", "cpu": "arm" }, "sha512-/zde3bFroFsNXOHN204DC2qUxAcAanUjVXXSdEGmhwMUZeAQalNj5cz2Qli2elsRjKN/hVbZOJj0gQ5zaYUjSg=="],
-
-    "@tauri-apps/cli-linux-arm64-gnu": ["@tauri-apps/cli-linux-arm64-gnu@2.9.6", "", { "os": "linux", "cpu": "arm64" }, "sha512-pvbljdhp9VOo4RnID5ywSxgBs7qiylTPlK56cTk7InR3kYSTJKYMqv/4Q/4rGo/mG8cVppesKIeBMH42fw6wjg=="],
-
-    "@tauri-apps/cli-linux-arm64-musl": ["@tauri-apps/cli-linux-arm64-musl@2.9.6", "", { "os": "linux", "cpu": "arm64" }, "sha512-02TKUndpodXBCR0oP//6dZWGYcc22Upf2eP27NvC6z0DIqvkBBFziQUcvi2n6SrwTRL0yGgQjkm9K5NIn8s6jw=="],
-
-    "@tauri-apps/cli-linux-riscv64-gnu": ["@tauri-apps/cli-linux-riscv64-gnu@2.9.6", "", { "os": "linux", "cpu": "none" }, "sha512-fmp1hnulbqzl1GkXl4aTX9fV+ubHw2LqlLH1PE3BxZ11EQk+l/TmiEongjnxF0ie4kV8DQfDNJ1KGiIdWe1GvQ=="],
-
-    "@tauri-apps/cli-linux-x64-gnu": ["@tauri-apps/cli-linux-x64-gnu@2.9.6", "", { "os": "linux", "cpu": "x64" }, "sha512-vY0le8ad2KaV1PJr+jCd8fUF9VOjwwQP/uBuTJvhvKTloEwxYA/kAjKK9OpIslGA9m/zcnSo74czI6bBrm2sYA=="],
-
-    "@tauri-apps/cli-linux-x64-musl": ["@tauri-apps/cli-linux-x64-musl@2.9.6", "", { "os": "linux", "cpu": "x64" }, "sha512-TOEuB8YCFZTWVDzsO2yW0+zGcoMiPPwcUgdnW1ODnmgfwccpnihDRoks+ABT1e3fHb1ol8QQWsHSCovb3o2ENQ=="],
-
-    "@tauri-apps/cli-win32-arm64-msvc": ["@tauri-apps/cli-win32-arm64-msvc@2.9.6", "", { "os": "win32", "cpu": "arm64" }, "sha512-ujmDGMRc4qRLAnj8nNG26Rlz9klJ0I0jmZs2BPpmNNf0gM/rcVHhqbEkAaHPTBVIrtUdf7bGvQAD2pyIiUrBHQ=="],
-
-    "@tauri-apps/cli-win32-ia32-msvc": ["@tauri-apps/cli-win32-ia32-msvc@2.9.6", "", { "os": "win32", "cpu": "ia32" }, "sha512-S4pT0yAJgFX8QRCyKA1iKjZ9Q/oPjCZf66A/VlG5Yw54Nnr88J1uBpmenINbXxzyhduWrIXBaUbEY1K80ZbpMg=="],
-
-    "@tauri-apps/cli-win32-x64-msvc": ["@tauri-apps/cli-win32-x64-msvc@2.9.6", "", { "os": "win32", "cpu": "x64" }, "sha512-ldWuWSSkWbKOPjQMJoYVj9wLHcOniv7diyI5UAJ4XsBdtaFB0pKHQsqw/ItUma0VXGC7vB4E9fZjivmxur60aw=="],
 
     "@tootallnate/once": ["@tootallnate/once@2.0.0", "", {}, "sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A=="],
 
@@ -1540,6 +1550,8 @@
     "@babel/helper-compilation-targets/lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
     "@babel/helper-compilation-targets/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
+
+    "@daw/app/@base-ui/remix": ["@base-ui/remix@file:packages/base-ui/packages/remix", { "devDependencies": { "@types/bun": "1.2.21", "happy-dom": "20.4.0", "typescript": "5.9.3" }, "peerDependencies": { "@floating-ui/utils": "^0.2.10", "@remix-run/component": "0.4.0" } }],
 
     "@effect/ai/@effect/experimental": ["@effect/experimental@0.58.0", "", { "dependencies": { "uuid": "^11.0.3" }, "peerDependencies": { "@effect/platform": "^0.94.0", "effect": "^3.19.13", "ioredis": "^5", "lmdb": "^3" }, "optionalPeers": ["ioredis", "lmdb"] }, "sha512-IEP9sapjF6rFy5TkoqDPc86st/fnqUfjT7Xa3pWJrFGr1hzaMXHo+mWsYOZS9LAOVKnpHuVziDK97EP5qsCHVA=="],
 

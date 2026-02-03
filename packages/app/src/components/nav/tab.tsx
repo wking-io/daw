@@ -1,0 +1,22 @@
+import { Tabs } from "@daw/ui/tabs";
+import { cn } from "@daw/utils";
+import type { Handle } from "@remix-run/component";
+
+export function Tab(_handle: Handle, setup: Tabs.Tab.Setup) {
+  return (props: Tabs.Tab.Props & { key: string }) => {
+    const { children, class: className, key, ...buttonProps } = props;
+    return (
+      <Tabs.Tab
+        key={key}
+        setup={setup}
+        {...buttonProps}
+        class={cn(
+          className,
+          "py-1.5 px-3 focus:outline-none text-xs flex items-center gap-1.5  z-1 text-foreground/50 data-active:text-foreground relative before:absolute before:inset-0 before:border before:border-transparent focus-visible:before:border-sky-5 focus-visible:before:ring-2 focus-visible:before:ring-sky-5/20 before:rounded-[4px]",
+        )}
+      >
+        {children}
+      </Tabs.Tab>
+    );
+  };
+}

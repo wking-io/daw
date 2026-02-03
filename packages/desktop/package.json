@@ -3,21 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "dist/main/index.js",
   "scripts": {
     "predev": "bun ./scripts/predev.ts",
     "prebuild": "bun ./scripts/predev.ts",
-    "dev": "vite",
-    "build": "vite build",
-    "tauri": "tauri",
-    "test:js": "bun test ./scripts",
-    "test:rust": "bun ./scripts/test-rust.ts",
-    "test": "bun run test:js && bun run test:rust",
-    "rust:fmt": "cargo fmt --manifest-path src-tauri/Cargo.toml",
-    "rust:clippy": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
-    "rust:check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "electron-vite build && electron-builder",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
-    "fmt": "oxfmt"
+    "fmt": "oxfmt",
+    "test:e2e": "bun ./scripts/predev.ts && electron-vite build && playwright test"
   },
   "dependencies": {
     "@daw/app": "workspace:*",
@@ -25,9 +21,12 @@
     "@remix-run/interaction": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.1",
     "@tailwindcss/vite": "catalog:",
-    "@tauri-apps/cli": "catalog:",
     "@types/bun": "catalog:",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.0.0",
+    "electron-vite": "^5.0.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "tailwindcss": "catalog:",

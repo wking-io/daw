@@ -12,7 +12,11 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-    "composite": true
+    "composite": true,
+    "paths": {
+      "@base-ui/remix": ["../base-ui/packages/remix/src/index.ts"],
+      "@base-ui/remix/*": ["../base-ui/packages/remix/src/*/index.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../base-ui/packages/remix/src"]
 }

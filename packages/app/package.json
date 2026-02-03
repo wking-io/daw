@@ -15,8 +15,11 @@
     "fmt": "oxfmt"
   },
   "dependencies": {
+    "@base-ui/remix": "file:../base-ui/packages/remix",
     "@daw/atom-remix": "workspace:*",
     "@daw/core": "workspace:*",
+    "@daw/ui": "workspace:*",
+    "@daw/utils": "workspace:*",
     "@effect/platform": "catalog:",
     "@floating-ui/dom": "1.7.5",
     "@remix-run/component": "catalog:",

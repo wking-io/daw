@@ -1,6 +1,6 @@
 import type { Handle } from "@remix-run/component";
-import { cn } from "../../utils/cn";
-import { FieldRoot } from "../ui/field";
+import { Field } from "@daw/ui";
+import { cn } from "@daw/utils";
 
 function generateId(): string {
   return `select-${Math.random().toString(36).slice(2, 9)}`;
@@ -17,7 +17,7 @@ export function Select(
   },
 ) {
   const id = generateId();
-  const fieldCtx = handle.context.get(FieldRoot);
+  const fieldCtx = handle.context.get(Field.Root);
 
   const name = fieldCtx?.name ?? setup.name;
   const disabled = fieldCtx?.disabled ?? setup.disabled ?? false;

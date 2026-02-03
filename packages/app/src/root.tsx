@@ -9,10 +9,22 @@ import { NavButton } from "./components/nav/button";
 import { Indicator } from "./components/nav/indicator";
 import { ProjectListView } from "./components/project-list-view";
 import { ProjectView } from "./components/project-view";
-import { Tabs, type TabValue } from "./components/ui/tabs";
-import { type Tab, tabsAtom } from "./state/tabs";
+import { Tabs, type TabsValue } from "@daw/ui";
+import { type Tab as TTab, tabsAtom } from "./state/tabs";
+import { Tab } from "./components/nav/tab";
 
 type Theme = "light" | "dark";
+
+// Type declaration for Electron API exposed via preload
+declare global {
+  interface Window {
+    electronAPI?: {
+      platform: string;
+      arch: string;
+      onCloseActiveTab: (callback: () => void) => () => void;
+    };
+  }
+}
 
 export function Root(handle: Handle<{ theme: Theme }>) {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -68,67 +80,104 @@ function MainApp(handle: Handle) {
     handle.update();
   };
 
+  const handleTabChange = (newTabId: TabsValue) => {
+    const tabId = newTabId as TTab["id"];
+    setTabs((tabs) => {
+      const updatedTabs: TTab[] = tabs.openTabs.map((tab) =>
+        tab.id === tabId && tab.state === "pending" ? { ...tab, state: "dirty" } : tab,
+      );
+      return {
+        openTabs: updatedTabs,
+        activeTabId: tabId,
+      };
+    });
+  };
+
+  const handleTabClose = (value: TabsValue) => {
+    const tabId = value as TTab["id"];
+    // Don't allow closing the home tab
+    if (tabId === "home") return;
+
+    setTabs((tabs) => {
+      const idx = tabs.openTabs.findIndex((t) => t.id === tabId);
+      const newTabs = tabs.openTabs.filter((t) => t.id !== tabId);
+
+      // Determine new active tab if closing the active one
+      let newActiveId = tabs.activeTabId;
+      if (tabs.activeTabId === tabId) {
+        // Prefer next tab, fall back to previous, then home
+        newActiveId = newTabs[idx]?.id ?? newTabs[idx - 1]?.id ?? "home";
+      }
+
+      return { openTabs: newTabs, activeTabId: newActiveId };
+    });
+  };
+
+  // Close active tab on Cmd/Ctrl+W (via Electron IPC)
+  const closeActiveTab = () => {
+    const { activeTabId } = getTabs();
+    handleTabClose(activeTabId);
+  };
+
+  // Register Electron IPC listener for close-active-tab
+  if (window.electronAPI?.onCloseActiveTab) {
+    const unsubscribe = window.electronAPI.onCloseActiveTab(closeActiveTab);
+    handle.signal.addEventListener("abort", unsubscribe);
+  }
+
   return () => {
     const { openTabs, activeTabId } = getTabs();
 
-    const handleTabChange = (newTabId: TabValue) => {
-      const tabId = newTabId as Tab["id"];
-      setTabs((tabs) => {
-        const updatedTabs: Tab[] = tabs.openTabs.map((tab) =>
-          tab.id === tabId && tab.state === "pending" ? { ...tab, state: "dirty" } : tab,
-        );
-        return {
-          openTabs: updatedTabs,
-          activeTabId: tabId,
-        };
-      });
-    };
-
     return (
       <Tabs.Root
+        setup={{ closable: true }}
         value={activeTabId}
         onValueChange={handleTabChange}
+        onTabClose={handleTabClose}
         class="flex flex-col flex-1 overflow-hidden"
       >
         <ControlBar.Root>
-          <ControlBar.Content class="py-1">
-            <div class="flex items-center h-6 gap-1">
+          <ControlBar.Content class="py-1 no-drag">
+            <div class="flex items-center gap-1">
               <Tabs.List
                 setup={{ activateOnFocus: false }}
-                class="flex relative bg-layer-1 rounded-[5px] shadow-recess"
+                class="flex relative bg-layer-1 rounded-[4px] shadow-recess"
               >
                 {openTabs.map((t) => (
-                  <Tabs.Tab
-                    key={t.id}
-                    setup={{ value: t.id }}
-                    class="h-6 px-2.5 focus:outline-none text-xs flex items-center gap-1.5 relative z-1 text-foreground/50 data-active:text-foreground rounded-[5px] focus-visible:ring-1 focus-visible:ring-denim-5/50"
-                  >
+                  <Tab key={t.id} setup={{ value: t.id }}>
                     {t.id === "home" ? (
-                      <span class="block -mt-0.5">⌂</span>
+                      <span class="block -mt-0.5 -mx-px">⌂</span>
                     ) : (
                       <>
                         <span class="block -mt-0.5">⦿</span>
                         {t.name}
+                        <Tabs.CloseTrigger
+                          setup={{}}
+                          aria-label={`Close ${t.name} tab`}
+                          class="ml-1 opacity-50 hover:opacity-100"
+                        >
+                          ✕
+                        </Tabs.CloseTrigger>
                       </>
                     )}
-                  </Tabs.Tab>
+                  </Tab>
                 ))}
                 <Indicator />
               </Tabs.List>
-              <div class="flex relative bg-layer-1 rounded-[5px] shadow-recess">
+              <div class="flex relative bg-layer-1 rounded-[4px] shadow-recess">
                 <NavButton
-                  class="size-6"
+                  isIcon={true}
                   on={{
                     click: openCreateDialog,
                   }}
                 >
-                  <span class="block -mt-0.5">+</span>
+                  <span class="block -mt-0.5 px-[3px]">+</span>
                 </NavButton>
               </div>
             </div>
           </ControlBar.Content>
-          <ControlBar.Content class="ml-auto pr-1 pt-1">
-            <ControlPanel.Content />
+          <ControlBar.Content class="ml-auto pr-1 py-1">
+            <ControlPanel.Content class="no-drag" />
           </ControlBar.Content>
         </ControlBar.Root>
 
