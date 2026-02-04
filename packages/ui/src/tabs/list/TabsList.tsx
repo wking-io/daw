@@ -127,11 +127,11 @@ export function TabsList(handle: Handle<TabsListContextValue>, setup: TabsListSe
   };
 
   return (props: TabsListProps) => {
-    const { class: className, ...rest } = props;
+    const { class: classes, ...rest } = props;
 
     if (!ctx) {
       return (
-        <div role="tablist" class={className} {...rest}>
+        <div role="tablist" class={classes} {...rest}>
           {props.children}
         </div>
       );
@@ -147,7 +147,7 @@ export function TabsList(handle: Handle<TabsListContextValue>, setup: TabsListSe
       <div
         role="tablist"
         aria-orientation={ctx.orientation}
-        class={className}
+        class={classes}
         connect={(el: HTMLElement) => {
           setListElement(el);
         }}

@@ -2,8 +2,6 @@ import { describe, expect, it, mock } from "bun:test";
 import { createRoot } from "@remix-run/component";
 import { DialogRoot } from "./DialogRoot";
 import { DialogTrigger } from "../trigger/DialogTrigger";
-import { DialogPortal } from "../portal/DialogPortal";
-import { DialogBackdrop } from "../backdrop/DialogBackdrop";
 import { DialogPopup } from "../popup/DialogPopup";
 import { DialogTitle } from "../title/DialogTitle";
 import { DialogDescription } from "../description/DialogDescription";
@@ -16,7 +14,7 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{}}>
+        <DialogRoot>
           <div data-testid="child">Child content</div>
         </DialogRoot>,
       );
@@ -30,33 +28,16 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{}}>
-          <DialogTrigger setup={{}}>Open</DialogTrigger>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>Content</DialogPopup>
         </DialogRoot>,
       );
       root.flush();
 
-      expect(container.querySelector("[role='dialog']")).toBeNull();
-    });
-
-    it("respects defaultOpen", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogTrigger setup={{}}>Open</DialogTrigger>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      expect(container.querySelector("[role='dialog']")).not.toBeNull();
+      const dialog = container.querySelector("dialog") as HTMLDialogElement | null;
+      expect(dialog).not.toBeNull();
+      expect(dialog?.open).toBe(false);
     });
   });
 
@@ -66,11 +47,9 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{}}>
-          <DialogTrigger setup={{}}>Open</DialogTrigger>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>Content</DialogPopup>
         </DialogRoot>,
       );
       root.flush();
@@ -79,7 +58,8 @@ describe("Dialog", () => {
       trigger?.click();
       root.flush();
 
-      expect(container.querySelector("[role='dialog']")).not.toBeNull();
+      const dialog = container.querySelector("dialog") as HTMLDialogElement | null;
+      expect(dialog?.open).toBe(true);
     });
 
     it("has correct ARIA attributes", () => {
@@ -87,11 +67,9 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{}}>
-          <DialogTrigger setup={{}}>Open</DialogTrigger>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>Content</DialogPopup>
         </DialogRoot>,
       );
       root.flush();
@@ -106,16 +84,19 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogTrigger setup={{}}>Open</DialogTrigger>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>Content</DialogPopup>
         </DialogRoot>,
       );
       root.flush();
 
       const trigger = container.querySelector("button");
+      expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+
+      trigger?.click();
+      root.flush();
+
       expect(trigger?.getAttribute("aria-expanded")).toBe("true");
     });
   });
@@ -126,50 +107,14 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogPopup>Content</DialogPopup>
         </DialogRoot>,
       );
       root.flush();
 
       const popup = container.querySelector("[role='dialog']");
       expect(popup).not.toBeNull();
-    });
-
-    it("has aria-modal when modal", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <DialogRoot setup={{ defaultOpen: true, modal: true }}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      const popup = container.querySelector("[role='dialog']");
-      expect(popup?.getAttribute("aria-modal")).toBe("true");
-    });
-
-    it("has data-open when open", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      const popup = container.querySelector("[role='dialog']");
-      expect(popup?.hasAttribute("data-open")).toBe(true);
     });
   });
 
@@ -179,16 +124,17 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>
-              <DialogTitle setup={{}}>My Title</DialogTitle>
-            </DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>
+            <DialogTitle>My Title</DialogTitle>
+          </DialogPopup>
         </DialogRoot>,
       );
       root.flush();
-      // Flush again to process the queued update from setTitleId
+
+      const trigger = container.querySelector("button");
+      trigger?.click();
       root.flush();
 
       const title = container.querySelector("h2");
@@ -206,16 +152,17 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>
-              <DialogDescription setup={{}}>My Description</DialogDescription>
-            </DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>
+            <DialogDescription>My Description</DialogDescription>
+          </DialogPopup>
         </DialogRoot>,
       );
       root.flush();
-      // Flush again to process the queued update from setDescriptionId
+
+      const trigger = container.querySelector("button");
+      trigger?.click();
       root.flush();
 
       const description = container.querySelector("p");
@@ -233,81 +180,11 @@ describe("Dialog", () => {
       const root = createRoot(container);
 
       root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>
-              <DialogClose setup={{}}>Close</DialogClose>
-            </DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      expect(container.querySelector("[role='dialog']")).not.toBeNull();
-
-      const closeButton = container.querySelector("button");
-      closeButton?.click();
-      root.flush();
-
-      expect(container.querySelector("[role='dialog']")).toBeNull();
-    });
-  });
-
-  describe("DialogBackdrop", () => {
-    it("renders with role='presentation'", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <DialogRoot setup={{ defaultOpen: true }}>
-          <DialogPortal setup={{}}>
-            <DialogBackdrop setup={{}} />
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      const backdrop = container.querySelector("[role='presentation']");
-      expect(backdrop).not.toBeNull();
-    });
-
-    it("closes dialog when clicked", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <DialogRoot setup={{ defaultOpen: true, dismissOnOutsidePress: true }}>
-          <DialogPortal setup={{}}>
-            <DialogBackdrop setup={{}} />
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      expect(container.querySelector("[role='dialog']")).not.toBeNull();
-
-      const backdrop = container.querySelector("[role='presentation']");
-      (backdrop as HTMLElement)?.click();
-      root.flush();
-
-      expect(container.querySelector("[role='dialog']")).toBeNull();
-    });
-  });
-
-  describe("onOpenChange callback", () => {
-    it("calls onOpenChange when opening", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-      const onOpenChange = mock((_open: boolean, _reason: string) => {});
-
-      root.render(
-        <DialogRoot setup={{}} onOpenChange={onOpenChange}>
-          <DialogTrigger setup={{}}>Open</DialogTrigger>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>
+            <DialogClose>Close</DialogClose>
+          </DialogPopup>
         </DialogRoot>,
       );
       root.flush();
@@ -316,91 +193,64 @@ describe("Dialog", () => {
       trigger?.click();
       root.flush();
 
-      expect(onOpenChange).toHaveBeenCalledTimes(1);
-      expect(onOpenChange.mock.calls[0]?.[0]).toBe(true);
-      expect(onOpenChange.mock.calls[0]?.[1]).toBe("trigger-press");
-    });
+      const dialog = container.querySelector("dialog") as HTMLDialogElement | null;
+      expect(dialog?.open).toBe(true);
 
-    it("calls onOpenChange when closing via Close button", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-      const onOpenChange = mock((_open: boolean, _reason: string) => {});
-
-      root.render(
-        <DialogRoot setup={{ defaultOpen: true }} onOpenChange={onOpenChange}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>
-              <DialogClose setup={{}}>Close</DialogClose>
-            </DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      const closeButton = container.querySelector("button");
+      const closeButton = container.querySelectorAll("button")[1];
       closeButton?.click();
       root.flush();
 
-      expect(onOpenChange).toHaveBeenCalledTimes(1);
-      expect(onOpenChange.mock.calls[0]?.[0]).toBe(false);
-      expect(onOpenChange.mock.calls[0]?.[1]).toBe("close-press");
-    });
-
-    it("calls onOpenChange when closing via backdrop click", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-      const onOpenChange = mock((_open: boolean, _reason: string) => {});
-
-      root.render(
-        <DialogRoot
-          setup={{ defaultOpen: true, dismissOnOutsidePress: true }}
-          onOpenChange={onOpenChange}
-        >
-          <DialogPortal setup={{}}>
-            <DialogBackdrop setup={{}} />
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
-        </DialogRoot>,
-      );
-      root.flush();
-
-      const backdrop = container.querySelector("[role='presentation']");
-      (backdrop as HTMLElement)?.click();
-      root.flush();
-
-      expect(onOpenChange).toHaveBeenCalledTimes(1);
-      expect(onOpenChange.mock.calls[0]?.[0]).toBe(false);
-      expect(onOpenChange.mock.calls[0]?.[1]).toBe("outside-press");
+      expect(dialog?.open).toBe(false);
     });
   });
 
-  describe("controlled mode", () => {
-    it("respects controlled open prop", () => {
+  describe("onOpen callback", () => {
+    it("calls onOpen when opening", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
+      const onOpen = mock(() => {});
 
       root.render(
-        <DialogRoot setup={{}} open={true}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot onOpen={onOpen}>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>Content</DialogPopup>
         </DialogRoot>,
       );
       root.flush();
 
-      expect(container.querySelector("[role='dialog']")).not.toBeNull();
+      const trigger = container.querySelector("button");
+      trigger?.click();
+      root.flush();
 
-      // Re-render with open=false
+      expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("onClose callback", () => {
+    it("calls onClose when closing via Close button", () => {
+      const container = document.createElement("div");
+      const root = createRoot(container);
+      const onClose = mock(() => {});
+
       root.render(
-        <DialogRoot setup={{}} open={false}>
-          <DialogPortal setup={{}}>
-            <DialogPopup setup={{}}>Content</DialogPopup>
-          </DialogPortal>
+        <DialogRoot setup={{}} onClose={onClose}>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>
+            <DialogClose>Close</DialogClose>
+          </DialogPopup>
         </DialogRoot>,
       );
       root.flush();
 
-      expect(container.querySelector("[role='dialog']")).toBeNull();
+      const trigger = container.querySelector("button");
+      trigger?.click();
+      root.flush();
+
+      const closeButton = container.querySelectorAll("button")[1];
+      closeButton?.click();
+      root.flush();
+
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from "@remix-run/component";
 import { generateId } from "../../utils/generate-id";
+import { getDataAttributes } from "../../utils/data-attributes";
 
 /**
  * Validation mode for field validation.
@@ -145,16 +146,16 @@ function createInitialValidityData(initialValue: unknown): FieldValidityData {
   };
 }
 
-function getStateDataAttributes(state: FieldRootState): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  if (state.disabled) attrs["data-disabled"] = "";
-  if (state.touched) attrs["data-touched"] = "";
-  if (state.dirty) attrs["data-dirty"] = "";
-  if (state.valid === true) attrs["data-valid"] = "";
-  if (state.valid === false) attrs["data-invalid"] = "";
-  if (state.filled) attrs["data-filled"] = "";
-  if (state.focused) attrs["data-focused"] = "";
-  return attrs;
+export function getFieldStateDataAttributes(state: FieldRootState): Record<string, string> {
+  return getDataAttributes({
+    disabled: state.disabled,
+    touched: state.touched,
+    dirty: state.dirty,
+    valid: state.valid === true,
+    invalid: state.valid === false,
+    filled: state.filled,
+    focused: state.focused,
+  });
 }
 
 /**
@@ -335,7 +336,7 @@ export function FieldRoot(handle: Handle<FieldRootContextValue>, setup: FieldRoo
 
   return (props: FieldRootProps) => {
     const state = getState();
-    const dataAttrs = getStateDataAttributes(state);
+    const dataAttrs = getFieldStateDataAttributes(state);
 
     return (
       <div class={props.class} {...dataAttrs}>
@@ -357,6 +358,3 @@ export namespace FieldRoot {
   export type Props = FieldRootProps;
   export type ContextValue = FieldRootContextValue;
 }
-
-// Re-export getStateDataAttributes for use by child components
-export { getStateDataAttributes as getFieldStateDataAttributes };

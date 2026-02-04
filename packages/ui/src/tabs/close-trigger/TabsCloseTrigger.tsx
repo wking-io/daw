@@ -1,16 +1,6 @@
 import type { Handle, Props } from "@remix-run/component";
 import { TabsTab, type TabsTabContextValue } from "../tab/TabsTab";
-
-/**
- * Setup configuration for the TabsCloseTrigger component.
- */
-export interface TabsCloseTriggerSetup {
-  /**
-   * Whether the close trigger is disabled.
-   * @default false
-   */
-  disabled?: boolean;
-}
+import { Button } from "../../button/Button";
 
 /**
  * Props passed to the TabsCloseTrigger render function.
@@ -24,12 +14,6 @@ export interface TabsCloseTriggerProps extends Props<"button"> {
  */
 export interface TabsCloseTriggerState {
   disabled: boolean;
-}
-
-function getCloseTriggerDataAttributes(state: TabsCloseTriggerState): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  if (state.disabled) attrs["data-disabled"] = "";
-  return attrs;
 }
 
 /**
@@ -51,45 +35,27 @@ function getCloseTriggerDataAttributes(state: TabsCloseTriggerState): Record<str
  * </Tabs.Root>
  * ```
  */
-export function TabsCloseTrigger(handle: Handle, setup: TabsCloseTriggerSetup = {}) {
+export function TabsCloseTrigger(handle: Handle) {
   const tabCtx = handle.context.get(TabsTab) as TabsTabContextValue | undefined;
 
   return (props: TabsCloseTriggerProps) => {
-    const { class: className, children, ...rest } = props;
-
     // If not within a Tab context or tabs aren't closable, render disabled button
     if (!tabCtx || !tabCtx.closable) {
-      return (
-        <button type="button" class={className} disabled tabIndex={-1} data-disabled="" {...rest}>
-          {children}
-        </button>
-      );
+      return <Button disabled tabIndex={-1} {...props} />;
     }
 
-    const isDisabled = setup.disabled ?? tabCtx.disabled;
-    const state: TabsCloseTriggerState = { disabled: isDisabled };
-    const dataAttrs = getCloseTriggerDataAttributes(state);
-
     return (
-      <button
-        type="button"
-        class={className}
-        disabled={isDisabled}
+      <Button
         tabIndex={-1}
         on={{
           click: (event: MouseEvent) => {
             // Prevent the click from activating the parent tab
             event.stopPropagation();
-            if (!isDisabled) {
-              tabCtx.onClose();
-            }
+            tabCtx.onClose();
           },
         }}
-        {...dataAttrs}
-        {...rest}
-      >
-        {children}
-      </button>
+        {...props}
+      />
     );
   };
 }
@@ -98,7 +64,6 @@ export function TabsCloseTrigger(handle: Handle, setup: TabsCloseTriggerSetup = 
  * Namespace containing all TabsCloseTrigger-related types.
  */
 export namespace TabsCloseTrigger {
-  export type Setup = TabsCloseTriggerSetup;
   export type Props = TabsCloseTriggerProps;
   export type State = TabsCloseTriggerState;
 }

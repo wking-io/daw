@@ -35,7 +35,7 @@ export function PopoverContent(handle: Handle) {
   handle.on(document, { keydown: handleKeyDown });
 
   return (props: PopoverContentProps) => {
-    const { class: className, children, ...rest } = props;
+    const { class: classes, children, ...rest } = props;
 
     return (
       <div
@@ -47,7 +47,7 @@ export function PopoverContent(handle: Handle) {
           el.focus();
         }}
         tabindex={-1}
-        class={className}
+        class={classes}
         {...rest}
       >
         {children}

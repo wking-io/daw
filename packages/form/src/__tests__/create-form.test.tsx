@@ -11,30 +11,32 @@ const TestSchema = Schema.Struct({
 });
 
 function TestForm(handle: Handle) {
-  const [fields, form] = createForm(handle, { schema: TestSchema });
+  const [field, form] = createForm(handle, { schema: TestSchema });
+  const email = field("email");
+  const age = field("age");
 
   return () => (
     <div>
       <input
         data-testid="email"
-        key={fields.email.key}
-        {...getInputProps(fields.email)}
+        key={email.key}
+        {...getInputProps(email)}
         on={{
           blur(e) {
-            fields.email.validate(e.currentTarget.value);
+            email.validate(e.currentTarget.value);
             handle.update();
           },
         }}
       />
-      {fields.email.errors.length > 0 && (
-        <div data-testid="email-errors" {...getErrorProps(fields.email)}>
-          {fields.email.errors.join(", ")}
+      {email.errors.length > 0 && (
+        <div data-testid="email-errors" {...getErrorProps(email)}>
+          {email.errors.join(", ")}
         </div>
       )}
-      <input data-testid="age" key={fields.age.key} {...getInputProps(fields.age)} type="number" />
-      {fields.age.errors.length > 0 && (
-        <div data-testid="age-errors" {...getErrorProps(fields.age)}>
-          {fields.age.errors.join(", ")}
+      <input data-testid="age" key={age.key} {...getInputProps(age)} type="number" />
+      {age.errors.length > 0 && (
+        <div data-testid="age-errors" {...getErrorProps(age)}>
+          {age.errors.join(", ")}
         </div>
       )}
       <div data-testid="is-valid">{String(form.isValid)}</div>
@@ -241,30 +243,31 @@ describe("field.reset", () => {
     let getEmailKey: () => number;
 
     function ResetTestForm(handle: Handle) {
-      const [fields] = createForm(handle, { schema: TestSchema });
+      const [field] = createForm(handle, { schema: TestSchema });
+      const email = field("email");
       resetEmailFn = () => {
-        fields.email.reset();
+        email.reset();
         handle.update();
       };
-      getEmailKey = () => fields.email.key;
+      getEmailKey = () => email.key;
 
       return () => (
         <div>
           <input
             data-testid="email"
-            key={fields.email.key}
-            {...getInputProps(fields.email)}
+            key={email.key}
+            {...getInputProps(email)}
             on={{
               blur(e) {
-                fields.email.validate(e.currentTarget.value);
+                email.validate(e.currentTarget.value);
                 handle.update();
               },
             }}
           />
-          {fields.email.errors.length > 0 && (
-            <div data-testid="email-errors">{fields.email.errors.join(", ")}</div>
+          {email.errors.length > 0 && (
+            <div data-testid="email-errors">{email.errors.join(", ")}</div>
           )}
-          <span data-testid="email-key">{fields.email.key}</span>
+          <span data-testid="email-key">{email.key}</span>
         </div>
       );
     }
@@ -314,7 +317,9 @@ describe("form.validate", () => {
     let validateFormFn: (values: { email: string; age: number }) => readonly string[];
 
     function FormValidateTestForm(handle: Handle) {
-      const [fields, form] = createForm(handle, { schema: TestSchema });
+      const [field, form] = createForm(handle, { schema: TestSchema });
+      const email = field("email");
+      const age = field("age");
       validateFormFn = (values) => {
         const errors = form.validate(values);
         handle.update();
@@ -323,12 +328,10 @@ describe("form.validate", () => {
 
       return () => (
         <div>
-          {fields.email.errors.length > 0 && (
-            <div data-testid="email-errors">{fields.email.errors.join(", ")}</div>
+          {email.errors.length > 0 && (
+            <div data-testid="email-errors">{email.errors.join(", ")}</div>
           )}
-          {fields.age.errors.length > 0 && (
-            <div data-testid="age-errors">{fields.age.errors.join(", ")}</div>
-          )}
+          {age.errors.length > 0 && <div data-testid="age-errors">{age.errors.join(", ")}</div>}
           <div data-testid="is-valid">{String(form.isValid)}</div>
         </div>
       );
@@ -375,7 +378,8 @@ describe("form.reset", () => {
     let resetFormFn: (formEl: HTMLFormElement) => void;
 
     function FormResetTestForm(handle: Handle) {
-      const [fields, form] = createForm(handle, { schema: TestSchema });
+      const [field, form] = createForm(handle, { schema: TestSchema });
+      const email = field("email");
       let _formRef: HTMLFormElement;
 
       validateFormFn = (values) => {
@@ -391,8 +395,8 @@ describe("form.reset", () => {
       return () => (
         <form connect={(el) => (_formRef = el)}>
           <input name="email" defaultValue="default@test.com" />
-          {fields.email.errors.length > 0 && (
-            <div data-testid="email-errors">{fields.email.errors.join(", ")}</div>
+          {email.errors.length > 0 && (
+            <div data-testid="email-errors">{email.errors.join(", ")}</div>
           )}
           <div data-testid="is-valid">{String(form.isValid)}</div>
         </form>

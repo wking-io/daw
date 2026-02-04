@@ -49,7 +49,7 @@ export function FieldError(handle: Handle) {
   return (props: FieldErrorProps) => {
     if (!ctx) return null;
 
-    const { match, forceShow, children, class: className } = props;
+    const { match, forceShow, children, class: classes } = props;
     const { validityData, state } = ctx;
 
     let shouldRender = false;
@@ -80,7 +80,7 @@ export function FieldError(handle: Handle) {
       ));
 
     return (
-      <div id={id} role="alert" class={className} {...dataAttrs}>
+      <div id={id} role="alert" class={classes} {...dataAttrs}>
         {errorContent}
       </div>
     );

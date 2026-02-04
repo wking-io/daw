@@ -24,7 +24,7 @@ export function PopoverClose(handle: Handle) {
   const ctx = handle.context.get(PopoverRoot);
 
   return (props: PopoverCloseProps) => {
-    const { class: className, children, ...rest } = props;
+    const { class: classes, children, ...rest } = props;
 
     return (
       <button
@@ -33,7 +33,7 @@ export function PopoverClose(handle: Handle) {
         on={{
           click: () => ctx?.closePopover(),
         }}
-        class={className}
+        class={classes}
         {...rest}
       >
         {children}

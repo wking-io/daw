@@ -382,7 +382,7 @@ function Card(handle: Handle) {
         '& .title': { fontSize: '20px', color: '#333' },
       }}
     >
-      <div className="title">Title</div>
+      <div classes="title">Title</div>
     </div>
   )
 }

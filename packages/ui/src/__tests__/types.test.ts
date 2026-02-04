@@ -12,8 +12,7 @@ import { describe, expect, it } from "bun:test";
 import type { RemixNode } from "@remix-run/component";
 
 // Button types
-import type { ButtonSize, ButtonSetup, ButtonProps, ButtonState } from "../button";
-import { Button } from "../button";
+import type { ButtonProps } from "../button";
 
 // Field types
 import type {
@@ -49,20 +48,6 @@ import { Tabs } from "../index";
 
 describe("Type Definition Tests", () => {
   describe("Button types", () => {
-    it("ButtonSize has expected values", () => {
-      const sizes: ButtonSize[] = ["xs", "sm", "default"];
-      expect(sizes).toHaveLength(3);
-    });
-
-    it("ButtonSetup has expected shape", () => {
-      const setup: ButtonSetup = {
-        size: "sm",
-        disabled: true,
-      };
-      expect(setup.size).toBe("sm");
-      expect(setup.disabled).toBe(true);
-    });
-
     it("ButtonProps extends button props", () => {
       const props: ButtonProps = {
         children: "Click me" as unknown as RemixNode,
@@ -71,23 +56,6 @@ describe("Type Definition Tests", () => {
         disabled: true,
       };
       expect(props.type).toBe("submit");
-    });
-
-    it("ButtonState has expected properties", () => {
-      const state: ButtonState = {
-        disabled: false,
-        size: "default",
-      };
-      expect(state.disabled).toBe(false);
-      expect(state.size).toBe("default");
-    });
-
-    it("Button namespace exports work", () => {
-      const setup: Button.Setup = { size: "xs" };
-      const size: Button.Size = "sm";
-
-      expect(setup.size).toBe("xs");
-      expect(size).toBe("sm");
     });
   });
 

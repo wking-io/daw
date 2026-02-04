@@ -141,10 +141,10 @@ export function TabsIndicator(handle: Handle, setup: TabsIndicatorSetup = {}) {
   });
 
   return (props: TabsIndicatorProps) => {
-    const { class: className, ...rest } = props;
+    const { class: classes, ...rest } = props;
 
     if (!ctx) {
-      return <span class={className} {...rest} />;
+      return <span class={classes} {...rest} />;
     }
 
     const { position, size } = calculatePosition();
@@ -181,7 +181,7 @@ export function TabsIndicator(handle: Handle, setup: TabsIndicatorSetup = {}) {
       <span
         role="presentation"
         aria-hidden="true"
-        class={className}
+        class={classes}
         style={style}
         {...dataAttrs}
         {...rest}

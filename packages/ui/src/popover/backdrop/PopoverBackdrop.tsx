@@ -24,7 +24,7 @@ export function PopoverBackdrop(handle: Handle) {
   const ctx = handle.context.get(PopoverRoot);
 
   return (props: PopoverBackdropProps) => {
-    const { class: className, ...rest } = props;
+    const { class: classes, ...rest } = props;
 
     return (
       <div
@@ -36,7 +36,7 @@ export function PopoverBackdrop(handle: Handle) {
         on={{
           click: () => ctx?.closePopover(),
         }}
-        class={className}
+        class={classes}
         {...rest}
       />
     );

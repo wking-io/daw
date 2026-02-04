@@ -4,7 +4,7 @@ import type { Handle, RemixNode } from "@remix-run/component";
 import { Cause, DateTime } from "effect";
 import { ApiClient } from "../api/client";
 import { tabsAtom } from "../state/tabs";
-import { Button } from "./button";
+import { Dialog } from "./dialog";
 
 type ProjectSummary = Project.ProjectSummary;
 
@@ -42,12 +42,12 @@ function ProjectCard(handle: Handle) {
 }
 
 function EmptyState(_handle: Handle) {
-  return (props: { onCreateProject: () => void }) => (
+  return () => (
     <div class="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div class="mb-4 text-5xl opacity-50">🎵</div>
       <h2 class="m-0 mb-2 text-xl">No projects yet</h2>
       <p class="m-0 mb-6 text-sm">Create your first project to get started</p>
-      <Button on={{ click: props.onCreateProject }}>Create Project</Button>
+      <Dialog.Trigger>Create Project</Dialog.Trigger>
     </div>
   );
 }
@@ -58,14 +58,14 @@ export function ProjectListView(handle: Handle) {
     ApiClient.query("project", "list", { reactivityKeys: ["projects"] }),
   );
 
-  return (props: { onCreateProject: () => void }) => {
+  return () => {
     const result = getResult();
 
     return Result.builder(result)
       .onInitial(() => <div class="flex items-center justify-center p-16">Loading projects...</div>)
       .onSuccess((projects) => {
         if (projects.length === 0) {
-          return <EmptyState onCreateProject={props.onCreateProject} />;
+          return <EmptyState />;
         }
 
         return (

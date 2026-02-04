@@ -120,7 +120,7 @@ describe("TabsPanel", () => {
 
       const tab = container.querySelector("[role='tab']");
       const panel = container.querySelector("[role='tabpanel']");
-      expect(panel?.getAttribute("aria-labelledby")).toBe(tab?.id);
+      expect(panel?.getAttribute("aria-labelledby")).toBe(tab?.id ?? "");
     });
   });
 

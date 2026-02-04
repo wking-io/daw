@@ -1,122 +1,83 @@
-import type { Handle, Props, RemixNode } from "@remix-run/component";
+import type { Handle, Props } from "@remix-run/component";
 import { DialogRoot } from "../root/DialogRoot";
 
-/**
- * Setup configuration for the DialogPopup component.
- */
-export interface DialogPopupSetup {}
+export interface DialogPopupProps extends Props<"dialog"> {}
 
 /**
- * Props passed to the DialogPopup render function.
- */
-export interface DialogPopupProps extends Props<"div"> {
-  children: RemixNode;
-  class?: string;
-}
-
-/**
- * State of the dialog popup.
- */
-export interface DialogPopupState {
-  open: boolean;
-}
-
-function getPopupDataAttributes(state: DialogPopupState): Record<string, string> {
-  return state.open ? { "data-open": "" } : { "data-closed": "" };
-}
-
-/**
- * A container for the dialog contents.
- * Renders a `<div>` element.
+ * The dialog popup container using the native <dialog> element.
+ * Renders a `<dialog>` element that uses the browser's built-in dialog functionality.
+ *
+ * Features provided by native dialog:
+ * - Modal behavior with showModal() - focus trapping, prevents background interaction
+ * - Top layer positioning (above all other content)
+ * - Built-in backdrop via ::backdrop pseudo-element
+ * - Escape key closes the dialog automatically
+ *
+ * Style the backdrop using the `::backdrop` pseudo-selector:
+ * ```css
+ * dialog::backdrop {
+ *   background: rgba(0, 0, 0, 0.5);
+ * }
+ * ```
  *
  * @example
  * ```tsx
  * <Dialog.Root setup={{}}>
  *   <Dialog.Trigger>Open</Dialog.Trigger>
- *   <Dialog.Portal>
- *     <Dialog.Popup>
- *       <Dialog.Title>Title</Dialog.Title>
- *       <Dialog.Description>Description</Dialog.Description>
- *       <Dialog.Close>Close</Dialog.Close>
- *     </Dialog.Popup>
- *   </Dialog.Portal>
+ *   <Dialog.Popup>
+ *     <Dialog.Title>Title</Dialog.Title>
+ *     <Dialog.Description>Description</Dialog.Description>
+ *     <Dialog.Close>Close</Dialog.Close>
+ *   </Dialog.Popup>
  * </Dialog.Root>
  * ```
  */
-export function DialogPopup(handle: Handle, _setup: DialogPopupSetup = {}) {
+export function DialogPopup(handle: Handle) {
   const ctx = handle.context.get(DialogRoot);
 
-  // Handle escape key for closing the dialog
-  if (ctx) {
-    handle.on(document, {
-      keydown: (event: KeyboardEvent) => {
-        if (event.key === "Escape" && ctx.open) {
-          event.preventDefault();
-          ctx.closeDialog("escape-key");
-        }
-      },
-    });
-  }
-
-  // Queue a task to re-render after children (Title, Description) have registered their IDs
-  handle.queueTask(() => {
-    handle.update();
-  });
-
   return (props: DialogPopupProps) => {
-    const { children, class: className, ...rest } = props;
+    const { children, connect, ...rest } = props;
 
     if (!ctx) {
       return (
-        <div role="dialog" class={className} {...rest}>
+        <dialog role="dialog" connect={connect} {...rest}>
           {children}
-        </div>
+        </dialog>
       );
     }
 
-    const state: DialogPopupState = {
-      open: ctx.open,
-    };
-    const dataAttrs = getPopupDataAttributes(state);
-
     return (
-      <div
+      <dialog
         id={ctx.dialogId}
         role="dialog"
-        aria-modal={ctx.modal === true || ctx.modal === "trap-focus" ? true : undefined}
         aria-labelledby={ctx.titleId ?? undefined}
         aria-describedby={ctx.descriptionId ?? undefined}
-        tabIndex={-1}
-        hidden={!ctx.open}
-        class={className}
-        connect={(el: HTMLDivElement) => {
-          ctx.setPopupRef(el);
-          // Focus the dialog when it opens
-          if (ctx.open && ctx.modal) {
-            handle.queueTask(() => {
-              // Focus the first focusable element or the popup itself
-              const focusable = el.querySelector<HTMLElement>(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-              );
-              if (focusable) {
-                focusable.focus();
-              } else {
-                el.focus();
-              }
-            });
-          }
-        }}
         on={{
-          click: (event: MouseEvent) => {
-            // Prevent clicks inside the popup from closing via backdrop
-            event.stopPropagation();
+          close: () => {
+            ctx.close();
+          },
+          cancel: () => {
+            ctx.close();
+          },
+          mousedown: (event) => {
+            if (event.target === event.currentTarget) {
+              ctx.close();
+            }
           },
         }}
-        {...dataAttrs}
+        connect={(el: HTMLDialogElement, signal: AbortSignal) => {
+          ctx.setDialogRef(el);
+
+          signal.addEventListener("abort", () => {
+            ctx.cleanup();
+          });
+
+          connect?.(el, signal);
+        }}
         {...rest}
       >
-        {children}
-      </div>
+        {ctx.state === "open" ? children : null}
+      </dialog>
     );
   };
 }
@@ -125,7 +86,5 @@ export function DialogPopup(handle: Handle, _setup: DialogPopupSetup = {}) {
  * Namespace containing all DialogPopup-related types.
  */
 export namespace DialogPopup {
-  export type Setup = DialogPopupSetup;
   export type Props = DialogPopupProps;
-  export type State = DialogPopupState;
 }

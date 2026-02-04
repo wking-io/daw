@@ -2,6 +2,8 @@ import type { Handle, Props } from "@remix-run/component";
 import { TabsRoot, type TabValue, type TabsOrientation } from "../root/TabsRoot";
 import { TabsList } from "../list/TabsList";
 import { generateId } from "../../utils/generate-id";
+import { getDataAttributes } from "../../utils/data-attributes";
+import { Button } from "../../button/Button";
 
 /**
  * Setup configuration for the TabsTab component.
@@ -43,16 +45,6 @@ export interface TabsTabContextValue {
   disabled: boolean;
   closable: boolean;
   onClose: () => void;
-}
-
-function getTabDataAttributes(state: TabsTabState): Record<string, string> {
-  const attrs: Record<string, string> = {
-    "data-orientation": state.orientation,
-  };
-  if (state.active) attrs["data-active"] = "";
-  if (state.disabled) attrs["data-disabled"] = "";
-  if (state.closable) attrs["data-closable"] = "";
-  return attrs;
 }
 
 /**
@@ -106,38 +98,31 @@ export function TabsTab(handle: Handle<TabsTabContextValue>, setup: TabsTabSetup
   }
 
   return (props: TabsTabProps) => {
-    const { class: className, children, ...rest } = props;
-
     if (!ctx) {
-      return (
-        <button type="button" role="tab" class={className} {...rest}>
-          {children}
-        </button>
-      );
+      return <Button role="tab" {...props} />;
     }
 
     const isActive = ctx.value === setup.value;
     const panelId = ctx.getPanelId(setup.value);
 
-    const state: TabsTabState = {
-      active: isActive,
-      disabled: isDisabled,
-      orientation: ctx.orientation,
-      closable: isClosable,
+    const dataAttrs = {
+      ...getDataAttributes({
+        orientation: ctx.orientation,
+        active: isActive,
+        disabled: isDisabled,
+        closable: isClosable,
+      }),
     };
-    const dataAttrs = getTabDataAttributes(state);
 
     return (
-      <button
+      <Button
         id={id}
-        type="button"
         role="tab"
         aria-selected={isActive}
         aria-controls={panelId}
         aria-disabled={isDisabled || undefined}
         disabled={isDisabled}
         tabIndex={isActive ? 0 : -1}
-        class={className}
         connect={(el: HTMLButtonElement) => {
           tabElement = el;
           // Trigger indicator recalculation when the active tab connects to DOM
@@ -169,10 +154,8 @@ export function TabsTab(handle: Handle<TabsTabContextValue>, setup: TabsTabSetup
           },
         }}
         {...dataAttrs}
-        {...rest}
-      >
-        {children}
-      </button>
+        {...props}
+      />
     );
   };
 }

@@ -2,32 +2,22 @@ import type { Handle, RemixNode } from "@remix-run/component";
 import { generateId } from "../../utils/generate-id";
 
 /**
- * Modal type for the dialog.
- */
-export type DialogModal = boolean | "trap-focus";
-
-/**
  * Setup configuration for the Dialog component.
  */
 export interface DialogRootSetup {
   /**
-   * Whether the dialog is open by default.
-   * @default false
-   */
-  defaultOpen?: boolean;
-  /**
-   * Determines if the dialog enters a modal state when open.
-   * - `true`: user interaction is limited to just the dialog
-   * - `false`: user interaction with the rest of the document is allowed
-   * - `"trap-focus"`: focus is trapped inside the dialog, but scroll is not locked
+   * Whether the dialog should be modal.
+   * - `true`: uses showModal() - user interaction is limited to the dialog, has backdrop
+   * - `false`: uses show() - non-modal, no backdrop
    * @default true
    */
-  modal?: DialogModal;
+  modal?: boolean;
   /**
-   * Determines whether the dialog should close on outside clicks.
-   * @default false
+   * The duration of the exit animation in milliseconds.
+   * If set to 0, the dialog will close immediately.
+   * @default 0
    */
-  dismissOnOutsidePress?: boolean;
+  exitDuration?: number;
 }
 
 /**
@@ -36,169 +26,133 @@ export interface DialogRootSetup {
 export interface DialogRootProps {
   children: RemixNode;
   /**
-   * Controlled open state. When provided, the component is controlled.
+   * Callback fired when the dialog opens.
    */
-  open?: boolean;
+  onOpen?: () => void;
   /**
-   * Callback when the open state changes.
+   * Callback fired when the dialog closes.
    */
-  onOpenChange?: (open: boolean, reason: DialogCloseReason) => void;
+  onClose?: () => void;
 }
-
-/**
- * State of the dialog.
- */
-export interface DialogRootState {
-  open: boolean;
-  modal: DialogModal;
-}
-
-/**
- * Reasons for closing the dialog.
- */
-export type DialogCloseReason =
-  | "trigger-press"
-  | "outside-press"
-  | "escape-key"
-  | "close-press"
-  | "imperative";
 
 /**
  * Context value provided by DialogRoot.
  */
 export interface DialogRootContextValue {
-  open: boolean;
-  modal: DialogModal;
-  dismissOnOutsidePress: boolean;
-  triggerRef: HTMLElement | null;
-  setTriggerRef: (el: HTMLElement | null) => void;
-  popupRef: HTMLElement | null;
-  setPopupRef: (el: HTMLElement | null) => void;
-  openDialog: (reason?: DialogCloseReason) => void;
-  closeDialog: (reason: DialogCloseReason) => void;
-  toggle: (reason?: DialogCloseReason) => void;
+  modal: boolean;
+  state: "open" | "closing" | "closed";
   dialogId: string;
-  titleId: string | null;
-  setTitleId: (id: string | null) => void;
-  descriptionId: string | null;
-  setDescriptionId: (id: string | null) => void;
+  titleId: string;
+  descriptionId: string;
+  dialogRef: HTMLDialogElement | null;
+  setDialogRef: (el: HTMLDialogElement | null) => void;
+  open: () => void;
+  close: () => void;
+  cleanup: () => void;
 }
 
 /**
- * Root component for a dialog.
+ * Root component for a dialog using the native <dialog> element.
  * Provides context for trigger, popup, and other dialog parts.
  * Doesn't render its own HTML element.
  *
+ * The native dialog element handles:
+ * - Modal behavior (focus trapping, backdrop)
+ * - Escape key to close
+ * - Top layer positioning
+ *
+ * Use `::backdrop` pseudo-selector to style the backdrop.
+ *
  * @example
  * ```tsx
- * <Dialog.Root setup={{ modal: true }}>
+ * <Dialog.Root setup={{ modal: true, onOpen: () => {}, onClose: () => {} }}>
  *   <Dialog.Trigger>Open</Dialog.Trigger>
- *   <Dialog.Portal>
- *     <Dialog.Backdrop />
- *     <Dialog.Popup>
- *       <Dialog.Title>Dialog Title</Dialog.Title>
- *       <Dialog.Description>Dialog description</Dialog.Description>
- *       <Dialog.Close>Close</Dialog.Close>
- *     </Dialog.Popup>
- *   </Dialog.Portal>
+ *   <Dialog.Popup>
+ *     <Dialog.Title>Dialog Title</Dialog.Title>
+ *     <Dialog.Description>Dialog description</Dialog.Description>
+ *     <Dialog.Close>Close</Dialog.Close>
+ *   </Dialog.Popup>
  * </Dialog.Root>
  * ```
  */
-export function DialogRoot(handle: Handle<DialogRootContextValue>, setup: DialogRootSetup = {}) {
-  const modal = setup.modal ?? true;
-  const dismissOnOutsidePress = setup.dismissOnOutsidePress ?? true;
-  let internalOpen = setup.defaultOpen ?? false;
-  let triggerRef: HTMLElement | null = null;
-  let popupRef: HTMLElement | null = null;
+export function DialogRoot(handle: Handle<DialogRootContextValue>, setup?: DialogRootSetup) {
+  const modal = setup?.modal ?? true;
+  let dialogRef: HTMLDialogElement | null = null;
   const dialogId = generateId("dialog");
-  let titleId: string | null = null;
-  let descriptionId: string | null = null;
+  const titleId = generateId("dialog-title");
+  const descriptionId = generateId("dialog-description");
+  const exitDuration = setup?.exitDuration ?? 0;
+  let onOpen = () => {};
+  let onClose = () => {};
+  let closeTimeout: ReturnType<typeof setTimeout> | null = null;
+  let state: DialogRootContextValue["state"] = "closed";
 
-  let currentOnOpenChange: ((open: boolean, reason: DialogCloseReason) => void) | undefined;
-  let isControlled = false;
-  let controlledOpen = false;
-
-  const getOpen = (): boolean => {
-    return isControlled ? controlledOpen : internalOpen;
+  const setDialogRef = (el: HTMLDialogElement | null) => {
+    dialogRef = el;
   };
 
-  const setTriggerRef = (el: HTMLElement | null) => {
-    triggerRef = el;
-  };
-
-  const setPopupRef = (el: HTMLElement | null) => {
-    popupRef = el;
-  };
-
-  const setTitleId = (id: string | null) => {
-    titleId = id;
-  };
-
-  const setDescriptionId = (id: string | null) => {
-    descriptionId = id;
-  };
-
-  const openDialog = (reason: DialogCloseReason = "trigger-press") => {
-    if (!getOpen()) {
-      if (!isControlled) {
-        internalOpen = true;
+  const open = () => {
+    if (dialogRef && !dialogRef.open) {
+      if (modal) {
+        dialogRef.showModal();
+      } else {
+        dialogRef.show();
       }
-      currentOnOpenChange?.(true, reason);
+      state = "open";
+      onOpen?.();
       handle.update();
     }
   };
 
-  const closeDialog = (reason: DialogCloseReason) => {
-    if (getOpen()) {
-      if (!isControlled) {
-        internalOpen = false;
+  const close = () => {
+    if (dialogRef && dialogRef.open) {
+      if (exitDuration > 0) {
+        if (state === "closing") return;
+        state = "closing";
+        handle.update();
+
+        closeTimeout = setTimeout(() => {
+          state = "closed";
+          closeTimeout = null;
+          onClose?.();
+          dialogRef?.close();
+          handle.update();
+        }, exitDuration);
+      } else {
+        dialogRef.close();
+        onClose?.();
+        handle.update();
       }
-      currentOnOpenChange?.(false, reason);
-      handle.update();
     }
   };
 
-  const toggle = (reason: DialogCloseReason = "trigger-press") => {
-    if (getOpen()) {
-      closeDialog(reason);
-    } else {
-      openDialog(reason);
+  const cleanup = () => {
+    if (closeTimeout) {
+      clearTimeout(closeTimeout);
+      closeTimeout = null;
     }
   };
 
   handle.context.set({
-    get open() {
-      return getOpen();
-    },
     modal,
-    dismissOnOutsidePress,
-    get triggerRef() {
-      return triggerRef;
+    get state() {
+      return state;
     },
-    setTriggerRef,
-    get popupRef() {
-      return popupRef;
-    },
-    setPopupRef,
-    openDialog,
-    closeDialog,
-    toggle,
     dialogId,
-    get titleId() {
-      return titleId;
+    titleId,
+    descriptionId,
+    get dialogRef() {
+      return dialogRef;
     },
-    setTitleId,
-    get descriptionId() {
-      return descriptionId;
-    },
-    setDescriptionId,
+    setDialogRef,
+    open,
+    close,
+    cleanup,
   });
 
   return (props: DialogRootProps) => {
-    isControlled = props.open !== undefined;
-    controlledOpen = props.open ?? false;
-    currentOnOpenChange = props.onOpenChange;
-
+    onOpen = props.onOpen ?? onOpen;
+    onClose = props.onClose ?? onClose;
     return <>{props.children}</>;
   };
 }
@@ -207,10 +161,7 @@ export function DialogRoot(handle: Handle<DialogRootContextValue>, setup: Dialog
  * Namespace containing all DialogRoot-related types.
  */
 export namespace DialogRoot {
-  export type Modal = DialogModal;
   export type Setup = DialogRootSetup;
   export type Props = DialogRootProps;
-  export type State = DialogRootState;
-  export type CloseReason = DialogCloseReason;
   export type ContextValue = DialogRootContextValue;
 }

@@ -1,4 +1,5 @@
 import type { Handle, RemixNode } from "@remix-run/component";
+import { getDataAttributes } from "../../utils/data-attributes";
 
 /**
  * Value type for tab identification.
@@ -98,11 +99,11 @@ export interface TabsRootContextValue {
   update: () => void;
 }
 
-function getStateDataAttributes(state: TabsRootState): Record<string, string> {
-  return {
-    "data-orientation": state.orientation,
-    "data-activation-direction": state.activationDirection,
-  };
+export function getTabsStateDataAttributes(state: TabsRootState): Record<string, string> {
+  return getDataAttributes({
+    orientation: state.orientation,
+    "activation-direction": state.activationDirection,
+  });
 }
 
 /**
@@ -253,11 +254,10 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
     currentOnValueChange = props.onValueChange;
     currentOnTabClose = props.onTabClose;
 
-    const state: TabsRootState = {
+    const dataAttrs = getTabsStateDataAttributes({
       orientation,
       activationDirection,
-    };
-    const dataAttrs = getStateDataAttributes(state);
+    });
 
     return (
       <div class={props.class} {...dataAttrs}>
@@ -266,9 +266,6 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
     );
   };
 }
-
-// Export the getStateDataAttributes for use by child components
-export { getStateDataAttributes as getTabsStateDataAttributes };
 
 /**
  * Namespace containing all TabsRoot-related types.

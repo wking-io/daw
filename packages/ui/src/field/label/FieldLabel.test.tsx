@@ -112,7 +112,7 @@ describe("FieldLabel", () => {
 
       const label = container.querySelector("label");
       const input = container.querySelector("input");
-      expect(label?.htmlFor).toBe(input?.id);
+      expect(label?.htmlFor).toBe(input?.id ?? "");
     });
 
     it("works when label comes after control", () => {
@@ -129,7 +129,7 @@ describe("FieldLabel", () => {
 
       const label = container.querySelector("label");
       const input = container.querySelector("input");
-      expect(label?.htmlFor).toBe(input?.id);
+      expect(label?.htmlFor).toBe(input?.id ?? "");
     });
   });
 

@@ -24,4 +24,4 @@ target
 *.bun-build
 
 # Forked repos
-packages/base-ui
+base-ui

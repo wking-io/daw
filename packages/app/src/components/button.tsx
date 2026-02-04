@@ -78,7 +78,7 @@ export function Button(_handle: Handle, setup: ButtonSetup = {}) {
   const setupDisabled = setup.disabled ?? false;
 
   return (props: ButtonProps) => {
-    const { children, class: className, disabled: propsDisabled, ...buttonProps } = props;
+    const { children, class: classes, disabled: propsDisabled, ...buttonProps } = props;
     const disabled = propsDisabled ?? setupDisabled;
     const sizes = sizeClasses[size];
 
@@ -98,7 +98,7 @@ export function Button(_handle: Handle, setup: ButtonSetup = {}) {
             "active:from-layer-1/30 active:via-layer-1/5 active:to-layer-1/15 active:dark:from-layer-1/30 active:dark:via-layer-1/0 active:dark:to-layer-1/15",
             sizes.button,
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            className,
+            classes,
           )}
           {...buttonProps}
         >

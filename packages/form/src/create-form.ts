@@ -8,6 +8,7 @@ import type {
   FieldGetter,
   FormField,
   FormValues,
+  StructFieldsFromSchema,
 } from "./types";
 import { ulid } from "ulid";
 
@@ -125,14 +126,14 @@ function getFieldSchema(
  * ```
  */
 export function createForm<
-  F extends Schema.Struct.Fields,
-  S extends Schema.Struct<F> &
-    Schema.Schema<
-      Schema.Schema.Type<Schema.Struct<F>>,
-      Schema.Schema.Encoded<Schema.Struct<F>>,
-      never
-    >,
->(handle: Handle, options: CreateFormOptions<F, S>): CreateFormResult<F> {
+  S extends Schema.Struct<any>,
+>(
+  handle: Handle,
+  options: CreateFormOptions<S>,
+): CreateFormResult<StructFieldsFromSchema<S>>;
+export function createForm<
+  S extends Schema.Struct<any>,
+>(handle: Handle, options: CreateFormOptions<S>): CreateFormResult<StructFieldsFromSchema<S>> {
   const { schema, refinementFields } = options;
   const fieldNames = getFieldNames(schema);
 
@@ -217,7 +218,7 @@ export function createForm<
   }
 
   // Type-safe field getter with autocomplete support
-  const field: FieldGetter<F> = (name) => {
+  const field: FieldGetter<StructFieldsFromSchema<S>> = (name) => {
     if (!fieldsCache[name]) {
       fieldsCache[name] = createFieldInstance(name);
     }
@@ -238,7 +239,13 @@ export function createForm<
       return !hasFieldErrors && !hasFormErrors;
     },
     validate(values: FormValues): readonly string[] {
-      const decode = Schema.decodeUnknownEither(schema);
+      const decode = Schema.decodeUnknownEither(
+        schema as unknown as Schema.Schema<
+          Schema.Schema.Type<S>,
+          Schema.Schema.Encoded<S>,
+          never
+        >,
+      );
       const result = decode(
         values instanceof FormData ? Object.fromEntries(values.entries()) : values,
       );

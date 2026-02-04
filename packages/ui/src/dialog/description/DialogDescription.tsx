@@ -1,24 +1,10 @@
-import type { Handle, Props, RemixNode } from "@remix-run/component";
+import type { Handle, Props } from "@remix-run/component";
 import { DialogRoot } from "../root/DialogRoot";
-import { generateId } from "../../utils/generate-id";
-
-/**
- * Setup configuration for the DialogDescription component.
- */
-export interface DialogDescriptionSetup {}
 
 /**
  * Props passed to the DialogDescription render function.
  */
-export interface DialogDescriptionProps extends Props<"p"> {
-  children: RemixNode;
-  class?: string;
-}
-
-/**
- * State of the dialog description.
- */
-export interface DialogDescriptionState {}
+export interface DialogDescriptionProps extends Props<"p"> {}
 
 /**
  * A paragraph with additional information about the dialog.
@@ -32,25 +18,11 @@ export interface DialogDescriptionState {}
  * </Dialog.Popup>
  * ```
  */
-export function DialogDescription(handle: Handle, _setup: DialogDescriptionSetup = {}) {
+export function DialogDescription(handle: Handle) {
   const ctx = handle.context.get(DialogRoot);
-  const id = generateId("dialog-desc");
-
-  if (ctx) {
-    ctx.setDescriptionId(id);
-    handle.signal.addEventListener("abort", () => {
-      ctx.setDescriptionId(null);
-    });
-  }
 
   return (props: DialogDescriptionProps) => {
-    const { children, class: className, ...rest } = props;
-
-    return (
-      <p id={id} class={className} {...rest}>
-        {children}
-      </p>
-    );
+    return <p id={ctx?.descriptionId} {...props} />;
   };
 }
 
@@ -58,7 +30,5 @@ export function DialogDescription(handle: Handle, _setup: DialogDescriptionSetup
  * Namespace containing all DialogDescription-related types.
  */
 export namespace DialogDescription {
-  export type Setup = DialogDescriptionSetup;
   export type Props = DialogDescriptionProps;
-  export type State = DialogDescriptionState;
 }

@@ -18,6 +18,7 @@
     "@base-ui/remix": "file:../base-ui/packages/remix",
     "@daw/atom-remix": "workspace:*",
     "@daw/core": "workspace:*",
+    "@daw/form": "workspace:*",
     "@daw/ui": "workspace:*",
     "@daw/utils": "workspace:*",
     "@effect/platform": "catalog:",

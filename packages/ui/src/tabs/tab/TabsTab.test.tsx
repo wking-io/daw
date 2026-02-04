@@ -164,7 +164,7 @@ describe("TabsTab", () => {
 
       const tab = container.querySelector("[role='tab']");
       const panel = container.querySelector("[role='tabpanel']");
-      expect(tab?.getAttribute("aria-controls")).toBe(panel?.id);
+      expect(tab?.getAttribute("aria-controls")).toBe(panel?.id ?? "");
     });
 
     it("has aria-disabled when disabled", () => {

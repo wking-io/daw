@@ -40,12 +40,13 @@ export interface FormState {
  * Options for createForm.
  * The schema must have no context requirements (all fields must be context-free).
  */
+export type StructFieldsFromSchema<S> = S extends Schema.Struct<infer Fields> ? Fields : never;
+
 export interface CreateFormOptions<
-  Fields extends Schema.Struct.Fields,
-  S extends Schema.Struct<Fields> = Schema.Struct<Fields>,
+  S extends Schema.Struct<any>,
 > {
   /** Effect Schema defining the form structure and validation rules */
-  readonly schema: S & Schema.Schema<Schema.Schema.Type<S>, Schema.Schema.Encoded<S>, never>;
+  readonly schema: S;
   /**
    * Cross-field validation errors can be assigned to a specific field.
    * Map from refinement index to field name.

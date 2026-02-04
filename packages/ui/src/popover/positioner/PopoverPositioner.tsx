@@ -198,7 +198,7 @@ export function PopoverPositioner(handle: Handle<PopoverPositionerContextValue>)
       collisionPadding = 8,
       arrowPadding = 5,
       sticky = false,
-      class: className,
+      class: classes,
       children,
       ...rest
     } = props;
@@ -227,7 +227,7 @@ export function PopoverPositioner(handle: Handle<PopoverPositionerContextValue>)
         data-positioned={isPositioned ? "" : undefined}
         data-anchor-hidden={anchorHidden ? "" : undefined}
         style={positionStyle}
-        class={className}
+        class={classes}
         connect={(el, signal) => {
           if (!anchor) return;
 

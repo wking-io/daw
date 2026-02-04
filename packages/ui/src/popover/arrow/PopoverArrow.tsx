@@ -34,7 +34,7 @@ export function PopoverArrow(handle: Handle) {
   const ctx = handle.context.get(PopoverPositioner);
 
   return (props: PopoverArrowProps) => {
-    const { width = 10, height = 5, class: className, ...rest } = props;
+    const { width = 10, height = 5, class: classes, ...rest } = props;
 
     const arrowStyle: Record<string, string | number | undefined> = {
       position: "absolute",
@@ -45,7 +45,7 @@ export function PopoverArrow(handle: Handle) {
     };
 
     return (
-      <div connect={(el) => ctx?.arrowRef(el)} style={arrowStyle} class={className} {...rest}>
+      <div connect={(el) => ctx?.arrowRef(el)} style={arrowStyle} class={classes} {...rest}>
         <svg
           width={width}
           height={height}

@@ -3,8 +3,7 @@
 	"private": true,
 	"type": "module",
 	"workspaces": [
-		"packages/*",
-		"!packages/base-ui"
+		"packages/*"
 	],
 	"packageManager": "bun@1.3.8",
 	"catalog": {

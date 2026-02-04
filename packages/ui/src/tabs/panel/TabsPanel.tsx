@@ -1,6 +1,7 @@
 import type { Handle, Props } from "@remix-run/component";
 import { TabsRoot, type TabValue, type TabsOrientation } from "../root/TabsRoot";
 import { generateId } from "../../utils/generate-id";
+import { getDataAttributes } from "../../utils/data-attributes";
 
 /**
  * Setup configuration for the TabsPanel component.
@@ -20,9 +21,7 @@ export interface TabsPanelSetup {
 /**
  * Props passed to the TabsPanel render function.
  */
-export interface TabsPanelProps extends Props<"div"> {
-  class?: string;
-}
+export interface TabsPanelProps extends Props<"div"> {}
 
 /**
  * State of a tab panel.
@@ -30,14 +29,6 @@ export interface TabsPanelProps extends Props<"div"> {
 export interface TabsPanelState {
   hidden: boolean;
   orientation: TabsOrientation;
-}
-
-function getPanelDataAttributes(state: TabsPanelState): Record<string, string> {
-  const attrs: Record<string, string> = {
-    "data-orientation": state.orientation,
-  };
-  if (state.hidden) attrs["data-hidden"] = "";
-  return attrs;
 }
 
 /**
@@ -70,14 +61,8 @@ export function TabsPanel(handle: Handle, setup: TabsPanelSetup) {
   }
 
   return (props: TabsPanelProps) => {
-    const { class: className, children, ...rest } = props;
-
     if (!ctx) {
-      return (
-        <div role="tabpanel" class={className} {...rest}>
-          {children}
-        </div>
-      );
+      return <div role="tabpanel" {...props} />;
     }
 
     const isActive = ctx.value === setup.value;
@@ -88,11 +73,10 @@ export function TabsPanel(handle: Handle, setup: TabsPanelSetup) {
       return null;
     }
 
-    const state: TabsPanelState = {
-      hidden,
+    const dataAttrs = getDataAttributes({
       orientation: ctx.orientation,
-    };
-    const dataAttrs = getPanelDataAttributes(state);
+      hidden,
+    });
 
     return (
       <div
@@ -100,12 +84,9 @@ export function TabsPanel(handle: Handle, setup: TabsPanelSetup) {
         role="tabpanel"
         aria-labelledby={tabId}
         hidden={hidden || undefined}
-        class={className}
         {...dataAttrs}
-        {...rest}
-      >
-        {children}
-      </div>
+        {...props}
+      />
     );
   };
 }

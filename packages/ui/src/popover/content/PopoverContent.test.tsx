@@ -126,7 +126,7 @@ describe("PopoverContent", () => {
       const trigger = container.querySelector("button");
       const ariaControls = trigger?.getAttribute("aria-controls");
 
-      expect(content?.id).toBe(ariaControls);
+      expect(content?.id).toBe(ariaControls ?? "");
     });
   });
 

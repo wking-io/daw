@@ -24,7 +24,7 @@ export function PopoverTrigger(handle: Handle) {
   const ctx = handle.context.get(PopoverRoot);
 
   return (props: PopoverTriggerProps) => {
-    const { class: className, children, ...rest } = props;
+    const { class: classes, children, ...rest } = props;
 
     return (
       <button
@@ -39,7 +39,7 @@ export function PopoverTrigger(handle: Handle) {
         on={{
           click: () => ctx?.toggle(),
         }}
-        class={className}
+        class={classes}
         {...rest}
       >
         {children}

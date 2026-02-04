@@ -5,24 +5,38 @@ import { ProjectVersion } from "@daw/core/versions";
 import type { Handle } from "@remix-run/component";
 import { ApiClient } from "../api/client";
 import { tabsAtom } from "../state/tabs";
+import { Button } from "./button";
+import { Dialog } from "./dialog";
+import { Field } from "./field";
 
 export function CreateProjectDialog(handle: Handle) {
+  const ctx = handle.context.get(Dialog.Root);
   const create = getAtomSet(handle, ApiClient.mutation("project", "create"));
   const [, setTabs] = getAtom(handle, tabsAtom);
   let isSubmitting = false;
   let error: string | null = null;
-  let onCloseRef: (() => void) | null = null;
+
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return "Project name is required";
+    }
+    if (name.length > 100) {
+      return "Project name must be 100 characters or less";
+    }
+    return null;
+  };
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    const form = e.currentTarget as HTMLFormElement;
-    const formData = new FormData(form);
-    const name = (formData.get("name") as string)?.trim();
+    const formEl = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(formEl);
+    const name = (formData.get("name") as string) ?? "";
 
-    if (!name) {
-      error = "Project name is required";
+    const validationError = validateName(name);
+    if (validationError) {
+      error = validationError;
       handle.update();
       return;
     }
@@ -40,7 +54,7 @@ export function CreateProjectDialog(handle: Handle) {
         actor: "ui",
         payload: ProjectCreate.make({
           t: "project.create",
-          name,
+          name: name.trim(),
           projectId,
         }),
       }),
@@ -48,72 +62,58 @@ export function CreateProjectDialog(handle: Handle) {
     });
 
     setTabs((current) => ({
-      openTabs: [...current.openTabs, { id: projectId, name, state: "idle" }],
+      openTabs: [...current.openTabs, { id: projectId, name: name.trim(), state: "idle" }],
       activeTabId: projectId,
     }));
-
-    onCloseRef?.();
   };
 
-  return (props: { onClose: () => void }) => {
-    onCloseRef = props.onClose;
+  return () => (
+    <Dialog.Popup>
+      <Dialog.Title>Create New Project</Dialog.Title>
 
-    return (
-      <div
-        class="fixed inset-0 z-1000 flex items-center justify-center bg-black/70"
+      <form
         on={{
-          click: (e) => {
-            if (e.target === e.currentTarget) {
-              props.onClose();
-            }
-          },
+          submit: handleSubmit,
         }}
       >
-        <div class="w-100 max-w-[90vw] rounded-lg border border-neutral-700 bg-neutral-900 p-6">
-          <h2 class="m-0 mb-4 text-lg text-white">Create New Project</h2>
-
-          <form on={{ submit: handleSubmit }}>
-            <div class="mb-4">
-              <label for="project-name" class="mb-1.5 block text-sm text-neutral-400">
-                Project Name
-              </label>
-              <input
-                id="project-name"
-                type="text"
-                name="name"
-                placeholder="My Project"
-                class="box-border w-full rounded border border-neutral-600 bg-neutral-800 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
-                connect={(input: HTMLInputElement) => {
+        <Field.Root setup={{ name: "name" }} class="mb-4">
+          <Field.Label>Project Name</Field.Label>
+          <Field.Control
+            name="name"
+            type="text"
+            placeholder="My Project"
+            required
+            connect={(input: HTMLInputElement) => {
+              if (ctx.state === "open") {
+                handle.queueTask(() => {
                   input.focus();
-                }}
-              />
+                });
+              }
+            }}
+            on={{
+              blur: (e: FocusEvent & { currentTarget: HTMLInputElement }) => {
+                error = validateName(e.currentTarget.value);
+                handle.update();
+              },
+            }}
+          />
+          {error && (
+            <div
+              role="alert"
+              class="mt-2 rounded-sm border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+            >
+              {error}
             </div>
+          )}
+        </Field.Root>
 
-            {error && (
-              <div class="mb-4 rounded border border-red-500 bg-red-500/10 px-3 py-2 text-sm text-red-500">
-                {error}
-              </div>
-            )}
-
-            <div class="flex justify-end gap-2">
-              <button
-                type="button"
-                class="cursor-pointer rounded border border-neutral-600 bg-transparent px-4 py-2 text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white"
-                on={{ click: props.onClose }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                class="cursor-pointer rounded border-none bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-blue-500"
-              >
-                {isSubmitting ? "Creating..." : "Create Project"}
-              </button>
-            </div>
-          </form>
+        <div class="flex justify-end gap-2">
+          <Dialog.Close>Cancel</Dialog.Close>
+          <Button setup={{ size: "sm" }} type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Project"}
+          </Button>
         </div>
-      </div>
-    );
-  };
+      </form>
+    </Dialog.Popup>
+  );
 }

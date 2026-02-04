@@ -101,7 +101,7 @@ export function FieldControl(handle: Handle) {
 
   return (props: FieldControlProps) => {
     const {
-      class: className,
+      class: classes,
       type = "text",
       placeholder,
       value,
@@ -122,7 +122,7 @@ export function FieldControl(handle: Handle) {
       return (
         <input
           type="text"
-          class={className}
+          class={classes}
           placeholder={placeholder}
           value={value}
           defaultValue={defaultValue}
@@ -150,7 +150,7 @@ export function FieldControl(handle: Handle) {
         disabled: ctx.disabled,
         "aria-invalid": ctx.state.valid === false ? true : undefined,
         "aria-describedby": describedBy || undefined,
-        class: className,
+        class: classes,
         placeholder,
         value,
         defaultValue,

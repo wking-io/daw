@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createRoot } from "@remix-run/component";
 import { Button } from "./Button";
-import { ButtonDataAttributes } from "./ButtonDataAttributes";
 
 describe("Button", () => {
   describe("rendering", () => {
@@ -9,7 +8,7 @@ describe("Button", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
 
-      root.render(<Button setup={{}}>Click me</Button>);
+      root.render(<Button>Click me</Button>);
       root.flush();
 
       const button = container.querySelector("button");
@@ -21,7 +20,7 @@ describe("Button", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
 
-      root.render(<Button setup={{}}>Test</Button>);
+      root.render(<Button>Test</Button>);
       root.flush();
 
       const button = container.querySelector("button");
@@ -29,88 +28,49 @@ describe("Button", () => {
       expect(button?.parentElement).toBe(container);
     });
 
-    it("applies custom class to the button", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <Button setup={{}} class="custom-class">
-          Test
-        </Button>,
-      );
-      root.flush();
-
-      const button = container.querySelector("button");
-      expect(button?.classList.contains("custom-class")).toBe(true);
-    });
-
     it("sets type to button by default", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
 
-      root.render(<Button setup={{}}>Test</Button>);
+      root.render(<Button>Test</Button>);
       root.flush();
 
       const button = container.querySelector("button");
       expect(button?.getAttribute("type")).toBe("button");
     });
-  });
 
+    it("sets the type to submit when type is submit", () => {
+      const container = document.createElement("div");
+      const root = createRoot(container);
+
+      root.render(<Button type="submit">Test</Button>);
+      root.flush();
+
+      const button = container.querySelector("button");
+      expect(button?.getAttribute("type")).toBe("submit");
+    });
+  });
   describe("disabled state", () => {
     it("is not disabled by default", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
 
-      root.render(<Button setup={{}}>Test</Button>);
+      root.render(<Button>Test</Button>);
       root.flush();
 
       const button = container.querySelector("button");
       expect(button?.disabled).toBe(false);
-      expect(button?.hasAttribute(ButtonDataAttributes.disabled)).toBe(false);
-    });
-
-    it("can be disabled via setup", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(<Button setup={{ disabled: true }}>Test</Button>);
-      root.flush();
-
-      const button = container.querySelector("button");
-      expect(button?.disabled).toBe(true);
-      expect(button?.hasAttribute(ButtonDataAttributes.disabled)).toBe(true);
     });
 
     it("can be disabled via props", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
 
-      root.render(
-        <Button setup={{}} disabled>
-          Test
-        </Button>,
-      );
+      root.render(<Button disabled>Test</Button>);
       root.flush();
 
       const button = container.querySelector("button");
       expect(button?.disabled).toBe(true);
-      expect(button?.hasAttribute(ButtonDataAttributes.disabled)).toBe(true);
-    });
-
-    it("props disabled overrides setup disabled", () => {
-      const container = document.createElement("div");
-      const root = createRoot(container);
-
-      root.render(
-        <Button setup={{ disabled: true }} disabled={false}>
-          Test
-        </Button>,
-      );
-      root.flush();
-
-      const button = container.querySelector("button");
-      expect(button?.disabled).toBe(false);
-      expect(button?.hasAttribute(ButtonDataAttributes.disabled)).toBe(false);
     });
   });
 
@@ -120,7 +80,7 @@ describe("Button", () => {
       const root = createRoot(container);
 
       root.render(
-        <Button setup={{}} type="submit" name="test-button">
+        <Button type="submit" name="test-button">
           Test
         </Button>,
       );
@@ -140,7 +100,6 @@ describe("Button", () => {
 
       root.render(
         <Button
-          setup={{}}
           on={{
             click: () => {
               clicked = true;
@@ -165,7 +124,7 @@ describe("Button", () => {
 
       root.render(
         <Button
-          setup={{ disabled: true }}
+          disabled
           on={{
             click: () => {
               clicked = true;
