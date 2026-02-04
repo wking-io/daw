@@ -1,5 +1,5 @@
 import type { Handle, Props } from "@remix-run/component";
-import { TabsRoot, type TabsValue, type TabsOrientation } from "../root/TabsRoot";
+import { TabsRoot, type TabValue, type TabsOrientation } from "../root/TabsRoot";
 import { TabsList } from "../list/TabsList";
 import { generateId } from "../../utils/generate-id";
 
@@ -10,7 +10,7 @@ export interface TabsTabSetup {
   /**
    * The value that identifies this tab.
    */
-  value: TabsValue;
+  value: TabValue;
   /**
    * Whether the tab is disabled.
    * @default false
@@ -39,7 +39,7 @@ export interface TabsTabState {
  * Context value provided by TabsTab for child components like CloseTrigger.
  */
 export interface TabsTabContextValue {
-  value: TabsValue;
+  value: TabValue;
   disabled: boolean;
   closable: boolean;
   onClose: () => void;
@@ -181,7 +181,7 @@ export function TabsTab(handle: Handle<TabsTabContextValue>, setup: TabsTabSetup
  * Namespace containing all TabsTab-related types.
  */
 export namespace TabsTab {
-  export type Value = TabsValue;
+  export type Value = TabValue;
   export type Setup = TabsTabSetup;
   export type Props = TabsTabProps;
   export type State = TabsTabState;

@@ -9,9 +9,9 @@ import { NavButton } from "./components/nav/button";
 import { Indicator } from "./components/nav/indicator";
 import { ProjectListView } from "./components/project-list-view";
 import { ProjectView } from "./components/project-view";
-import { Tabs, type TabsValue } from "@daw/ui";
+import { Tabs, type TabValue } from "@daw/ui";
 import { type Tab as TTab, tabsAtom } from "./state/tabs";
-import { Tab } from "./components/nav/tab";
+import { CloseTrigger, Tab } from "./components/nav/tab";
 
 type Theme = "light" | "dark";
 
@@ -80,7 +80,7 @@ function MainApp(handle: Handle) {
     handle.update();
   };
 
-  const handleTabChange = (newTabId: TabsValue) => {
+  const handleTabChange = (newTabId: TabValue) => {
     const tabId = newTabId as TTab["id"];
     setTabs((tabs) => {
       const updatedTabs: TTab[] = tabs.openTabs.map((tab) =>
@@ -93,7 +93,7 @@ function MainApp(handle: Handle) {
     });
   };
 
-  const handleTabClose = (value: TabsValue) => {
+  const handleTabClose = (value: TabValue) => {
     const tabId = value as TTab["id"];
     // Don't allow closing the home tab
     if (tabId === "home") return;
@@ -151,13 +151,9 @@ function MainApp(handle: Handle) {
                       <>
                         <span class="block -mt-0.5">⦿</span>
                         {t.name}
-                        <Tabs.CloseTrigger
-                          setup={{}}
-                          aria-label={`Close ${t.name} tab`}
-                          class="ml-1 opacity-50 hover:opacity-100"
-                        >
+                        <CloseTrigger setup={{}} aria-label={`Close ${t.name} tab`}>
                           ✕
-                        </Tabs.CloseTrigger>
+                        </CloseTrigger>
                       </>
                     )}
                   </Tab>

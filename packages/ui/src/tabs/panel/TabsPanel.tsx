@@ -1,5 +1,5 @@
 import type { Handle, Props } from "@remix-run/component";
-import { TabsRoot, type TabsValue, type TabsOrientation } from "../root/TabsRoot";
+import { TabsRoot, type TabValue, type TabsOrientation } from "../root/TabsRoot";
 import { generateId } from "../../utils/generate-id";
 
 /**
@@ -9,7 +9,7 @@ export interface TabsPanelSetup {
   /**
    * The value that identifies which tab this panel belongs to.
    */
-  value: TabsValue;
+  value: TabValue;
   /**
    * Whether to keep the panel mounted when inactive.
    * @default false
@@ -114,7 +114,7 @@ export function TabsPanel(handle: Handle, setup: TabsPanelSetup) {
  * Namespace containing all TabsPanel-related types.
  */
 export namespace TabsPanel {
-  export type Value = TabsValue;
+  export type Value = TabValue;
   export type Setup = TabsPanelSetup;
   export type Props = TabsPanelProps;
   export type State = TabsPanelState;

@@ -33,7 +33,7 @@ import type {
 
 // Tabs types
 import type {
-  TabsValue,
+  TabValue,
   TabsOrientation,
   TabsActivationDirection,
   TabsRootSetup,
@@ -187,9 +187,9 @@ describe("Type Definition Tests", () => {
   });
 
   describe("Tabs types", () => {
-    it("TabsValue accepts strings and numbers", () => {
-      const stringValue: TabsValue = "tab1";
-      const numberValue: TabsValue = 0;
+    it("TabValue accepts strings and numbers", () => {
+      const stringValue: TabValue = "tab1";
+      const numberValue: TabValue = 0;
 
       expect(stringValue).toBe("tab1");
       expect(numberValue).toBe(0);

@@ -3,7 +3,7 @@ import type { Handle, RemixNode } from "@remix-run/component";
 /**
  * Value type for tab identification.
  */
-export type TabsValue = string | number | (string & {});
+export type TabValue = string | number | (string & {});
 
 /**
  * Orientation of the tabs.
@@ -25,14 +25,14 @@ export interface TabsRootState {
 
 interface TabMetadata {
   id: string;
-  value: TabsValue;
+  value: TabValue;
   disabled: boolean;
   element: HTMLElement | null;
 }
 
 interface PanelMetadata {
   id: string;
-  value: TabsValue;
+  value: TabValue;
 }
 
 /**
@@ -42,7 +42,7 @@ export interface TabsRootSetup {
   /**
    * The default selected tab value.
    */
-  defaultValue?: TabsValue;
+  defaultValue?: TabValue;
   /**
    * The orientation of the tabs.
    * @default "horizontal"
@@ -65,35 +65,35 @@ export interface TabsRootProps {
   /**
    * Controlled value. When provided, the component is controlled.
    */
-  value?: TabsValue;
+  value?: TabValue;
   /**
    * Callback when the value changes.
    */
-  onValueChange?: (value: TabsValue) => void;
+  onValueChange?: (value: TabValue) => void;
   /**
    * Callback when a tab should be closed.
    * Only called when closable is true.
    */
-  onTabClose?: (value: TabsValue) => void;
+  onTabClose?: (value: TabValue) => void;
 }
 
 /**
  * Context value provided by TabsRoot.
  */
 export interface TabsRootContextValue {
-  value: TabsValue | null;
+  value: TabValue | null;
   orientation: TabsOrientation;
   activationDirection: TabsActivationDirection;
   closable: boolean;
-  onValueChange: (value: TabsValue) => void;
-  onTabClose: (value: TabsValue) => void;
+  onValueChange: (value: TabValue) => void;
+  onTabClose: (value: TabValue) => void;
   registerTab: (metadata: TabMetadata) => void;
-  unregisterTab: (value: TabsValue) => void;
+  unregisterTab: (value: TabValue) => void;
   registerPanel: (metadata: PanelMetadata) => void;
-  unregisterPanel: (value: TabsValue) => void;
-  getTabId: (value: TabsValue) => string | undefined;
-  getPanelId: (value: TabsValue) => string | undefined;
-  getTabElement: (value: TabsValue) => HTMLElement | null;
+  unregisterPanel: (value: TabValue) => void;
+  getTabId: (value: TabValue) => string | undefined;
+  getPanelId: (value: TabValue) => string | undefined;
+  getTabElement: (value: TabValue) => HTMLElement | null;
   getTabs: () => TabMetadata[];
   update: () => void;
 }
@@ -125,21 +125,21 @@ function getStateDataAttributes(state: TabsRootState): Record<string, string> {
 export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSetup = {}) {
   const orientation = setup.orientation ?? "horizontal";
   const closable = setup.closable ?? false;
-  let internalValue: TabsValue | null = setup.defaultValue ?? null;
+  let internalValue: TabValue | null = setup.defaultValue ?? null;
   let activationDirection: TabsActivationDirection = "none";
-  const tabs: Map<TabsValue, TabMetadata> = new Map();
-  const panels: Map<TabsValue, PanelMetadata> = new Map();
+  const tabs: Map<TabValue, TabMetadata> = new Map();
+  const panels: Map<TabValue, PanelMetadata> = new Map();
 
-  let currentOnValueChange: ((value: TabsValue) => void) | undefined;
-  let currentOnTabClose: ((value: TabsValue) => void) | undefined;
+  let currentOnValueChange: ((value: TabValue) => void) | undefined;
+  let currentOnTabClose: ((value: TabValue) => void) | undefined;
   let isControlled = false;
-  let controlledValue: TabsValue | null = null;
+  let controlledValue: TabValue | null = null;
 
-  const getCurrentValue = (): TabsValue | null => {
+  const getCurrentValue = (): TabValue | null => {
     return isControlled ? controlledValue : internalValue;
   };
 
-  const getTabPosition = (value: TabsValue): number | null => {
+  const getTabPosition = (value: TabValue): number | null => {
     const tab = tabs.get(value);
     if (!tab?.element) return null;
     const listElement = tab.element.parentElement;
@@ -152,8 +152,8 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
   };
 
   const calculateDirection = (
-    oldValue: TabsValue | null,
-    newValue: TabsValue,
+    oldValue: TabValue | null,
+    newValue: TabValue,
   ): TabsActivationDirection => {
     if (oldValue === null) return "none";
 
@@ -173,7 +173,7 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
     return "none";
   };
 
-  const onValueChange = (value: TabsValue) => {
+  const onValueChange = (value: TabValue) => {
     const tab = tabs.get(value);
     if (tab?.disabled) return;
 
@@ -192,7 +192,7 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
     tabs.set(metadata.value, metadata);
   };
 
-  const unregisterTab = (value: TabsValue) => {
+  const unregisterTab = (value: TabValue) => {
     tabs.delete(value);
   };
 
@@ -200,19 +200,19 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
     panels.set(metadata.value, metadata);
   };
 
-  const unregisterPanel = (value: TabsValue) => {
+  const unregisterPanel = (value: TabValue) => {
     panels.delete(value);
   };
 
-  const getTabId = (value: TabsValue): string | undefined => {
+  const getTabId = (value: TabValue): string | undefined => {
     return tabs.get(value)?.id;
   };
 
-  const getPanelId = (value: TabsValue): string | undefined => {
+  const getPanelId = (value: TabValue): string | undefined => {
     return panels.get(value)?.id;
   };
 
-  const getTabElement = (value: TabsValue): HTMLElement | null => {
+  const getTabElement = (value: TabValue): HTMLElement | null => {
     return tabs.get(value)?.element ?? null;
   };
 
@@ -220,7 +220,7 @@ export function TabsRoot(handle: Handle<TabsRootContextValue>, setup: TabsRootSe
     return Array.from(tabs.values());
   };
 
-  const onTabClose = (value: TabsValue) => {
+  const onTabClose = (value: TabValue) => {
     if (!closable) return;
     currentOnTabClose?.(value);
   };
@@ -274,7 +274,7 @@ export { getStateDataAttributes as getTabsStateDataAttributes };
  * Namespace containing all TabsRoot-related types.
  */
 export namespace TabsRoot {
-  export type Value = TabsValue;
+  export type Value = TabValue;
   export type Orientation = TabsOrientation;
   export type ActivationDirection = TabsActivationDirection;
   export type State = TabsRootState;

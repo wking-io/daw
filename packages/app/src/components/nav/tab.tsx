@@ -3,11 +3,10 @@ import { cn } from "@daw/utils";
 import type { Handle } from "@remix-run/component";
 
 export function Tab(_handle: Handle, setup: Tabs.Tab.Setup) {
-  return (props: Tabs.Tab.Props & { key: string }) => {
-    const { children, class: className, key, ...buttonProps } = props;
+  return (props: Tabs.Tab.Props) => {
+    const { children, class: className, ...buttonProps } = props;
     return (
       <Tabs.Tab
-        key={key}
         setup={setup}
         {...buttonProps}
         class={cn(
@@ -17,6 +16,21 @@ export function Tab(_handle: Handle, setup: Tabs.Tab.Setup) {
       >
         {children}
       </Tabs.Tab>
+    );
+  };
+}
+
+export function CloseTrigger(_handle: Handle, setup: Tabs.CloseTrigger.Setup) {
+  return (props: Tabs.CloseTrigger.Props) => {
+    const { children, class: className, ...buttonProps } = props;
+    return (
+      <Tabs.CloseTrigger
+        setup={setup}
+        {...buttonProps}
+        class={cn(className, "ml-1 opacity-50 hover:opacity-100")}
+      >
+        {children}
+      </Tabs.CloseTrigger>
     );
   };
 }
