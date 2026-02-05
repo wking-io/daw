@@ -12,7 +12,7 @@ import { Tabs, type TabValue } from "@daw/ui";
 import { type Tab as TTab, tabsAtom } from "./state/tabs";
 import { CloseTrigger, Tab } from "./components/nav/tab";
 import { CreateProjectDialog } from "./project/create";
-import { HomeIcon } from "@daw/ui/icons";
+import { CloseIcon, HomeIcon } from "@daw/ui/icons";
 
 type Theme = "light" | "dark";
 
@@ -142,7 +142,9 @@ function MainApp(handle: Handle) {
                         <>
                           <span class="block -mt-0.5">⦿</span>
                           {t.name}
-                          <CloseTrigger aria-label={`Close ${t.name} tab`}>✕</CloseTrigger>
+                          <CloseTrigger aria-label={`Close ${t.name} tab`}>
+                            <CloseIcon size="xs" />
+                          </CloseTrigger>
                         </>
                       )}
                     </Tab>
