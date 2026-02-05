@@ -1,16 +1,35 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Outer ring shape for clipping (the donut area) -->
-    <clipPath id="outerRingClip">
-      <path d="M50,5 A45,45 0 1,1 49.99,5 Z M50,15 A35,35 0 1,0 50.01,15 Z" clip-rule="evenodd"/>
+    <!-- Clip to inside the outer circle -->
+    <clipPath id="insideClip">
+      <circle cx="50" cy="50" r="40"/>
     </clipPath>
 
-    <!-- Inverse clip (center hole + outside) -->
-    <clipPath id="outsideRingClip">
-      <path d="M0,0 H100 V100 H0 Z M50,5 A45,45 0 1,1 49.99,5 Z M50,15 A35,35 0 1,0 50.01,15 Z" clip-rule="evenodd"/>
+    <!-- Clip to outside the outer circle -->
+    <clipPath id="outsideClip">
+      <path d="M0,0 H100 V100 H0 Z M50,10 A40,40 0 1,1 49.99,10 Z" clip-rule="evenodd"/>
     </clipPath>
 
-    <!-- Mask for outside: middle ring visible, inner ring cuts hole -->
+    <!-- Mask for inside: cut out middle ring (r=4 to r=8), keep inner circle -->
+    <mask id="insideMask">
+      <rect width="100" height="100" fill="white"/>
+      <g transform="translate(50,50)">
+        <!-- Cut out the middle ring area -->
+        <circle r="8" fill="black">
+          <animateMotion dur="8s" repeatCount="indefinite" keyPoints="0;0.08;0.42;0.5;0.58;0.92;1" keyTimes="0;0.0625;0.4375;0.5;0.5625;0.9375;1" calcMode="linear">
+            <mpath href="#orbitPath"/>
+          </animateMotion>
+        </circle>
+        <!-- Restore the inner circle -->
+        <circle r="4" fill="white">
+          <animateMotion dur="8s" repeatCount="indefinite" keyPoints="0;0.08;0.42;0.5;0.58;0.92;1" keyTimes="0;0.0625;0.4375;0.5;0.5625;0.9375;1" calcMode="linear">
+            <mpath href="#orbitPath"/>
+          </animateMotion>
+        </circle>
+      </g>
+    </mask>
+
+    <!-- Mask for outside: middle ring visible, inner circle cut out -->
     <mask id="outsideMask">
       <g transform="translate(50,50)">
         <circle r="8" fill="white">
@@ -26,41 +45,31 @@
       </g>
     </mask>
 
-    <!-- Animation path: center->right, CCW circle, right->center, center->left, CW circle, left->center -->
+    <!-- Animation path: center->right edge, CCW circle, right->center, center->left edge, CW circle, left->center -->
     <path id="orbitPath" d="
       M0,0
-      L25,0
-      A25,25 0 0,0 0,-25
-      A25,25 0 0,0 -25,0
-      A25,25 0 0,0 0,25
-      A25,25 0 0,0 25,0
+      L40,0
+      A40,40 0 0,0 0,-40
+      A40,40 0 0,0 -40,0
+      A40,40 0 0,0 0,40
+      A40,40 0 0,0 40,0
       L0,0
-      L-25,0
-      A25,25 0 0,1 0,-25
-      A25,25 0 0,1 25,0
-      A25,25 0 0,1 0,25
-      A25,25 0 0,1 -25,0
+      L-40,0
+      A40,40 0 0,1 0,-40
+      A40,40 0 0,1 40,0
+      A40,40 0 0,1 0,40
+      A40,40 0 0,1 -40,0
       L0,0
     " fill="none"/>
   </defs>
 
-  <!-- Outer stationary white ring -->
-  <path d="M50,5 A45,45 0 1,1 49.99,5 Z M50,15 A35,35 0 1,0 50.01,15 Z"
-        fill="currentColor" fill-rule="evenodd"/>
-
-  <!-- Inside the outer ring: middle=transparent (cut out), inner=white (filled back) -->
-  <g clip-path="url(#outerRingClip)">
-    <g transform="translate(50,50)">
-      <path fill="currentColor" fill-rule="evenodd" d="M0,0 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 M0,0 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0">
-        <animateMotion dur="8s" repeatCount="indefinite" keyPoints="0;0.08;0.42;0.5;0.58;0.92;1" keyTimes="0;0.0625;0.4375;0.5;0.5625;0.9375;1" calcMode="linear">
-          <mpath href="#orbitPath"/>
-        </animateMotion>
-      </path>
-    </g>
+  <!-- Inside the outer circle: white circle with middle ring cut out, inner circle remains -->
+  <g clip-path="url(#insideClip)">
+    <circle cx="50" cy="50" r="40" fill="currentColor" mask="url(#insideMask)"/>
   </g>
 
-  <!-- Outside the outer ring: middle=white, inner=transparent via mask -->
-  <g clip-path="url(#outsideRingClip)">
+  <!-- Outside the outer circle: middle ring white, inner circle transparent -->
+  <g clip-path="url(#outsideClip)">
     <rect x="0" y="0" width="100" height="100" fill="currentColor" mask="url(#outsideMask)"/>
   </g>
 </svg>
