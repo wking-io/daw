@@ -7,7 +7,7 @@
   "scripts": {
     "predev": "bun ./scripts/predev.ts",
     "prebuild": "bun ./scripts/predev.ts",
-    "dev": "electron-vite dev",
+    "dev": "ELECTRON_DISABLE_MAIN_RESTART=1 electron-vite dev",
     "build": "electron-vite build",
     "package": "electron-vite build && electron-builder",
     "typecheck": "tsc --noEmit",

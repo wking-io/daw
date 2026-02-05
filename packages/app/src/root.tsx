@@ -12,7 +12,7 @@ import { Tabs, type TabValue } from "@daw/ui";
 import { type Tab as TTab, tabsAtom } from "./state/tabs";
 import { CloseTrigger, Tab } from "./components/nav/tab";
 import { CreateProjectDialog } from "./project/create";
-import { CloseIcon, HomeIcon } from "@daw/ui/icons";
+import { CloseIcon, HomeIcon, OrbitRingsIcon } from "@daw/ui/icons";
 
 type Theme = "light" | "dark";
 
@@ -65,6 +65,18 @@ function App(handle: Handle) {
       .onFailure(() => <AppLoad message="Starting server..." />)
       .render() as RemixNode;
   };
+}
+
+function ProjectTabIcon(handle: Handle) {
+  const ctx = handle.context.get(ControlPanel.Root);
+  handle.on(ctx, { change: () => handle.update() });
+
+  // Generate a key from config to force remount when settings change (restarts animation)
+  const configKey = () => JSON.stringify(ctx.orbitRingsConfig);
+
+  return () => (
+    <OrbitRingsIcon key={configKey()} size="custom" class="size-8 -m-2" config={ctx.orbitRingsConfig} />
+  );
 }
 
 function MainApp(handle: Handle) {
@@ -140,7 +152,7 @@ function MainApp(handle: Handle) {
                         <HomeIcon size="xs" />
                       ) : (
                         <>
-                          <span class="block -mt-0.5">⦿</span>
+                          <ProjectTabIcon />
                           {t.name}
                           <CloseTrigger aria-label={`Close ${t.name} tab`}>
                             <CloseIcon size="xs" />
