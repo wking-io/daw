@@ -1,12 +1,13 @@
 import type { Handle, Props } from "@remix-run/component";
 import { TabsTab, type TabsTabContextValue } from "../tab/TabsTab";
-import { Button } from "../../button/Button";
+import { getDataAttributes } from "../../utils/data-attributes";
 
 /**
  * Props passed to the TabsCloseTrigger render function.
  */
-export interface TabsCloseTriggerProps extends Props<"button"> {
+export interface TabsCloseTriggerProps extends Props<"span"> {
   class?: string;
+  disabled?: boolean;
 }
 
 /**
@@ -41,19 +42,33 @@ export function TabsCloseTrigger(handle: Handle) {
   return (props: TabsCloseTriggerProps) => {
     // If not within a Tab context or tabs aren't closable, render disabled button
     if (!tabCtx || !tabCtx.closable) {
-      return <Button disabled tabIndex={-1} {...props} />;
+      return (
+        <span
+          role="button"
+          aria-disabled="true"
+          tabIndex={-1}
+          {...getDataAttributes({ disabled: true })}
+          {...props}
+        />
+      );
     }
 
     return (
-      <Button
+      <span
+        role="button"
         tabIndex={-1}
         on={{
           click: (event: MouseEvent) => {
             // Prevent the click from activating the parent tab
             event.stopPropagation();
+            if (props.disabled) {
+              return;
+            }
             tabCtx.onClose();
           },
         }}
+        aria-disabled={props.disabled ? "true" : undefined}
+        {...getDataAttributes({ disabled: props.disabled ?? false })}
         {...props}
       />
     );

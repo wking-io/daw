@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import * as Numeric from "../numeric";
 import * as Span from "../span";
 

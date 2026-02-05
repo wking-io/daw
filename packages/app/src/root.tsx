@@ -6,13 +6,12 @@ import { ControlBar } from "./components/control-bar";
 import { ControlPanel } from "./components/control-panel/panel";
 import { NavCreateButton } from "./components/nav/button";
 import { Indicator } from "./components/nav/indicator";
-import { ProjectListView } from "./components/project-list-view";
-import { ProjectView } from "./components/project-view";
 import { Tabs, type TabValue } from "@daw/ui";
 import { type Tab as TTab, tabsAtom } from "./state/tabs";
 import { CloseTrigger, Tab } from "./components/nav/tab";
 import { CreateProjectDialog } from "./project/create";
-import { CloseIcon, HomeIcon, OrbitRingsIcon } from "@daw/ui/icons";
+import { CloseIcon, HomeIcon, StatusIcon } from "@daw/ui/icons";
+import { cn } from "@daw/utils";
 
 type Theme = "light" | "dark";
 
@@ -72,10 +71,20 @@ function ProjectTabIcon(handle: Handle) {
   handle.on(ctx, { change: () => handle.update() });
 
   // Generate a key from config to force remount when settings change (restarts animation)
-  const configKey = () => JSON.stringify(ctx.orbitRingsConfig);
+  const configKey = () => JSON.stringify(ctx.statusIconConfig);
 
   return () => (
-    <OrbitRingsIcon key={configKey()} size="custom" class="size-8 -m-2" config={ctx.orbitRingsConfig} />
+    <StatusIcon
+      key={configKey()}
+      size="custom"
+      class={cn(
+        "size-8 -m-2 group-data-active:opacity-100",
+        ctx.statusIconConfig.innerPosition === "notification"
+          ? "dark:text-pistachio-5 text-pistachio-6 opacity-80"
+          : "text-foreground-muted opacity-50",
+      )}
+      config={ctx.statusIconConfig}
+    />
   );
 }
 
@@ -149,7 +158,9 @@ function MainApp(handle: Handle) {
                   {openTabs.map((t) => (
                     <Tab key={t.id} setup={{ value: t.id }}>
                       {t.id === "home" ? (
-                        <HomeIcon size="xs" />
+                        <span class="block pl-0.5 py-1">
+                          <HomeIcon size="xs" />
+                        </span>
                       ) : (
                         <>
                           <ProjectTabIcon />
@@ -175,13 +186,7 @@ function MainApp(handle: Handle) {
 
           {openTabs.map((tab) => (
             <Tabs.Panel setup={{ value: tab.id }}>
-              <div class="flex flex-1 overflow-hidden">
-                {tab.id !== "home" ? (
-                  <ProjectView setup={{ projectId: tab.id }} projectId={tab.id} />
-                ) : (
-                  <ProjectListView />
-                )}
-              </div>
+              <div class="flex flex-1 overflow-hidden"></div>
             </Tabs.Panel>
           ))}
 

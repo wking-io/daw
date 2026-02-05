@@ -1,5 +1,9 @@
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin, transformWithEsbuild } from "vite";
+
+const appRoot = resolve(dirname(fileURLToPath(import.meta.url)));
 
 function vitePluginRemix(): Plugin {
   return {
@@ -10,7 +14,7 @@ function vitePluginRemix(): Plugin {
         return transformWithEsbuild(code, id, {
           loader: "tsx",
           jsx: "automatic",
-          jsxImportSource: "remix/component",
+          jsxImportSource: "@remix-run/component",
         });
       }
       return null;
@@ -22,10 +26,10 @@ export default defineConfig({
   plugins: [vitePluginRemix(), tailwindcss()],
   resolve: {
     alias: {
-      "@app/*": "./src/*",
-      "@ui/*": "@daw/ui/src/*",
-      "@utils/*": "@daw/utils/src/*",
-      "@core/*": "@daw/core/src/*",
+      "@app": resolve(appRoot, "src"),
+      "@ui": "@daw/ui/src",
+      "@utils": "@daw/utils/src",
+      "@core": "@daw/core/src",
     },
   },
   build: {

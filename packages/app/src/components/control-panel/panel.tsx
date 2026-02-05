@@ -1,40 +1,36 @@
 import type { Handle, RemixNode } from "@remix-run/component";
 import { TypedEventTarget } from "@remix-run/interaction";
 import { Field, Popover } from "@daw/ui";
-import { type AsciiLoaderType, asciiOptions, isAsciiLoaderType } from "../ascii-loader";
+import {
+  defaultStatusIconConfig,
+  statusEasingOptions,
+  type StatusEasing,
+  type StatusIconConfig,
+} from "@daw/ui/icons";
+import { Button } from "../button";
 import { Select } from "./select";
 import { Slider } from "./slider";
 import { cn } from "@daw/utils";
-import {
-  type OrbitRingsConfig,
-  type OrbitEasing,
-  defaultOrbitRingsConfig,
-  orbitEasingOptions,
-} from "@daw/ui/icons";
 
 const outerRadiusOptions = ["12", "14", "16", "18", "20"];
 const middleRadiusOptions = ["4", "6", "8", "10", "12"];
 const innerRadiusOptions = ["2", "3", "4", "5", "6"];
+const innerPositionOptions = ["orbit", "center", "notification"];
 
 class ControlPanelContext extends TypedEventTarget<{ change: Event }> {
-  #loaderType: AsciiLoaderType = "dots";
-  #orbitRingsConfig: OrbitRingsConfig = { ...defaultOrbitRingsConfig };
+  #statusIconConfig: StatusIconConfig = { ...defaultStatusIconConfig };
 
-  get loaderType() {
-    return this.#loaderType;
+  get statusIconConfig() {
+    return this.#statusIconConfig;
   }
 
-  get orbitRingsConfig() {
-    return this.#orbitRingsConfig;
-  }
-
-  setLoaderType(value: AsciiLoaderType) {
-    this.#loaderType = value;
+  setStatusIconConfig(updates: Partial<StatusIconConfig>) {
+    this.#statusIconConfig = { ...this.#statusIconConfig, ...updates };
     this.dispatchEvent(new Event("change"));
   }
 
-  setOrbitRingsConfig(updates: Partial<OrbitRingsConfig>) {
-    this.#orbitRingsConfig = { ...this.#orbitRingsConfig, ...updates };
+  resetStatusIconConfig() {
+    this.#statusIconConfig = { ...defaultStatusIconConfig };
     this.dispatchEvent(new Event("change"));
   }
 }
@@ -64,116 +60,125 @@ export function ControlPanelContent(handle: Handle) {
       <Popover.Portal>
         <Popover.Backdrop class="fixed inset-0 z-40" />
         <Popover.Positioner side="bottom" align="end" class="z-50">
-          <Popover.Content class="outline-none bg-linear-to-b from-foreground/50 to-foreground/20 rounded-xl p-px">
-            <div class="bg-linear-to-b from-layer-2 to-layer-1 rounded-[11px] p-px">
-              <div class="rounded-[10px] bg-layer p-3 flex flex-col gap-3">
-                <Field.Root setup={{ name: "loaderType" }} class="flex flex-col gap-1">
-                  <Field.Label class="text-xs">Loader Type</Field.Label>
+          <Popover.Content class="rounded-lg shadow-recess">
+            <div
+              class={cn(
+                "rounded-lg p-6",
+                "bg-layer-2 bg-linear-to-b from-layer-3/30 dark:from-foreground/2 via-layer-2 via-40% to-layer-3/50 dark:to-foreground/5",
+                "text-foreground border border-oatmeal-12/15 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10",
+                "outline-none bg-clip-padding",
+                "after:pointer-events-none after:absolute after:inset-px after:rounded-[7px] after:shadow-highlight after:shadow-layer-3/40 dark:after:shadow-foreground/5 after:transition",
+                "before:shadow-xl before:absolute before:inset-0 before:pointer-events-none",
+              )}
+            >
+              <div class="flex flex-col gap-3">
+                <Field.Root setup={{ name: "outerRadius" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Outer Radius</Field.Label>
                   <Select
                     setup={{
                       onChange: (value: string) => {
-                        if (isAsciiLoaderType(value)) {
-                          ctx.setLoaderType(value);
-                        }
+                        ctx.setStatusIconConfig({ outerRadius: Number(value) });
                       },
-                      options: asciiOptions,
+                      options: outerRadiusOptions,
                     }}
-                    value={ctx.loaderType}
+                    value={String(ctx.statusIconConfig.outerRadius)}
                   />
                 </Field.Root>
 
-                <div class="border-t border-foreground/10 pt-3">
-                  <p class="text-xs font-medium mb-2">Orbit Rings</p>
+                <Field.Root setup={{ name: "middleRadius" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Middle Radius</Field.Label>
+                  <Select
+                    setup={{
+                      onChange: (value: string) => {
+                        ctx.setStatusIconConfig({ middleRadius: Number(value) });
+                      },
+                      options: middleRadiusOptions,
+                    }}
+                    value={String(ctx.statusIconConfig.middleRadius)}
+                  />
+                </Field.Root>
 
-                  <div class="flex flex-col gap-2">
-                    <Field.Root setup={{ name: "outerRadius" }} class="flex flex-col gap-1">
-                      <Field.Label class="text-xs">Outer Radius</Field.Label>
-                      <Select
-                        setup={{
-                          onChange: (value: string) => {
-                            ctx.setOrbitRingsConfig({ outerRadius: Number(value) });
-                          },
-                          options: outerRadiusOptions,
-                        }}
-                        value={String(ctx.orbitRingsConfig.outerRadius)}
-                      />
-                    </Field.Root>
+                <Field.Root setup={{ name: "innerRadius" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Inner Radius</Field.Label>
+                  <Select
+                    setup={{
+                      onChange: (value: string) => {
+                        ctx.setStatusIconConfig({ innerRadius: Number(value) });
+                      },
+                      options: innerRadiusOptions,
+                    }}
+                    value={String(ctx.statusIconConfig.innerRadius)}
+                  />
+                </Field.Root>
 
-                    <Field.Root setup={{ name: "middleRadius" }} class="flex flex-col gap-1">
-                      <Field.Label class="text-xs">Middle Radius</Field.Label>
-                      <Select
-                        setup={{
-                          onChange: (value: string) => {
-                            ctx.setOrbitRingsConfig({ middleRadius: Number(value) });
-                          },
-                          options: middleRadiusOptions,
-                        }}
-                        value={String(ctx.orbitRingsConfig.middleRadius)}
-                      />
-                    </Field.Root>
+                <Field.Root setup={{ name: "innerPosition" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Inner Position</Field.Label>
+                  <Select
+                    setup={{
+                      onChange: (value: string) => {
+                        ctx.setStatusIconConfig({
+                          innerPosition: value as StatusIconConfig["innerPosition"],
+                        });
+                      },
+                      options: innerPositionOptions,
+                    }}
+                    value={ctx.statusIconConfig.innerPosition}
+                  />
+                </Field.Root>
 
-                    <Field.Root setup={{ name: "innerRadius" }} class="flex flex-col gap-1">
-                      <Field.Label class="text-xs">Inner Radius</Field.Label>
-                      <Select
-                        setup={{
-                          onChange: (value: string) => {
-                            ctx.setOrbitRingsConfig({ innerRadius: Number(value) });
-                          },
-                          options: innerRadiusOptions,
-                        }}
-                        value={String(ctx.orbitRingsConfig.innerRadius)}
-                      />
-                    </Field.Root>
+                <Field.Root setup={{ name: "totalDuration" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Total Duration</Field.Label>
+                  <Slider
+                    setup={{
+                      onChange: (value: number) => {
+                        ctx.setStatusIconConfig({ totalDuration: value });
+                      },
+                      min: 1000,
+                      max: 5000,
+                      step: 10,
+                      formatValue: (v) => `${v}ms`,
+                    }}
+                    value={Math.round(ctx.statusIconConfig.totalDuration)}
+                  />
+                </Field.Root>
 
-                    <Field.Root setup={{ name: "totalDuration" }} class="flex flex-col gap-1">
-                      <Field.Label class="text-xs">Total Duration</Field.Label>
-                      <Slider
-                        setup={{
-                          onChange: (value: number) => {
-                            ctx.setOrbitRingsConfig({ totalDuration: value });
-                          },
-                          min: 1000,
-                          max: 5000,
-                          step: 10,
-                          formatValue: (v) => `${v}ms`,
-                        }}
-                        value={Math.round(ctx.orbitRingsConfig.totalDuration)}
-                      />
-                    </Field.Root>
+                <Field.Root setup={{ name: "durationRatio" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Linear / Orbit Ratio</Field.Label>
+                  <Slider
+                    setup={{
+                      onChange: (value: number) => {
+                        const linearRatio = value / 100;
+                        ctx.setStatusIconConfig({
+                          linearDuration: linearRatio,
+                          orbitDuration: 1 - linearRatio,
+                        });
+                      },
+                      min: 5,
+                      max: 95,
+                      step: 5,
+                      formatValue: (v) => `${v}%`,
+                    }}
+                    value={Math.round(ctx.statusIconConfig.linearDuration * 100)}
+                  />
+                </Field.Root>
 
-                    <Field.Root setup={{ name: "durationRatio" }} class="flex flex-col gap-1">
-                      <Field.Label class="text-xs">Linear / Orbit Ratio</Field.Label>
-                      <Slider
-                        setup={{
-                          onChange: (value: number) => {
-                            const linearRatio = value / 100;
-                            ctx.setOrbitRingsConfig({
-                              linearDuration: linearRatio,
-                              orbitDuration: 1 - linearRatio,
-                            });
-                          },
-                          min: 5,
-                          max: 95,
-                          step: 5,
-                          formatValue: (v) => `${v}%`,
-                        }}
-                        value={Math.round(ctx.orbitRingsConfig.linearDuration * 100)}
-                      />
-                    </Field.Root>
+                <Field.Root setup={{ name: "orbitEasing" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Orbit Easing</Field.Label>
+                  <Select
+                    setup={{
+                      onChange: (value: string) => {
+                        ctx.setStatusIconConfig({ orbitEasing: value as StatusEasing });
+                      },
+                      options: [...statusEasingOptions],
+                    }}
+                    value={ctx.statusIconConfig.orbitEasing}
+                  />
+                </Field.Root>
 
-                    <Field.Root setup={{ name: "orbitEasing" }} class="flex flex-col gap-1">
-                      <Field.Label class="text-xs">Orbit Easing</Field.Label>
-                      <Select
-                        setup={{
-                          onChange: (value: string) => {
-                            ctx.setOrbitRingsConfig({ orbitEasing: value as OrbitEasing });
-                          },
-                          options: [...orbitEasingOptions],
-                        }}
-                        value={ctx.orbitRingsConfig.orbitEasing}
-                      />
-                    </Field.Root>
-                  </div>
+                <div class="flex justify-end pt-2">
+                  <Button setup={{ size: "xs" }} on={{ click: () => ctx.resetStatusIconConfig() }}>
+                    Reset
+                  </Button>
                 </div>
               </div>
             </div>

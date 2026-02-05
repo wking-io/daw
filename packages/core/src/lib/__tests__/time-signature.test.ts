@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import * as TimeSignature from "../time-signature";
 
 describe("lib/time-signature", () => {

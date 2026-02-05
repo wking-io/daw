@@ -1,4 +1,4 @@
 export * from "./add";
 export * from "./close";
 export * from "./home";
-export * from "./orbit-rings";
+export * from "./status-icon";
