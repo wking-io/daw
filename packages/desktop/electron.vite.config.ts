@@ -1,7 +1,10 @@
-import path from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { defineConfig } from "electron-vite";
 import { loadEnv, type Plugin, transformWithEsbuild } from "vite";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 function vitePluginRemix(): Plugin {
   return {
@@ -12,25 +15,7 @@ function vitePluginRemix(): Plugin {
         return transformWithEsbuild(code, id, {
           loader: "tsx",
           jsx: "automatic",
-          jsxImportSource: "remix/component",
-        });
-      }
-      return null;
-    },
-  };
-}
-
-function vitePluginBaseUIRemix(): Plugin {
-  return {
-    name: "vite-plugin-base-ui-remix",
-    enforce: "pre",
-    transform(code, id) {
-      // Transform @base-ui/remix source files with Remix JSX
-      if (id.includes("base-ui/packages/remix") && id.endsWith(".tsx")) {
-        return transformWithEsbuild(code, id, {
-          loader: "tsx",
-          jsx: "automatic",
-          jsxImportSource: "remix/component",
+          jsxImportSource: "@remix-run/component",
         });
       }
       return null;
@@ -43,8 +28,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     main: {
-      plugins: [externalizeDepsPlugin()],
       build: {
+        externalizeDeps: true,
         outDir: "dist/main",
         rollupOptions: {
           input: {
@@ -54,8 +39,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     preload: {
-      plugins: [externalizeDepsPlugin()],
       build: {
+        externalizeDeps: true,
         outDir: "dist/preload",
         rollupOptions: {
           input: {
@@ -70,7 +55,7 @@ export default defineConfig(({ mode }) => {
     },
     renderer: {
       root: ".",
-      plugins: [vitePluginRemix(), vitePluginBaseUIRemix(), tailwindcss()],
+      plugins: [vitePluginRemix(), tailwindcss()],
       server: {
         fs: {
           // Allow serving files from the base-ui package
@@ -82,10 +67,6 @@ export default defineConfig(({ mode }) => {
         __DAW_STATE_TOKEN__: JSON.stringify(env.DAW_STATE_TOKEN ?? ""),
         __DAW_MCP_PORT__: JSON.stringify(env.DAW_MCP_PORT ?? ""),
       },
-      optimizeDeps: {
-        exclude: ["@base-ui/remix"],
-        force: true, // Force re-bundling deps
-      },
       build: {
         outDir: "dist/renderer",
         rollupOptions: {
@@ -96,9 +77,10 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          "remix/component": "@remix-run/component",
-          // Resolve directly to source to avoid bun symlink issues
-          "@base-ui/remix": path.resolve(__dirname, "../base-ui/packages/remix/src"),
+          "@app": resolve(repoRoot, "packages/app/src"),
+          "@ui": resolve(repoRoot, "packages/ui/src"),
+          "@utils": resolve(repoRoot, "packages/utils/src"),
+          "@core": resolve(repoRoot, "packages/core/src"),
         },
       },
     },

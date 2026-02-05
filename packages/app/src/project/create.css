@@ -1,0 +1,34 @@
+.create-project-dialog {
+  transition: opacity 200ms ease-in-out, transform 200ms ease-in-out,
+    overlay 200ms ease-in-out allow-discrete,
+    display 200ms ease-in-out allow-discrete;
+
+  opacity: 0;
+  transform: translateY(--spacing(4));
+
+  &[open] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &::backdrop {
+    transition: display 200ms allow-discrete, overlay 200ms allow-discrete,
+      background-color 200ms;
+    background-color: --alpha(var(--color-background) / 0%);
+  }
+
+  &[open]::backdrop {
+    background-color: --alpha(var(--color-background) / 50%);
+  }
+}
+
+@starting-style {
+  .create-project-dialog[open] {
+    opacity: 0;
+    transform: translateY(-(--spacing(4)));
+
+    &::backdrop {
+        background-color: --alpha(var(--color-background) / 0%);
+    }
+  }
+}

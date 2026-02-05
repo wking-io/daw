@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@source "./";
+@source "../../";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -369,3 +369,5 @@ body {
 .no-drag {
   -webkit-app-region: no-drag;
 }
+
+@import "./project/create.css"

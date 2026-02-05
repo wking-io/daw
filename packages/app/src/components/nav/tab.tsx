@@ -11,7 +11,7 @@ export function Tab(_handle: Handle, setup: Tabs.Tab.Setup) {
         {...buttonProps}
         class={cn(
           classes,
-          "py-1.5 px-3 focus:outline-none text-xs flex items-center gap-1.5  z-1 text-foreground/50 data-active:text-foreground relative before:absolute before:inset-0 before:border before:border-transparent focus-visible:before:border-sky-5 focus-visible:before:ring-2 focus-visible:before:ring-sky-5/20 before:rounded-[4px]",
+          "p-2.5 focus:outline-none text-xs flex items-center gap-1.5  z-1 text-foreground/50 data-active:text-foreground relative before:absolute before:inset-0 before:border before:border-transparent focus-visible:before:border-sky-5 focus-visible:before:ring-2 focus-visible:before:ring-sky-5/20 before:rounded-[4px]",
         )}
       >
         {children}

@@ -1,15 +1,20 @@
+import { ApiClient } from "@app/api/client";
 import { getAtom, getAtomSet } from "@daw/atom-remix";
-import { ProjectCreate, ProjectCreateCommand } from "@daw/core/commands/command";
+import type { Handle } from "@remix-run/component";
 import * as Ids from "@daw/core/ids";
 import { ProjectVersion } from "@daw/core/versions";
-import type { Handle } from "@remix-run/component";
-import { ApiClient } from "../api/client";
-import { tabsAtom } from "../state/tabs";
-import { Button } from "./button";
-import { Dialog } from "./dialog";
-import { Field } from "./field";
+import { ProjectCreate, ProjectCreateCommand } from "@daw/core/commands/command";
+import type { DialogRootProps } from "@daw/ui";
+import { tabsAtom } from "@app/state/tabs";
+import { Dialog } from "@app/components/dialog";
+import { Field } from "@app/components/field";
+import { Button } from "@app/components/button";
 
-export function CreateProjectDialog(handle: Handle) {
+export function CreateDialogRoot() {
+  return (props: DialogRootProps) => <Dialog.Root {...props} />;
+}
+
+export function CreateDialogPopup(handle: Handle) {
   const ctx = handle.context.get(Dialog.Root);
   const create = getAtomSet(handle, ApiClient.mutation("project", "create"));
   const [, setTabs] = getAtom(handle, tabsAtom);
@@ -66,9 +71,8 @@ export function CreateProjectDialog(handle: Handle) {
       activeTabId: projectId,
     }));
   };
-
   return () => (
-    <Dialog.Portal>
+    <Dialog.Portal class="create-project-dialog">
       <Dialog.Popup>
         <Dialog.Title>Create New Project</Dialog.Title>
 
@@ -119,3 +123,8 @@ export function CreateProjectDialog(handle: Handle) {
     </Dialog.Portal>
   );
 }
+
+export const CreateProjectDialog = {
+  Root: CreateDialogRoot,
+  Popup: CreateDialogPopup,
+};

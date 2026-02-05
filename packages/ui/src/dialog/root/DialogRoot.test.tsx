@@ -116,6 +116,36 @@ describe("Dialog", () => {
       const popup = container.querySelector("[role='dialog']");
       expect(popup).not.toBeNull();
     });
+
+    it("removes children after native close event", () => {
+      const container = document.createElement("div");
+      const root = createRoot(container);
+
+      root.render(
+        <DialogRoot>
+          <DialogTrigger>Open</DialogTrigger>
+          <DialogPopup>
+            <div data-testid="dialog-content">Content</div>
+          </DialogPopup>
+        </DialogRoot>,
+      );
+      root.flush();
+
+      const trigger = container.querySelector("button");
+      trigger?.click();
+      root.flush();
+
+      expect(container.querySelector("[data-testid='dialog-content']")).not.toBeNull();
+
+      const dialog = container.querySelector("dialog") as HTMLDialogElement | null;
+      if (dialog) {
+        dialog.open = false;
+        dialog.dispatchEvent(new Event("close"));
+      }
+      root.flush();
+
+      expect(container.querySelector("[data-testid='dialog-content']")).toBeNull();
+    });
   });
 
   describe("DialogTitle", () => {

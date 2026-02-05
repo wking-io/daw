@@ -105,24 +105,29 @@ export function DialogRoot(handle: Handle<DialogRootContextValue>, setup?: Dialo
   };
 
   const close = () => {
-    if (dialogRef && dialogRef.open) {
-      if (exitDuration > 0) {
-        if (state === "closing") return;
-        state = "closing";
-        handle.update();
+    if (!dialogRef) return;
 
-        closeTimeout = setTimeout(() => {
-          state = "closed";
-          closeTimeout = null;
-          onClose?.();
-          dialogRef?.close();
-          handle.update();
-        }, exitDuration);
-      } else {
-        dialogRef.close();
+    if (exitDuration > 0) {
+      if (state === "closing") return;
+      state = "closing";
+      handle.update();
+
+      closeTimeout = setTimeout(() => {
+        state = "closed";
+        closeTimeout = null;
+        if (dialogRef?.open) {
+          dialogRef.close();
+        }
         onClose?.();
         handle.update();
+      }, exitDuration);
+    } else {
+      state = "closed";
+      if (dialogRef.open) {
+        dialogRef.close();
       }
+      onClose?.();
+      handle.update();
     }
   };
 

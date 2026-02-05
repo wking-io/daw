@@ -1,5 +1,6 @@
 import type { Handle, Props } from "@remix-run/component";
 import { DialogRoot } from "../root/DialogRoot";
+import { getDataAttributes } from "../../utils/data-attributes";
 
 export interface DialogPopupProps extends Props<"dialog"> {}
 
@@ -46,6 +47,10 @@ export function DialogPopup(handle: Handle) {
       );
     }
 
+    const dataAttrs = getDataAttributes({
+      closing: ctx.state === "closing",
+    });
+
     return (
       <dialog
         id={ctx.dialogId}
@@ -74,6 +79,7 @@ export function DialogPopup(handle: Handle) {
 
           connect?.(el, signal);
         }}
+        {...dataAttrs}
         {...rest}
       >
         {ctx.state === "open" ? children : null}

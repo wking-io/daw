@@ -4,7 +4,6 @@ import { healthWithRetryAtom } from "./api/health";
 import { AppLoad } from "./components/app-load";
 import { ControlBar } from "./components/control-bar";
 import { ControlPanel } from "./components/control-panel/panel";
-import { CreateProjectDialog } from "./components/create-project-dialog";
 import { NavCreateButton } from "./components/nav/button";
 import { Indicator } from "./components/nav/indicator";
 import { ProjectListView } from "./components/project-list-view";
@@ -12,7 +11,8 @@ import { ProjectView } from "./components/project-view";
 import { Tabs, type TabValue } from "@daw/ui";
 import { type Tab as TTab, tabsAtom } from "./state/tabs";
 import { CloseTrigger, Tab } from "./components/nav/tab";
-import { Dialog } from "./components/dialog";
+import { CreateProjectDialog } from "./project/create";
+import { HomeIcon } from "@daw/ui/icons";
 
 type Theme = "light" | "dark";
 
@@ -119,7 +119,7 @@ function MainApp(handle: Handle) {
     const { openTabs, activeTabId } = getTabs();
 
     return (
-      <Dialog.Root>
+      <CreateProjectDialog.Root>
         <Tabs.Root
           setup={{ closable: true }}
           value={activeTabId}
@@ -132,12 +132,12 @@ function MainApp(handle: Handle) {
               <div class="flex items-center gap-1">
                 <Tabs.List
                   setup={{ activateOnFocus: false }}
-                  class="flex relative bg-layer-1 rounded-[4px] shadow-recess"
+                  class="flex relative bg-layer-1 rounded-[5px] shadow-recess"
                 >
                   {openTabs.map((t) => (
                     <Tab key={t.id} setup={{ value: t.id }}>
                       {t.id === "home" ? (
-                        <span class="block -mt-0.5 -mx-px">⌂</span>
+                        <HomeIcon size="xs" />
                       ) : (
                         <>
                           <span class="block -mt-0.5">⦿</span>
@@ -149,7 +149,7 @@ function MainApp(handle: Handle) {
                   ))}
                   <Indicator />
                 </Tabs.List>
-                <div class="flex relative bg-layer-1 rounded-[4px] shadow-recess">
+                <div class="flex relative bg-layer-1 rounded-[5px] shadow-recess">
                   <NavCreateButton />
                 </div>
               </div>
@@ -171,9 +171,9 @@ function MainApp(handle: Handle) {
             </Tabs.Panel>
           ))}
 
-          <CreateProjectDialog />
+          <CreateProjectDialog.Popup />
         </Tabs.Root>
-      </Dialog.Root>
+      </CreateProjectDialog.Root>
     );
   };
 }
