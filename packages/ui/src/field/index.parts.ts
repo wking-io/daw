@@ -1,6 +1,6 @@
-export { FieldRoot as Root } from "./root/FieldRoot";
-export { FieldLabel as Label } from "./label/FieldLabel";
-export { FieldControl as Control } from "./control/FieldControl";
-export { FieldDescription as Description } from "./description/FieldDescription";
-export { FieldError as Error } from "./error/FieldError";
-export { FieldValidity as Validity } from "./validity/FieldValidity";
+export { FieldRoot as Root } from "./root/field-root";
+export { FieldLabel as Label } from "./label/field-label";
+export { FieldControl as Control } from "./control/field-control";
+export { FieldDescription as Description } from "./description/field-description";
+export { FieldError as Error } from "./error/field-error";
+export { FieldValidity as Validity } from "./validity/field-validity";

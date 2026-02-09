@@ -40,7 +40,7 @@ export function createWindow(): BrowserWindow {
   // Maximize and show when ready
   mainWindow.on("ready-to-show", () => {
     mainWindow?.maximize();
-    mainWindow?.show();
+    mainWindow?.showInactive();
   });
 
   // Load the app

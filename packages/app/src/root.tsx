@@ -4,14 +4,14 @@ import { healthWithRetryAtom } from "./api/health";
 import { AppLoad } from "./components/app-load";
 import { ControlBar } from "./components/control-bar";
 import { ControlPanel } from "./components/control-panel/panel";
-import { NavCreateButton } from "./components/nav/button";
 import { Indicator } from "./components/nav/indicator";
-import { Tabs, type TabValue } from "@daw/ui";
+import { Dialog, Tabs, type TabValue } from "@daw/ui";
 import { type Tab as TTab, tabsAtom } from "./state/tabs";
 import { CloseTrigger, Tab } from "./components/nav/tab";
-import { CreateProjectDialog } from "./project/create";
-import { CloseIcon, HomeIcon, StatusIcon } from "@daw/ui/icons";
+import { CreateProjectDialog } from "./project/create-dialog";
+import { AddIcon, CloseIcon, HomeIcon, StatusIcon } from "@daw/ui/icons";
 import { cn } from "@daw/utils";
+import { Button } from "./components/button";
 
 type Theme = "light" | "dark";
 
@@ -153,7 +153,10 @@ function MainApp(handle: Handle) {
               <div class="flex items-center gap-1">
                 <Tabs.List
                   setup={{ activateOnFocus: false }}
-                  class="flex relative bg-layer-1 rounded-[5px] shadow-recess"
+                  class={cn(
+                    "flex relative bg-layer-1 rounded-sm shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+                  )}
                 >
                   {openTabs.map((t) => (
                     <Tab key={t.id} setup={{ value: t.id }}>
@@ -175,7 +178,13 @@ function MainApp(handle: Handle) {
                   <Indicator />
                 </Tabs.List>
                 <div class="flex relative bg-layer-1 rounded-[5px] shadow-recess">
-                  <NavCreateButton />
+                  <Dialog.Trigger
+                    render={(triggerProps) => (
+                      <Button setup={{ isIcon: true }} {...triggerProps}>
+                        <AddIcon size="xs" />
+                      </Button>
+                    )}
+                  />
                 </div>
               </div>
             </ControlBar.Content>
@@ -186,7 +195,7 @@ function MainApp(handle: Handle) {
 
           {openTabs.map((tab) => (
             <Tabs.Panel setup={{ value: tab.id }}>
-              <div class="flex flex-1 overflow-hidden"></div>
+              <div class="flex flex-col overflow-hidden p-4 gap-4"></div>
             </Tabs.Panel>
           ))}
 

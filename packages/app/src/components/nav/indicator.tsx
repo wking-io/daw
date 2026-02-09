@@ -1,17 +1,22 @@
 import type { Handle } from "@remix-run/component";
 import { spring } from "@remix-run/component";
 import { Tabs } from "@daw/ui";
+import { Surface } from "../surface";
 
 export function Indicator(_handle: Handle) {
   return () => (
     <Tabs.Indicator
-      class="absolute left-(--active-tab-left) top-0 block h-(--active-tab-height) w-(--active-tab-width) after:pointer-events-none after:absolute after:inset-px after:rounded-sm after:shadow-highlight after:shadow-layer-3/40 dark:after:shadow-foreground/5 after:transition origin-left
-  "
-      animate={{
-        layout: spring("snappy"),
-      }}
-    >
-      <span class="transition absolute inset-0 text-sm cursor-pointer bg-layer-2 bg-linear-to-b from-layer-3/30 dark:from-foreground/1 via-layer-2 via-40% to-layer-3/50 dark:to-foreground/5 text-foreground rounded-[5px] border border-oatmeal-12/15 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10 outline-none bg-clip-padding" />
-    </Tabs.Indicator>
+      render={(props) => (
+        <Surface.Root
+          {...props}
+          class="absolute left-(--active-tab-left) top-0 block h-(--active-tab-height) w-(--active-tab-width)"
+          animate={{
+            layout: spring("snappy"),
+          }}
+        >
+          <Surface.Inner />
+        </Surface.Root>
+      )}
+    />
   );
 }

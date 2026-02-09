@@ -2,6 +2,8 @@ import type { Props } from "@remix-run/component";
 import { cn } from "@daw/utils";
 import { Dialog } from "../dialog";
 import { AddIcon } from "@daw/ui/icons";
+import { Button } from "../button";
+import type { ButtonProps } from "../button";
 
 const wrapperClass =
   "relative after:pointer-events-none after:absolute after:inset-px after:rounded-sm after:shadow-highlight after:shadow-layer-3/40 dark:after:shadow-foreground/5 after:transition origin-left";
@@ -11,16 +13,8 @@ const buttonActiveClass =
   "active:from-layer-1/30 active:via-layer-1/5 active:to-layer-1/15 active:dark:from-layer-1/30 active:dark:via-layer-1/0 active:dark:to-layer-1/15";
 
 export function NavButton() {
-  return (props: Props<"button">) => {
-    const { children, class: classes, ...buttonProps } = props;
-
-    return (
-      <div class={wrapperClass}>
-        <button type="button" class={cn(buttonClass, buttonActiveClass, classes)} {...buttonProps}>
-          {children}
-        </button>
-      </div>
-    );
+  return (props: ButtonProps) => {
+    return <Button setup={{ size: "sm" }} {...props} />;
   };
 }
 

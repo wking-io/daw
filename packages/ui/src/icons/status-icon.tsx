@@ -42,7 +42,7 @@ export const defaultStatusIconConfig: StatusIconConfig = {
   orbitDuration: 0.6,
   linearDuration: 0.4,
   orbitEasing: "ease-in-out",
-  innerPosition: "orbit",
+  innerPosition: "center",
 };
 
 export interface StatusIconProps extends Props<"svg"> {
@@ -116,25 +116,14 @@ export function StatusIcon() {
   let lastStyleKey = "";
   let currentStyleEl: HTMLStyleElement | null = null;
 
-  return ({
-    size = "DEFAULT",
-    class: externalClasses,
-    config = {},
-    ...props
-  }: StatusIconProps) => {
+  return ({ size = "DEFAULT", class: externalClasses, config = {}, ...props }: StatusIconProps) => {
     const mergedConfig = {
       ...defaultStatusIconConfig,
       ...config,
     };
 
-    const {
-      outerRadius,
-      middleRadius,
-      innerRadius,
-      totalDuration,
-      orbitEasing,
-      innerPosition,
-    } = mergedConfig;
+    const { outerRadius, middleRadius, innerRadius, totalDuration, orbitEasing, innerPosition } =
+      mergedConfig;
 
     const { keyTimes, keyPoints } = calculateTimingValues(mergedConfig);
 

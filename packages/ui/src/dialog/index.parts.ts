@@ -1,6 +1,6 @@
-export { DialogRoot as Root } from "./root/DialogRoot";
-export { DialogTrigger as Trigger } from "./trigger/DialogTrigger";
-export { DialogPopup as Popup } from "./popup/DialogPopup";
-export { DialogTitle as Title } from "./title/DialogTitle";
-export { DialogDescription as Description } from "./description/DialogDescription";
-export { DialogClose as Close } from "./close/DialogClose";
+export { DialogRoot as Root } from "./root/dialog-root";
+export { DialogTrigger as Trigger } from "./trigger/dialog-trigger";
+export { DialogPopup as Popup } from "./popup/dialog-popup";
+export { DialogTitle as Title } from "./title/dialog-title";
+export { DialogDescription as Description } from "./description/dialog-description";
+export { DialogClose as Close } from "./close/dialog-close";

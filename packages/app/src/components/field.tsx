@@ -23,7 +23,7 @@ export function FieldLabel(_handle: Handle) {
     const { children, class: classes } = props;
 
     return (
-      <BaseField.Label class={cn("mb-1.5 block text-sm text-foreground/70", classes)}>
+      <BaseField.Label class={cn("mb-1.5 block text-xs text-foreground-muted", classes)}>
         {children}
       </BaseField.Label>
     );
@@ -74,15 +74,12 @@ export function FieldControl(_handle: Handle) {
     } = props;
 
     const inputClasses = cn(
-      "box-border w-full px-3 py-2.5 text-sm rounded-sm transition",
-      // Button-like background and styling
-      "bg-layer-2 bg-linear-to-b from-layer-3/30 dark:from-foreground/2 via-layer-2 via-40% to-layer-3/50 dark:to-foreground/5",
-      "text-foreground border border-oatmeal-12/15 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10",
-      "outline-none bg-clip-padding",
+      "h-7 w-full px-2.5 py-1.5 text-xs rounded-sm transition text-foreground outline-none text-foreground",
       // Placeholder styling
       "placeholder:text-foreground/40",
       // Disabled state
       "disabled:opacity-50 disabled:cursor-not-allowed",
+      "before:pointer-events-none before:absolute before:inset-0 before:rounded-[4px] before:border before:border-sky-5 before:ring-2 before:ring-sky-5/20 before:opacity-0 before:transition focus-visible:before:opacity-100",
       classes,
     );
 
@@ -124,11 +121,9 @@ export function FieldControl(_handle: Handle) {
       <div
         class={cn(
           // Wrapper with recess shadow (similar to Button wrapper)
-          "relative bg-layer-1 shadow-recess rounded-[4px]",
+          "relative bg-layer-2 shadow-recess shadow-foreground/10 dark:shadow-background/40 rounded-sm",
+          "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 before:dark:border-background/40",
           // Focus ring
-          "before:pointer-events-none before:absolute before:inset-0 before:rounded-[4px] before:border before:border-sky-5 before:ring-2 before:ring-sky-5/20 before:opacity-0 before:transition focus-within:before:opacity-100",
-          // Inner highlight
-          "after:pointer-events-none after:absolute after:inset-px after:rounded-[3px] after:shadow-highlight after:shadow-layer-3/40 dark:after:shadow-foreground/5 after:transition",
         )}
       >
         {renderInput()}

@@ -17,15 +17,54 @@ const middleRadiusOptions = ["4", "6", "8", "10", "12"];
 const innerRadiusOptions = ["2", "3", "4", "5", "6"];
 const innerPositionOptions = ["orbit", "center", "notification"];
 
+export const primaryColorOptions = [
+  "strawberry",
+  "ruby",
+  "tangerine",
+  "ochre",
+  "honey",
+  "lemon",
+  "pear",
+  "pistachio",
+  "jade",
+  "emerald",
+  "aqua",
+  "ocean",
+  "sky",
+  "cobalt",
+  "denim",
+  "iris",
+  "grape",
+  "lilac",
+  "fuchsia",
+  "blush",
+] as const;
+
+export type PrimaryColor = (typeof primaryColorOptions)[number];
+
 class ControlPanelContext extends TypedEventTarget<{ change: Event }> {
   #statusIconConfig: StatusIconConfig = { ...defaultStatusIconConfig };
+  #primaryColor: PrimaryColor = "aqua";
 
   get statusIconConfig() {
     return this.#statusIconConfig;
   }
 
+  get primaryColor() {
+    return this.#primaryColor;
+  }
+
   setStatusIconConfig(updates: Partial<StatusIconConfig>) {
     this.#statusIconConfig = { ...this.#statusIconConfig, ...updates };
+    this.dispatchEvent(new Event("change"));
+  }
+
+  setPrimaryColor(color: PrimaryColor) {
+    this.#primaryColor = color;
+    for (const c of primaryColorOptions) {
+      document.documentElement.classList.remove(`theme-${c}`);
+    }
+    document.documentElement.classList.add(`theme-${color}`);
     this.dispatchEvent(new Event("change"));
   }
 
@@ -173,6 +212,25 @@ export function ControlPanelContent(handle: Handle) {
                     }}
                     value={ctx.statusIconConfig.orbitEasing}
                   />
+                </Field.Root>
+
+                <Field.Root setup={{ name: "primaryColor" }} class="flex flex-col gap-1">
+                  <Field.Label class="text-xs">Primary Color</Field.Label>
+                  <div class="grid grid-cols-10 gap-1">
+                    {primaryColorOptions.map((color) => (
+                      <button
+                        type="button"
+                        on={{ click: () => ctx.setPrimaryColor(color) }}
+                        class={cn(
+                          `size-5 rounded-sm bg-${color}-6 cursor-pointer border-2 transition-all`,
+                          ctx.primaryColor === color
+                            ? "border-foreground scale-110"
+                            : "border-transparent hover:scale-105",
+                        )}
+                        title={color}
+                      />
+                    ))}
+                  </div>
                 </Field.Root>
 
                 <div class="flex justify-end pt-2">

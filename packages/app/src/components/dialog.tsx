@@ -18,7 +18,7 @@ export function DialogPortal(_handle: Handle) {
     return (
       <BaseDialog.Popup
         class={cn(
-          "fixed left-1/2 top-2 -translate-x-1/2 bg-transparent shadow-recess rounded-lg",
+          "fixed left-1/2 top-2 -translate-x-1/2 bg-transparent shadow-recess rounded-[9px] focus-visible:ring-2 focus-visible:ring-sky-5/20 outline-none focus-visible:border-sky-5 border border-transparent no-drag",
           classes,
         )}
         {...rest}
@@ -34,16 +34,50 @@ export function DialogPopup() {
     return (
       <div
         class={cn(
-          "w-100 max-w-[90vw] rounded-lg p-6",
-          "bg-layer-2 bg-linear-to-b from-layer-3/30 dark:from-foreground/2 via-layer-2 via-40% to-layer-3/50 dark:to-foreground/5",
-          "text-foreground border border-oatmeal-12/15 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10",
-          "outline-none bg-clip-padding",
-          "after:pointer-events-none after:absolute after:inset-px after:rounded-[7px] after:shadow-highlight after:shadow-layer-3/40 dark:after:shadow-foreground/5 after:transition",
+          "w-100 max-w-[90vw] shadow-layer-4/30 dark:shadow-foreground/5 rounded-lg",
+          "bg-layer-2 shadow-highlight text-foreground bg-clip-padding",
+          "after:absolute after:pointer-events-none after:inset-0 after:rounded-lg after:shadow-lg after:shadow-oatmeal-13/5 after:dark:shadow-oatmeal-13/10",
           classes,
         )}
         {...rest}
       />
     );
+  };
+}
+
+export interface DialogBodyProps extends Props<"div"> {}
+export function DialogBody() {
+  return (props: DialogBodyProps) => {
+    const { class: classes, ...rest } = props;
+    return (
+      <div
+        class={cn(
+          "w-full rounded-lg p-3 relative",
+          "bg-layer-3 bg-linear-to-b from-layer-4/30 dark:from-foreground/2 via-layer-3 via-40% to-layer-4/50 dark:to-foreground/5",
+          "text-foreground border border-oatmeal-13/15 shadow-input shadow-oatmeal-13/5 dark:shadow-oatmeal-13/10",
+          "outline-none bg-clip-padding",
+          "after:pointer-events-none after:absolute after:inset-0 after:rounded-[7px] after:shadow-highlight after:shadow-layer-4 dark:after:shadow-foreground/5 after:transition",
+          classes,
+        )}
+        {...rest}
+      />
+    );
+  };
+}
+
+export interface DialogHeaderProps extends Props<"div"> {}
+export function DialogHeader() {
+  return (props: DialogHeaderProps) => {
+    const { class: classes, ...rest } = props;
+    return <div class={cn("py-2 px-3 flex gap-1", classes)} {...rest} />;
+  };
+}
+
+export interface DialogFooterProps extends Props<"div"> {}
+export function DialogFooter() {
+  return (props: DialogFooterProps) => {
+    const { class: classes, ...rest } = props;
+    return <div class={cn("py-2 px-3 flex flex-row-reverse gap-1", classes)} {...rest} />;
   };
 }
 
@@ -61,7 +95,7 @@ export function DialogTitle() {
 
     return (
       <BaseDialog.Title
-        class={cn("m-0 mb-4 text-lg font-medium text-foreground", classes)}
+        class={cn("text-xxs uppercase tracking-wide text-foreground-muted", classes)}
         {...rest}
       />
     );
@@ -93,10 +127,11 @@ export function DialogClose() {
 
     return (
       <BaseDialog.Close
+        aria-label="close dialog"
         class={cn(
-          "cursor-pointer rounded-sm px-4 py-2 text-sm transition",
-          "border border-oatmeal-12/15 bg-transparent text-foreground/70",
-          "hover:bg-layer-3/50 hover:text-foreground",
+          "cursor-pointer rounded-sm size-5 -m-1 flex items-center justify-center text-sm transition duration-150 text-foreground-muted",
+          "",
+          "hover:bg-layer-3 hover:shadow-sm hover:text-foreground",
           "disabled:cursor-not-allowed disabled:opacity-50",
           classes,
         )}
@@ -114,6 +149,9 @@ export const Dialog = {
   Trigger: BaseDialog.Trigger,
   Portal: DialogPortal,
   Popup: DialogPopup,
+  Body: DialogBody,
+  Header: DialogHeader,
+  Footer: DialogFooter,
   Title: DialogTitle,
   Description: DialogDescription,
   Close: DialogClose,

@@ -125,15 +125,14 @@ function getFieldSchema(
  * }
  * ```
  */
-export function createForm<
-  S extends Schema.Struct<any>,
->(
+export function createForm<S extends Schema.Struct<any>>(
   handle: Handle,
   options: CreateFormOptions<S>,
 ): CreateFormResult<StructFieldsFromSchema<S>>;
-export function createForm<
-  S extends Schema.Struct<any>,
->(handle: Handle, options: CreateFormOptions<S>): CreateFormResult<StructFieldsFromSchema<S>> {
+export function createForm<S extends Schema.Struct<any>>(
+  handle: Handle,
+  options: CreateFormOptions<S>,
+): CreateFormResult<StructFieldsFromSchema<S>> {
   const { schema, refinementFields } = options;
   const fieldNames = getFieldNames(schema);
 
@@ -240,11 +239,7 @@ export function createForm<
     },
     validate(values: FormValues): readonly string[] {
       const decode = Schema.decodeUnknownEither(
-        schema as unknown as Schema.Schema<
-          Schema.Schema.Type<S>,
-          Schema.Schema.Encoded<S>,
-          never
-        >,
+        schema as unknown as Schema.Schema<Schema.Schema.Type<S>, Schema.Schema.Encoded<S>, never>,
       );
       const result = decode(
         values instanceof FormData ? Object.fromEntries(values.entries()) : values,

@@ -1,11 +1,11 @@
 export * as Tabs from "./index.parts";
 
-export type * from "./root/TabsRoot";
-export type * from "./root/TabsRootDataAttributes";
-export type * from "./list/TabsList";
-export type * from "./tab/TabsTab";
-export type * from "./panel/TabsPanel";
-export type * from "./panel/TabsPanelDataAttributes";
-export type * from "./indicator/TabsIndicator";
-export type * from "./indicator/TabsIndicatorCssVars";
-export type * from "./close-trigger/TabsCloseTrigger";
+export type * from "./root/tabs-root";
+export type * from "./root/tabs-root-data-attributes";
+export type * from "./list/tabs-list";
+export type * from "./tab/tabs-tab";
+export type * from "./panel/tabs-panel";
+export type * from "./panel/tabs-panel-data-attributes";
+export type * from "./indicator/tabs-indicator";
+export type * from "./indicator/tabs-indicator-css-vars";
+export type * from "./close-trigger/tabs-close-trigger";

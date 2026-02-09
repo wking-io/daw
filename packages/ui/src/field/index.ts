@@ -1,9 +1,9 @@
 export * as Field from "./index.parts";
 
-export type * from "./root/FieldRoot";
-export type * from "./root/FieldRootDataAttributes";
-export type * from "./label/FieldLabel";
-export type * from "./control/FieldControl";
-export type * from "./description/FieldDescription";
-export type * from "./error/FieldError";
-export type * from "./validity/FieldValidity";
+export type * from "./root/field-root";
+export type * from "./root/field-root-data-attributes";
+export type * from "./label/field-label";
+export type * from "./control/field-control";
+export type * from "./description/field-description";
+export type * from "./error/field-error";
+export type * from "./validity/field-validity";
