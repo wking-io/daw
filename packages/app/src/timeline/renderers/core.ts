@@ -8,8 +8,6 @@ export type CanvasEnv = Readonly<{
 }>
 
 export type TimelineTheme = Readonly<{
-	/** Background fill for the main timeline canvas */
-	background: string
 	/** Color for grid lines and track separators */
 	gridLine: string
 	/** Default clip fill when track color can't be parsed */

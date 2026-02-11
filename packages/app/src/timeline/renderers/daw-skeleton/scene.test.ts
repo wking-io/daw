@@ -6,7 +6,6 @@ import { DawSkeletonSceneRenderer } from './scene'
 import type { DawClip, DawData, DawTrack, DawUiState } from './types'
 
 const MOCK_THEME: TimelineTheme = {
-	background: 'oklch(24.4% 0.0048 66.2)',
 	gridLine: 'oklch(37.67% 0.0074 66.2)',
 	clipFallbackFill: 'oklch(19.19% 0.0038 66.2)',
 	clipFallbackFillSelected: 'oklch(37.67% 0.0074 66.2)',
@@ -106,49 +105,6 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 		})
 
 		describe('buildScene - canvas nodes', () => {
-			it('always includes background rect', () => {
-				const data = createDawData([], [])
-				const projection = createMockProjection({})
-				const env = createMockEnv({ width: 400, height: 200 })
-
-				const scene = DawSkeletonSceneRenderer.buildScene({
-					data,
-					projection,
-					ui: createUiState(),
-					env,
-				})
-
-				const bgNode = scene.canvas[0]
-				expect(bgNode?.kind).toBe('rect')
-				if (bgNode?.kind === 'rect') {
-					expect(bgNode.rect).toEqual({ x: 0, y: 0, width: 400, height: 200 })
-					expect(bgNode.fill).toBe(MOCK_THEME.background)
-				}
-			})
-
-			it('renders background for main surface', () => {
-				const data = createDawData(
-					[createTrack('t1', 'Track 1'), createTrack('t2', 'Track 2')],
-					[],
-				)
-				const projection = createMockProjection({})
-				const env = createMockEnv({ height: 200, fitToHeight: true })
-
-				const scene = DawSkeletonSceneRenderer.buildScene({
-					data,
-					projection,
-					ui: createUiState(),
-					env,
-				})
-
-				// Background should be the first canvas node
-				const bgNode = scene.canvas[0]
-				expect(bgNode?.kind).toBe('rect')
-				if (bgNode?.kind === 'rect') {
-					expect(bgNode.fill).toBe(MOCK_THEME.background)
-				}
-			})
-
 			it('generates vertical grid lines', () => {
 				const data = createDawData([], [])
 				const projection = createMockProjection({
@@ -578,9 +534,9 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 					env,
 				})
 
-				// Should still have background in canvas and dom
-				expect(scene.canvas.length).toBeGreaterThanOrEqual(1) // at least background + grid
-				expect(scene.dom.length).toBe(1) // just background hit area
+				// Should still have grid lines in canvas and hit area in dom
+				expect(scene.canvas.length).toBeGreaterThanOrEqual(1) // grid lines
+				expect(scene.dom.length).toBe(1) // just hit area
 			})
 
 			it('handles many clips across multiple tracks', () => {
@@ -643,14 +599,14 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 					env,
 				})
 
-				// Canvas should have: background + grid lines
-				expect(scene.canvas.length).toBeGreaterThan(1)
+				// Canvas should have grid lines
+				expect(scene.canvas.length).toBeGreaterThanOrEqual(1)
 
-				// DOM should have: background + 2 clip groups
+				// DOM should have: hit area + 2 clip groups
 				expect(scene.dom.length).toBe(3)
 
 				// Verify structure
-				expect(scene.canvas[0]?.kind).toBe('rect') // background
+				expect(scene.canvas[0]?.kind).toBe('line') // grid line
 				expect(scene.dom[0]?.kind).toBe('rect') // hit area
 				expect(scene.dom[1]?.kind).toBe('group') // clip 1
 				expect(scene.dom[2]?.kind).toBe('group') // clip 2

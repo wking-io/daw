@@ -221,36 +221,34 @@ function MainApp(handle: Handle) {
 
           {openTabs.map((tab) => (
             <Tabs.Panel setup={{ value: tab.id }}>
-              <div class="flex flex-col overflow-hidden p-4 gap-4">
+              <div class="mt-4">
                 <TimelineRoot>
                   {/* Navigator (minimap) */}
-                  <div className="relative mb-1">
-                    <InsetPanel class="user-select-none">
-                      <NavigatorRoot
-                        height={26}
-                        class="relative h-full w-full overflow-hidden rounded-[3px] bg-neutral-800"
-                      >
-                        <NavigatorTrack>
-                          <NavigatorCanvas
-                            renderer={DawSkeletonSceneRenderer}
-                            data={demoDawData}
-                            ui={dawUIState}
-                          />
-                          <NavigatorDom
-                            renderer={DawSkeletonSceneRenderer}
-                            data={demoDawData}
-                            ui={dawUIState}
-                            dispatch={handleDawAction}
-                          />
-                          <ZoomWindow />
-                        </NavigatorTrack>
-                      </NavigatorRoot>
-                    </InsetPanel>
-                  </div>
+                  <div
+                    class={cn(
+                      "user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+                    )}
+                  >
+                    <NavigatorRoot height={26} class="relative h-full w-full overflow-hidden">
+                      <NavigatorTrack>
+                        <NavigatorCanvas
+                          renderer={DawSkeletonSceneRenderer}
+                          data={demoDawData}
+                          ui={dawUIState}
+                        />
+                        <NavigatorDom
+                          renderer={DawSkeletonSceneRenderer}
+                          data={demoDawData}
+                          ui={dawUIState}
+                          dispatch={handleDawAction}
+                        />
+                        <ZoomWindow />
+                      </NavigatorTrack>
+                    </NavigatorRoot>
 
-                  {/* Projection (main view) */}
-                  <InsetPanel class="user-select-none">
-                    <ProjectionRoot height={240} class="rounded-[3px] bg-neutral-800">
+                    {/* Projection (main view) */}
+                    <ProjectionRoot height={240} class="">
                       <ProjectionCanvas
                         renderer={DawSkeletonSceneRenderer}
                         data={demoDawData}
@@ -263,7 +261,7 @@ function MainApp(handle: Handle) {
                         dispatch={handleDawAction}
                       />
                     </ProjectionRoot>
-                  </InsetPanel>
+                  </div>
                 </TimelineRoot>
               </div>
             </Tabs.Panel>

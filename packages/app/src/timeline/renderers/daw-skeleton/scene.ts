@@ -178,7 +178,7 @@ function computeClipLayouts(args: {
 
 /**
  * Build canvas nodes for the main (projection) surface.
- * Includes background and grid lines only - clips are rendered as DOM for interactivity.
+ * Includes grid lines only - clips are rendered as DOM for interactivity.
  */
 function buildMainCanvasNodes(args: {
 	projection: BuildSceneArgs<DawData, DawUiState>['projection']
@@ -189,13 +189,6 @@ function buildMainCanvasNodes(args: {
 
 	const canvasWidth = env.canvas.widthPx
 	const canvasHeight = env.canvas.heightPx
-
-	// Background
-	nodes.push({
-		kind: 'rect',
-		rect: rect(Px.Px(0), Px.Px(0), canvasWidth, canvasHeight),
-		fill: env.theme.background,
-	})
 
 	// Vertical grid lines (content-space every 100 px)
 	const viewStart = Number(projection.view.start)

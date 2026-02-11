@@ -65,7 +65,11 @@ export function NavigatorTrack(handle: Handle) {
 
   function handlePan(e: PointerEvent) {
     const { currentTarget: el } = e;
-    if (!(el instanceof Element) || interaction.kind !== "pan" || !el.hasPointerCapture(e.pointerId)) {
+    if (
+      !(el instanceof Element) ||
+      interaction.kind !== "pan" ||
+      !el.hasPointerCapture(e.pointerId)
+    ) {
       return;
     }
 
@@ -107,11 +111,10 @@ export function NavigatorTrack(handle: Handle) {
           pointermove: handlePan,
           pointerup: handleInteractionEnd,
         }}
-        class={cn("timeline group relative h-full w-full overflow-hidden", props.class)}
+        class={cn("group relative h-full w-full overflow-hidden", props.class)}
       >
         {props.children}
       </div>
     );
   };
 }
-

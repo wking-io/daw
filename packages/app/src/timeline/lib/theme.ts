@@ -9,7 +9,6 @@ export function readTimelineTheme(
 ): TimelineTheme {
 	const style = getComputedStyle(el)
 	return {
-		background: getCssVar(style, '--color-oatmeal-11'),
 		gridLine: getCssVar(style, '--color-oatmeal-9'),
 		clipFallbackFill: getCssVar(style, '--color-oatmeal-12'),
 		clipFallbackFillSelected: getCssVar(style, '--color-oatmeal-9'),
