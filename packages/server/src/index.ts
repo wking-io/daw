@@ -1,3 +1,5 @@
+process.title = "daw:server:main";
+
 import { makeTracingLayer } from "@daw/core/tracing";
 import { HttpApiBuilder, HttpMiddleware, HttpServer } from "@effect/platform";
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";

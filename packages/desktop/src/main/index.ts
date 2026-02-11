@@ -1,3 +1,5 @@
+process.title = "daw:desktop:main";
+
 import { app } from "electron";
 import { loadConfig } from "./config";
 import { killAll, startAll } from "./sidecar-manager";

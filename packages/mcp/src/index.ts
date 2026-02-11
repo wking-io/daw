@@ -1,3 +1,5 @@
+process.title = "daw:mcp:main";
+
 import { makeTracingLayer } from "@daw/core/tracing";
 import { McpServer, Toolkit } from "@effect/ai";
 import { FetchHttpClient, HttpRouter } from "@effect/platform";
