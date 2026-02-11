@@ -15,7 +15,6 @@ export function TimelineCanvas(handle: Handle) {
 	let canvasEl: HTMLCanvasElement
 
 	return (props: {
-		dpr: number
 		projection: Projection1D<Px.Px>
 		size: { width: number; height: number }
 		height: number
@@ -26,12 +25,14 @@ export function TimelineCanvas(handle: Handle) {
 		ui: unknown
 		class?: string
 	}) => {
+		const dpr = window.devicePixelRatio || 1
+
 		handle.queueTask(() => {
 			if (!canvasEl) return
 
 			const env: TimelineHostEnv = {
 				canvas: {
-					dpr: props.dpr,
+					dpr,
 					widthPx: props.size.width as Px.Px,
 					heightPx: props.size.height as Px.Px,
 				},
@@ -44,7 +45,7 @@ export function TimelineCanvas(handle: Handle) {
 				canvas: canvasEl,
 				cssW: Math.max(1, props.size.width),
 				cssH: props.height,
-				dpr: props.dpr,
+				dpr,
 			})
 			if (!ctx) return
 

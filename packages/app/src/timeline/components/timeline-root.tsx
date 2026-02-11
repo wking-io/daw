@@ -9,7 +9,6 @@ export type TimelineRootContext = {
   setTimeline: (next: Timeline.Timeline<Px.Px>) => void;
   get isInteracting(): boolean;
   setIsInteracting: (isInteracting: boolean) => void;
-  dpr: number;
 };
 
 function makeInitialTimeline(): Timeline.Timeline<Px.Px> {
@@ -22,7 +21,6 @@ function makeInitialTimeline(): Timeline.Timeline<Px.Px> {
 
 export function TimelineRoot(handle: Handle<TimelineRootContext>) {
   let isInteracting = false;
-  const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
 
   let currentTimeline: Timeline.Timeline<Px.Px> = makeInitialTimeline();
 
@@ -40,7 +38,6 @@ export function TimelineRoot(handle: Handle<TimelineRootContext>) {
     setIsInteracting(v: boolean) {
       isInteracting = v;
     },
-    dpr,
   });
 
   return (props: Props<"div">) => {

@@ -1,10 +1,10 @@
 import type { Handle, RemixNode } from "@remix-run/component";
 import { cn } from "@daw/utils";
 
-import * as Projection from "@daw/core/lib/projection";
 import * as Px from "@daw/core/lib/px";
 import * as Span from "@daw/core/lib/span";
 import * as Timeline from "@daw/core/lib/timeline";
+import { deltaFrom, zoomFactorFromDelta } from "../utils/interaction-math";
 import { NavigatorRoot } from "./navigator-root";
 import type { NavigatorRootContext } from "./navigator-root";
 import { TimelineRoot } from "./timeline-root";
@@ -19,15 +19,16 @@ type Pan = {
 
 type Interaction = Idle | Pan;
 
+const ZOOM_RATE = 350;
+
 export function NavigatorTrack(handle: Handle) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
   const navCtx: NavigatorRootContext = handle.context.get(NavigatorRoot);
   let interaction: Interaction = { kind: "idle" };
-  let zoomRate = 350;
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
-    const factor = factorFromDelta(e.deltaY, zoomRate);
+    const factor = zoomFactorFromDelta(-e.deltaY, ZOOM_RATE);
     const nextTimeline = Timeline.zoomAt(
       Px.Numeric,
       rootCtx.timeline,
@@ -114,23 +115,3 @@ export function NavigatorTrack(handle: Handle) {
   };
 }
 
-function deltaFrom({
-  x,
-  scale,
-  offset,
-  from,
-}: {
-  x: Px.Px;
-  offset: Px.Px;
-  scale: number;
-  from?: Px.Px;
-}): Px.Px {
-  const N = Px.Numeric;
-  const at = Projection.fromScreen(N, N.zero, x, scale);
-  const nextStart = N.subtract(at, offset);
-  return N.subtract(nextStart, from ?? N.zero);
-}
-
-function factorFromDelta(dy: number, rate = 350): number {
-  return Math.pow(2, dy / rate);
-}

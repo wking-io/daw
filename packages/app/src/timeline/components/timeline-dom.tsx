@@ -10,7 +10,6 @@ import type { DawAction, DawData, DawUiState } from "../renderers/daw-skeleton/t
 
 export function TimelineDom() {
   return (props: {
-    dpr: number;
     projection: Projection1D<Px.Px>;
     size: { width: number; height: number };
     height: number;
@@ -24,7 +23,7 @@ export function TimelineDom() {
   }): RemixNode => {
     const env: TimelineHostEnv = {
       canvas: {
-        dpr: props.dpr,
+        dpr: window.devicePixelRatio || 1,
         widthPx: props.size.width as Px.Px,
         heightPx: props.height as Px.Px,
       },

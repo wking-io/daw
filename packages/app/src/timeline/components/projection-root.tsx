@@ -17,7 +17,6 @@ export type ProjectionRootContext = {
 	size: { width: number; height: number }
 	scale: number
 	projection: Projection1D<Px.Px>
-	contentWidth: number
 	height: number
 	getPointerPosition: (e: PointerEvent) => { x: number; y: number }
 }
@@ -28,17 +27,40 @@ export function ProjectionRoot(handle: Handle<ProjectionRootContext>) {
 	let size = { width: 0, height: 0 }
 	let suppressScrollEvents = false
 
+	function getScale() {
+		if (size.width === 0) return 1
+		return Projection.scaleFor(
+			Px.Numeric,
+			rootCtx.timeline.view.size,
+			Px.Px(size.width),
+		)
+	}
+
+	function onScroll() {
+		if (suppressScrollEvents || !containerEl) return
+
+		const scale = getScale()
+		const nextStart = Scroll.fromScroll(
+			Px.Numeric,
+			Px.Px(containerEl.scrollLeft),
+			scale,
+		)
+
+		const nextTimeline = Timeline.panBy(
+			Px.Numeric,
+			rootCtx.timeline,
+			Px.subtract(nextStart, rootCtx.timeline.view.start),
+		)
+
+		rootCtx.setTimeline(nextTimeline)
+	}
+
 	handle.context.set({
 		get size() {
 			return size
 		},
 		get scale() {
-			if (size.width === 0) return 1
-			return Projection.scaleFor(
-				Px.Numeric,
-				rootCtx.timeline.view.size,
-				Px.Px(size.width),
-			)
+			return getScale()
 		},
 		get projection() {
 			return makeProjection1D({
@@ -46,17 +68,6 @@ export function ProjectionRoot(handle: Handle<ProjectionRootContext>) {
 				timeline: rootCtx.timeline,
 				viewportWidthPx: Px.Px(size.width || 1),
 			})
-		},
-		get contentWidth() {
-			const s =
-				size.width === 0
-					? 1
-					: Projection.scaleFor(
-							Px.Numeric,
-							rootCtx.timeline.view.size,
-							Px.Px(size.width),
-						)
-			return Scroll.width(Px.Numeric, rootCtx.timeline.size, s)
 		},
 		get height() {
 			return size.height
@@ -72,16 +83,7 @@ export function ProjectionRoot(handle: Handle<ProjectionRootContext>) {
 		class?: string
 	}) => {
 		const h = props.height ?? DEFAULT_HEIGHT
-
-		// Compute current scale and contentWidth for this render
-		const scale =
-			size.width === 0
-				? 1
-				: Projection.scaleFor(
-						Px.Numeric,
-						rootCtx.timeline.view.size,
-						Px.Px(size.width),
-					)
+		const scale = getScale()
 		const contentWidth = Scroll.width(
 			Px.Numeric,
 			rootCtx.timeline.size,
@@ -106,24 +108,6 @@ export function ProjectionRoot(handle: Handle<ProjectionRootContext>) {
 				suppressScrollEvents = false
 			})
 		})
-
-		function onScroll() {
-			if (suppressScrollEvents || !containerEl) return
-
-			const nextStart = Scroll.fromScroll(
-				Px.Numeric,
-				Px.Px(containerEl.scrollLeft),
-				scale,
-			)
-
-			const nextTimeline = Timeline.panBy(
-				Px.Numeric,
-				rootCtx.timeline,
-				Px.subtract(nextStart, rootCtx.timeline.view.start),
-			)
-
-			rootCtx.setTimeline(nextTimeline)
-		}
 
 		return (
 			<div

@@ -5,12 +5,9 @@ import type { SceneRenderer } from "../renderers/types";
 import { ProjectionRoot } from "./projection-root";
 import type { ProjectionRootContext } from "./projection-root";
 import { TimelineDom } from "./timeline-dom";
-import { TimelineRoot } from "./timeline-root";
-import type { TimelineRootContext } from "./timeline-root";
 import type { DawAction, DawData, DawUiState } from "../renderers/daw-skeleton/types";
 
 export function ProjectionDom(handle: Handle) {
-  const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
   const projCtx: ProjectionRootContext = handle.context.get(ProjectionRoot);
 
   return (props: {
@@ -22,7 +19,6 @@ export function ProjectionDom(handle: Handle) {
   }) => {
     return (
       <TimelineDom
-        dpr={rootCtx.dpr}
         projection={projCtx.projection}
         size={projCtx.size}
         height={projCtx.height}

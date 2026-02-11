@@ -52,16 +52,8 @@ export function NavigatorRoot(handle: Handle<NavigatorRootContext>) {
 		},
 		get zoomWindow() {
 			const timeline = rootCtx.timeline
-			const s =
-				size.width === 0
-					? 1
-					: Projection.scaleFor(
-							Px.Numeric,
-							timeline.size,
-							Px.Px(size.width),
-						)
 			return Span.transform(timeline.view, (v) =>
-				Projection.toScreen(Px.Numeric, Px.Numeric.zero, v, s),
+				Projection.toScreen(Px.Numeric, Px.Numeric.zero, v, this.scale),
 			)
 		},
 		get height() {

@@ -4,11 +4,8 @@ import type { SceneRenderer } from '../renderers/types'
 import { NavigatorRoot } from './navigator-root'
 import type { NavigatorRootContext } from './navigator-root'
 import { TimelineCanvas } from './timeline-canvas'
-import { TimelineRoot } from './timeline-root'
-import type { TimelineRootContext } from './timeline-root'
 
 export function NavigatorCanvas(handle: Handle) {
-	const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot)
 	const navCtx: NavigatorRootContext = handle.context.get(NavigatorRoot)
 
 	return (props: {
@@ -20,7 +17,6 @@ export function NavigatorCanvas(handle: Handle) {
 	}) => {
 		return (
 			<TimelineCanvas
-				dpr={rootCtx.dpr}
 				projection={navCtx.projection}
 				size={navCtx.size}
 				height={navCtx.height}
