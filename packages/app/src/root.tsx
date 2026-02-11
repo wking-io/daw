@@ -12,6 +12,21 @@ import { CreateProjectDialog } from "./project/create-dialog";
 import { AddIcon, CloseIcon, HomeIcon, StatusIcon } from "@daw/ui/icons";
 import { cn } from "@daw/utils";
 import { Button } from "./components/button";
+import { TimelineRoot } from "./timeline/components/timeline-root";
+import {
+  InsetPanel,
+  NavigatorCanvas,
+  NavigatorDom,
+  NavigatorTrack,
+  ProjectionCanvas,
+  ProjectionDom,
+  ZoomWindow,
+} from "./timeline/components";
+import { NavigatorRoot } from "./timeline/components/navigator-root";
+import { ProjectionRoot } from "./timeline/components/projection-root";
+import { DawSkeletonSceneRenderer } from "./timeline/renderers/daw-skeleton/scene";
+import { demoDawData } from "./timeline/demo/daw-data";
+import type { DawAction, DawUiState } from "./timeline/renderers/daw-skeleton/types";
 
 type Theme = "light" | "dark";
 
@@ -90,6 +105,16 @@ function ProjectTabIcon(handle: Handle) {
 
 function MainApp(handle: Handle) {
   const [getTabs, setTabs] = getAtom(handle, tabsAtom);
+  let selectedClipId: string | null = null;
+
+  const handleDawAction = (action: DawAction) => {
+    switch (action.type) {
+      case "select-clip":
+        selectedClipId = action.clipId;
+        handle.update();
+        break;
+    }
+  };
 
   const handleTabChange = (newTabId: TabValue) => {
     const tabId = newTabId as TTab["id"];
@@ -138,6 +163,7 @@ function MainApp(handle: Handle) {
 
   return () => {
     const { openTabs, activeTabId } = getTabs();
+    const dawUIState: DawUiState = { selectedClipId };
 
     return (
       <CreateProjectDialog.Root>
@@ -195,7 +221,51 @@ function MainApp(handle: Handle) {
 
           {openTabs.map((tab) => (
             <Tabs.Panel setup={{ value: tab.id }}>
-              <div class="flex flex-col overflow-hidden p-4 gap-4"></div>
+              <div class="flex flex-col overflow-hidden p-4 gap-4">
+                <TimelineRoot>
+                  {/* Navigator (minimap) */}
+                  <div className="relative mb-1">
+                    <InsetPanel class="user-select-none">
+                      <NavigatorRoot
+                        height={26}
+                        class="relative h-full w-full overflow-hidden rounded-[3px] bg-neutral-800"
+                      >
+                        <NavigatorTrack zoomRate={350}>
+                          <NavigatorCanvas
+                            renderer={DawSkeletonSceneRenderer}
+                            data={demoDawData}
+                            ui={dawUIState}
+                          />
+                          <NavigatorDom
+                            renderer={DawSkeletonSceneRenderer}
+                            data={demoDawData}
+                            ui={dawUIState}
+                            dispatch={handleDawAction}
+                          />
+                          <ZoomWindow zoomRate={350} />
+                        </NavigatorTrack>
+                      </NavigatorRoot>
+                    </InsetPanel>
+                  </div>
+
+                  {/* Projection (main view) */}
+                  <InsetPanel class="user-select-none">
+                    <ProjectionRoot height={240} class="rounded-[3px] bg-neutral-800">
+                      <ProjectionCanvas
+                        renderer={DawSkeletonSceneRenderer}
+                        data={demoDawData}
+                        ui={dawUIState}
+                      />
+                      <ProjectionDom
+                        renderer={DawSkeletonSceneRenderer}
+                        data={demoDawData}
+                        ui={dawUIState}
+                        dispatch={handleDawAction}
+                      />
+                    </ProjectionRoot>
+                  </InsetPanel>
+                </TimelineRoot>
+              </div>
             </Tabs.Panel>
           ))}
 

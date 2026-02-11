@@ -1,0 +1,3 @@
+.timeline {
+  box-shadow: inset 0 0 1px 1px --alpha(var(--color-oatmeal-13) / 20%);
+}
