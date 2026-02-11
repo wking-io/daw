@@ -1,9 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import type { Projection1D } from '../../foundation/projection1d'
-import * as Px from '../../lib/px'
-import type { TimelineHostEnv } from '../core'
+import * as Px from '@daw/core/lib/px'
+import type { TimelineHostEnv, TimelineTheme } from '../core'
 import { DawSkeletonSceneRenderer } from './scene'
 import type { DawClip, DawData, DawTrack, DawUiState } from './types'
+
+const MOCK_THEME: TimelineTheme = {
+	background: 'oklch(24.4% 0.0048 66.2)',
+	gridLine: 'oklch(37.67% 0.0074 66.2)',
+	clipFallbackFill: 'oklch(19.19% 0.0038 66.2)',
+	clipFallbackFillSelected: 'oklch(37.67% 0.0074 66.2)',
+	clipFallbackBorder: 'oklch(45.24% 0.0089 66.2)',
+	clipBorderSelected: 'oklch(89.57% 0.005 66.2)',
+}
 
 // =============================================================================
 // Test Fixtures
@@ -50,6 +59,7 @@ function createMockEnv(options: {
 		},
 		surface,
 		fitToHeight,
+		theme: MOCK_THEME,
 	}
 }
 
@@ -112,7 +122,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 				expect(bgNode?.kind).toBe('rect')
 				if (bgNode?.kind === 'rect') {
 					expect(bgNode.rect).toEqual({ x: 0, y: 0, width: 400, height: 200 })
-					expect(bgNode.fill).toBe('oklch(26.9% 0 0)') // neutral-800
+					expect(bgNode.fill).toBe(MOCK_THEME.background)
 				}
 			})
 
@@ -135,7 +145,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 				const bgNode = scene.canvas[0]
 				expect(bgNode?.kind).toBe('rect')
 				if (bgNode?.kind === 'rect') {
-					expect(bgNode.fill).toBe('oklch(26.9% 0 0)') // neutral-800
+					expect(bgNode.fill).toBe(MOCK_THEME.background)
 				}
 			})
 
@@ -156,7 +166,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 				})
 
 				const gridLines = scene.canvas.filter(
-					(n) => n.kind === 'line' && n.stroke.color === 'oklch(37.1% 0 0)', // neutral-700
+					(n) => n.kind === 'line' && n.stroke.color === MOCK_THEME.gridLine,
 				)
 
 				// Grid lines at intervals of 100, plus buffer
@@ -180,7 +190,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 				})
 
 				const gridLines = scene.canvas.filter(
-					(n) => n.kind === 'line' && n.stroke.color === 'oklch(37.1% 0 0)', // neutral-700
+					(n) => n.kind === 'line' && n.stroke.color === MOCK_THEME.gridLine,
 				)
 
 				// Should have grid lines - exact count depends on view
@@ -421,7 +431,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 					const rect = selectedClip.children[0]
 					if (rect?.kind === 'rect') {
 						expect(rect.fill).toBe('#ff5500') // track color
-						expect(rect.stroke?.color).toBe('oklch(92.2% 0 0)') // neutral-200 (selected border)
+						expect(rect.stroke?.color).toBe(MOCK_THEME.clipBorderSelected)
 					}
 				}
 

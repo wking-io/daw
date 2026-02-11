@@ -1,4 +1,4 @@
-import type * as Px from '../../lib/px'
+import type * as Px from '@daw/core/lib/px'
 
 export type DawClip = Readonly<{
 	id: string

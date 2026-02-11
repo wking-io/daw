@@ -32,6 +32,11 @@
     "./lib/numeric": "./src/lib/numeric.ts",
     "./lib/range": "./src/lib/range.ts",
     "./lib/span": "./src/lib/span.ts",
+    "./lib/math": "./src/lib/math.ts",
+    "./lib/px": "./src/lib/px.ts",
+    "./lib/projection": "./src/lib/projection.ts",
+    "./lib/scroll": "./src/lib/scroll.ts",
+    "./lib/timeline": "./src/lib/timeline.ts",
     "./lib/time-signature": "./src/lib/time-signature.ts"
   },
   "scripts": {

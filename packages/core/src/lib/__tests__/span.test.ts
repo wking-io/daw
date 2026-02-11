@@ -90,17 +90,4 @@ describe("lib/span", () => {
     });
   });
 
-  describe("toRange", () => {
-    it("converts span to range (start, start + size)", () => {
-      const span = { start: 10, size: 20 };
-      const range = Span.toRange(Numeric.Default, span);
-      expect(range).toEqual({ start: 10, end: 30 });
-    });
-
-    it("handles zero size", () => {
-      const span = { start: 10, size: 0 };
-      const range = Span.toRange(Numeric.Default, span);
-      expect(range).toEqual({ start: 10, end: 10 });
-    });
-  });
 });

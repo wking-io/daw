@@ -1,4 +1,4 @@
-import * as Px from '../lib/px'
+import * as Px from '@daw/core/lib/px'
 import type { DawData } from '../renderers/daw-skeleton/types'
 
 // Tailwind color palette

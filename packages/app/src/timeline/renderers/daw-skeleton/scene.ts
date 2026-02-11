@@ -1,9 +1,7 @@
-// Import DAW theme colors type
-import type { ThemeColors } from '~/app/routes/daw/lib/colors'
-
-import * as Px from '../../lib/px'
+import * as Px from '@daw/core/lib/px'
 import type { InteractiveNode, Scene, SceneNode } from '../../scene'
 import { point, rect, stroke } from '../../scene'
+import type { TimelineTheme } from '../core'
 import type { SceneRenderer, BuildSceneArgs } from '../types'
 import type { DawAction, DawClip, DawData, DawUiState } from './types'
 
@@ -14,26 +12,6 @@ import type { DawAction, DawClip, DawData, DawUiState } from './types'
 const DEFAULT_TRACK_HEIGHT_PX = 28
 const CLIP_VERTICAL_PADDING = 3
 const GRID_MAJOR_INTERVAL = 100
-
-// Default theme colors (dark theme oklch neutrals from daw/lib/colors.ts)
-const DEFAULT_THEME: Pick<
-	ThemeColors,
-	'neutral200' | 'neutral600' | 'neutral700' | 'neutral800' | 'neutral900'
-> = {
-	neutral200: 'oklch(92.2% 0 0)',
-	neutral600: 'oklch(43.9% 0 0)',
-	neutral700: 'oklch(37.1% 0 0)',
-	neutral800: 'oklch(26.9% 0 0)',
-	neutral900: 'oklch(20.5% 0 0)',
-}
-
-// Scene colors derived from theme
-const BACKGROUND_COLOR = DEFAULT_THEME.neutral800
-const GRID_LINE_COLOR = DEFAULT_THEME.neutral700
-const CLIP_BORDER_SELECTED = DEFAULT_THEME.neutral200
-const CLIP_FALLBACK_FILL = DEFAULT_THEME.neutral900
-const CLIP_FALLBACK_FILL_SELECTED = DEFAULT_THEME.neutral700
-const CLIP_FALLBACK_BORDER = DEFAULT_THEME.neutral600
 
 // =============================================================================
 // Color Utilities
@@ -76,27 +54,6 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
 }
 
 /**
- * Darken a color by mixing with black.
- * @param r Red component (0-255)
- * @param g Green component (0-255)
- * @param b Blue component (0-255)
- * @param amount How much to darken (0 = original, 1 = black)
- */
-function darken(
-	r: number,
-	g: number,
-	b: number,
-	amount: number,
-): { r: number; g: number; b: number } {
-	const factor = 1 - amount
-	return {
-		r: Math.round(r * factor),
-		g: Math.round(g * factor),
-		b: Math.round(b * factor),
-	}
-}
-
-/**
  * Convert RGB to hex string.
  */
 function rgbToHex(r: number, g: number, b: number): string {
@@ -111,14 +68,15 @@ function rgbToHex(r: number, g: number, b: number): string {
 function deriveClipColors(
 	trackColor: string,
 	isSelected: boolean,
+	theme: TimelineTheme,
 ): { fill: string; border: string } {
 	const parsed = parseColor(trackColor)
 
 	if (!parsed) {
-		// Fallback to neutral colors if parsing fails
+		// Fallback to theme colors if parsing fails
 		return isSelected
-			? { fill: CLIP_FALLBACK_FILL_SELECTED, border: CLIP_BORDER_SELECTED }
-			: { fill: CLIP_FALLBACK_FILL, border: CLIP_FALLBACK_BORDER }
+			? { fill: theme.clipFallbackFillSelected, border: theme.clipBorderSelected }
+			: { fill: theme.clipFallbackFill, border: theme.clipFallbackBorder }
 	}
 
 	const { r, g, b } = parsed
@@ -126,7 +84,7 @@ function deriveClipColors(
 	if (isSelected) {
 		return {
 			fill: rgbToHex(r, g, b),
-			border: CLIP_BORDER_SELECTED,
+			border: theme.clipBorderSelected,
 		}
 	}
 
@@ -136,11 +94,10 @@ function deriveClipColors(
 	}
 }
 
-function deriveNavigatorClipFill(trackColor: string): string {
+function deriveNavigatorClipFill(trackColor: string, theme: TimelineTheme): string {
 	const parsed = parseColor(trackColor)
-	if (!parsed) return '#525252' // neutral-600
+	if (!parsed) return theme.clipFallbackBorder
 	const { r, g, b } = parsed
-	// Darken by 40% for navigator clips
 	return rgbToHex(r, g, b)
 }
 
@@ -237,7 +194,7 @@ function buildMainCanvasNodes(args: {
 	nodes.push({
 		kind: 'rect',
 		rect: rect(Px.Px(0), Px.Px(0), canvasWidth, canvasHeight),
-		fill: BACKGROUND_COLOR,
+		fill: env.theme.background,
 	})
 
 	// Vertical grid lines (content-space every 100 px)
@@ -246,7 +203,7 @@ function buildMainCanvasNodes(args: {
 	const first =
 		Math.floor(viewStart / GRID_MAJOR_INTERVAL) * GRID_MAJOR_INTERVAL
 
-	const gridStroke = stroke(GRID_LINE_COLOR, 1)
+	const gridStroke = stroke(env.theme.gridLine, 1)
 	for (
 		let t = first;
 		t <= viewEnd + GRID_MAJOR_INTERVAL;
@@ -262,9 +219,6 @@ function buildMainCanvasNodes(args: {
 
 	return nodes
 }
-
-// Colors for navigator
-const NAV_TRACK_BORDER_COLOR = DEFAULT_THEME.neutral700
 
 /**
  * Build canvas nodes for the navigator surface.
@@ -285,7 +239,7 @@ function buildNavigatorCanvasNodes(args: {
 	// Only render track separator lines if 4 or fewer tracks
 	const showSeparators = data.tracks.length <= 4
 	if (showSeparators) {
-		const borderStroke = stroke(NAV_TRACK_BORDER_COLOR, 1)
+		const borderStroke = stroke(env.theme.gridLine, 1)
 		for (let i = 1; i < data.tracks.length; i++) {
 			const y = Px.Px(Number(Px.multiply(trackHeightPx, i)) + 0.5) // +0.5 for crisp 1px line
 			nodes.push({
@@ -305,7 +259,7 @@ function buildNavigatorCanvasNodes(args: {
 		nodes.push({
 			kind: 'rect',
 			rect: rect(layout.x, layout.y, layout.width, clipHeight),
-			fill: deriveNavigatorClipFill(layout.trackColor),
+			fill: deriveNavigatorClipFill(layout.trackColor, env.theme),
 		})
 	}
 
@@ -331,6 +285,7 @@ function buildDomNodes(args: {
 		const { fill: bgColor, border: borderColor } = deriveClipColors(
 			layout.trackColor,
 			layout.isSelected,
+			env.theme,
 		)
 
 		// Use clip rect for group bounds so groups don't overlap

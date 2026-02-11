@@ -2,10 +2,10 @@ import type { Handle, RemixNode } from '@remix-run/component'
 
 import { makeProjection1D } from '../foundation/projection1d'
 import type { Projection1D } from '../foundation/projection1d'
-import * as Projection from '../lib/projection'
-import * as Px from '../lib/px'
-import * as Span from '../lib/span'
-import type { Span as SpanT } from '../lib/span'
+import * as Projection from '@daw/core/lib/projection'
+import * as Px from '@daw/core/lib/px'
+import * as Span from '@daw/core/lib/span'
+import type { Span as SpanT } from '@daw/core/lib/span'
 import { getPointerPosition } from '../utils/get-pointer-position'
 import { TimelineRoot } from './timeline-root'
 import type { TimelineRootContext } from './timeline-root'
@@ -13,7 +13,6 @@ import type { TimelineRootContext } from './timeline-root'
 const DEFAULT_HEIGHT = 26
 
 export type NavigatorRootContext = {
-	containerEl: HTMLDivElement | null
 	size: { width: number; height: number }
 	scale: number
 	projection: Projection1D<Px.Px>
@@ -29,9 +28,6 @@ export function NavigatorRoot(handle: Handle<NavigatorRootContext>) {
 	const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot)
 
 	handle.context.set({
-		get containerEl() {
-			return containerEl
-		},
 		get size() {
 			return size
 		},

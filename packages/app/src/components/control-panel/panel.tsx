@@ -234,9 +234,7 @@ export function ControlPanelContent(handle: Handle) {
                 </Field.Root>
 
                 <div class="flex justify-end pt-2">
-                  <Button setup={{ size: "xs" }} on={{ click: () => ctx.resetStatusIconConfig() }}>
-                    Reset
-                  </Button>
+                  <Button on={{ click: () => ctx.resetStatusIconConfig() }}>Reset</Button>
                 </div>
               </div>
             </div>

@@ -1,9 +1,10 @@
 import type { RemixNode } from "@remix-run/component";
 
 import type { Projection1D } from "../foundation/projection1d";
-import type * as Px from "../lib/px";
+import type * as Px from "@daw/core/lib/px";
 import type { TimelineHostEnv } from "../renderers/core";
 import type { SceneRenderer } from "../renderers/types";
+import { readTimelineTheme } from "../lib/theme";
 import { renderToDom } from "../scene";
 import type { DawAction, DawData, DawUiState } from "../renderers/daw-skeleton/types";
 
@@ -29,6 +30,7 @@ export function TimelineDom() {
       },
       surface: props.surface,
       fitToHeight: props.fitToHeight,
+      theme: readTimelineTheme(),
     };
 
     const scene = props.renderer.buildScene({

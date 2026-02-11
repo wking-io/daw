@@ -1,8 +1,8 @@
 import type { Handle, Props } from "@remix-run/component";
 
-import * as Px from "../lib/px";
-import * as Timeline from "../lib/timeline";
-import * as Span from "../lib/span";
+import * as Px from "@daw/core/lib/px";
+import * as Timeline from "@daw/core/lib/timeline";
+import * as Span from "@daw/core/lib/span";
 
 export type TimelineRootContext = {
   get timeline(): Timeline.Timeline<Px.Px>;

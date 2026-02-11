@@ -110,7 +110,7 @@ export function CreateProjectDialog(handle: Handle) {
 
           <div class="flex justify-end gap-2">
             <Dialog.Close>Cancel</Dialog.Close>
-            <Button setup={{ size: "sm" }} type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Creating..." : "Create Project"}
             </Button>
           </div>

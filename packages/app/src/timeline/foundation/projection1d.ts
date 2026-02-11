@@ -1,8 +1,8 @@
-import type { Numeric } from '../lib/numeric'
-import * as Projection from '../lib/projection'
-import type * as Px from '../lib/px'
-import type * as Span from '../lib/span'
-import type * as Timeline from '../lib/timeline'
+import type { Numeric } from '@daw/core/lib/numeric'
+import * as Projection from '@daw/core/lib/projection'
+import type * as Px from '@daw/core/lib/px'
+import type * as Span from '@daw/core/lib/span'
+import type * as Timeline from '@daw/core/lib/timeline'
 
 export type Projection1D<Unit extends number> = Readonly<{
 	/** screen px / content unit */

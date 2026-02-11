@@ -1,5 +1,4 @@
 import type { Numeric } from "./numeric";
-import * as Range from "./range";
 
 export type Span<A extends number> = {
   start: A;
@@ -40,6 +39,3 @@ export const withSize = <A extends number>(s: Span<A>, size: A): Span<A> => ({
   ...s,
   size,
 });
-
-export const toRange = <A extends number>(N: Numeric<A>, s: Span<A>) =>
-  Range.make(N, s.start, end(N, s));

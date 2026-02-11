@@ -230,7 +230,7 @@ function MainApp(handle: Handle) {
                         height={26}
                         class="relative h-full w-full overflow-hidden rounded-[3px] bg-neutral-800"
                       >
-                        <NavigatorTrack zoomRate={350}>
+                        <NavigatorTrack>
                           <NavigatorCanvas
                             renderer={DawSkeletonSceneRenderer}
                             data={demoDawData}
@@ -242,7 +242,7 @@ function MainApp(handle: Handle) {
                             ui={dawUIState}
                             dispatch={handleDawAction}
                           />
-                          <ZoomWindow zoomRate={350} />
+                          <ZoomWindow />
                         </NavigatorTrack>
                       </NavigatorRoot>
                     </InsetPanel>

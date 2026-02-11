@@ -1,9 +1,10 @@
 import type { Handle } from '@remix-run/component'
 
 import type { Projection1D } from '../foundation/projection1d'
-import type * as Px from '../lib/px'
+import type * as Px from '@daw/core/lib/px'
 import type { TimelineHostEnv } from '../renderers/core'
 import type { SceneRenderer } from '../renderers/types'
+import { readTimelineTheme } from '../lib/theme'
 import { renderToCanvas } from '../scene'
 import { prepareCanvas } from '../utils/prepare-canvas'
 
@@ -36,6 +37,7 @@ export function TimelineCanvas(handle: Handle) {
 				},
 				surface: props.surface,
 				fitToHeight: props.fitToHeight,
+				theme: readTimelineTheme(),
 			}
 
 			const ctx = prepareCanvas({

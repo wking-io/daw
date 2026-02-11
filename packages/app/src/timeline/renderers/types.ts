@@ -1,5 +1,5 @@
 import type { Projection1D } from '../foundation/projection1d'
-import type { Px } from '../lib/px'
+import type { Px } from '@daw/core/lib/px'
 import type { Scene } from '../scene'
 import type { TimelineHostEnv } from './core'
 

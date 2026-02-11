@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, mock, beforeEach } from 'bun:test'
 import { renderToCanvas } from './canvas-adapter'
 import { point, rect, stroke, textStyle } from './types'
 import type { SceneNode } from './types'
@@ -13,17 +13,17 @@ describe('timeline/scene/canvas-adapter', () => {
 			font: '',
 			textAlign: 'start' as CanvasTextAlign,
 			textBaseline: 'alphabetic' as CanvasTextBaseline,
-			fillRect: vi.fn(),
-			strokeRect: vi.fn(),
-			beginPath: vi.fn(),
-			moveTo: vi.fn(),
-			lineTo: vi.fn(),
-			stroke: vi.fn(),
-			fillText: vi.fn(),
-			save: vi.fn(),
-			restore: vi.fn(),
-			rect: vi.fn(),
-			clip: vi.fn(),
+			fillRect: mock(() => {}),
+			strokeRect: mock(() => {}),
+			beginPath: mock(() => {}),
+			moveTo: mock(() => {}),
+			lineTo: mock(() => {}),
+			stroke: mock(() => {}),
+			fillText: mock(() => {}),
+			save: mock(() => {}),
+			restore: mock(() => {}),
+			rect: mock(() => {}),
+			clip: mock(() => {}),
 		} as unknown as CanvasRenderingContext2D
 	}
 

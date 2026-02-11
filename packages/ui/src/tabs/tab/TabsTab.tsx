@@ -1,9 +1,9 @@
 import type { Handle, Props } from "@remix-run/component";
-import { TabsRoot, type TabValue, type TabsOrientation } from "../root/TabsRoot";
-import { TabsList } from "../list/TabsList";
+import { TabsRoot, type TabValue, type TabsOrientation } from "../root/tabs-root";
+import { TabsList } from "../list/tabs-list";
 import { generateId } from "../../utils/generate-id";
 import { getDataAttributes } from "../../utils/data-attributes";
-import { Button } from "../../button/Button";
+import { Button } from "../../button/button";
 
 /**
  * Setup configuration for the TabsTab component.

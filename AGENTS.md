@@ -28,3 +28,4 @@ Use bun. If a dependency is only used by one package, install it locally; otherw
 ## Agent References
 
 - Logging: docs/logging-best-practices.md
+- DOM events: docs/dom-event-patterns.md

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { hitTest } from './hit-test'
 import { point, rect, stroke, textStyle } from './types'
 import type { InteractiveNode } from './types'

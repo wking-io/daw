@@ -1,4 +1,4 @@
-import { clamp } from '../lib/math'
+import { clamp } from '@daw/core/lib/math'
 
 export function getPointerPosition(
 	e: PointerEvent,
