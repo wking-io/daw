@@ -14,7 +14,6 @@ import { cn } from "@daw/utils";
 import { Button } from "./components/button";
 import { TimelineRoot } from "./timeline/components/timeline-root";
 import {
-  InsetPanel,
   NavigatorCanvas,
   NavigatorDom,
   NavigatorTrack,
