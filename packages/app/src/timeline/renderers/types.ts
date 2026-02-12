@@ -1,5 +1,5 @@
 import type { Projection1D } from '../foundation/projection1d'
-import type { Px } from '@daw/core/lib/px'
+import type * as QN from '@daw/core/lib/qn'
 import type { Scene } from '../scene'
 import type { TimelineHostEnv } from './core'
 
@@ -12,7 +12,7 @@ import type { TimelineHostEnv } from './core'
  */
 export type BuildSceneArgs<Data, UiState> = Readonly<{
 	data: Data
-	projection: Projection1D<Px>
+	projection: Projection1D<QN.QN>
 	ui: UiState
 	env: TimelineHostEnv
 }>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Schema } from "effect";
 import type { NoteId, PatternId, ProjectId } from "../../ids";
 import { MidiNote, MidiPattern } from "../midi";
-import type { QN } from "../qn";
+import type { QN } from "../../lib/qn";
 
 describe("MidiNote schema", () => {
   const validNote = {

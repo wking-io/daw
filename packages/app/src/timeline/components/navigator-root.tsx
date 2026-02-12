@@ -4,6 +4,7 @@ import { makeProjection1D } from '../foundation/projection1d'
 import type { Projection1D } from '../foundation/projection1d'
 import * as Projection from '@daw/core/lib/projection'
 import * as Px from '@daw/core/lib/px'
+import * as QN from '@daw/core/lib/qn'
 import * as Span from '@daw/core/lib/span'
 import type { Span as SpanT } from '@daw/core/lib/span'
 import { getPointerPosition } from '../utils/get-pointer-position'
@@ -15,7 +16,7 @@ const DEFAULT_HEIGHT = 26
 export type NavigatorRootContext = {
 	size: { width: number; height: number }
 	scale: number
-	projection: Projection1D<Px.Px>
+	projection: Projection1D<QN.QN>
 	zoomWindow: SpanT<Px.Px>
 	height: number
 	getPointerPosition: (e: PointerEvent) => { x: number; y: number }
@@ -34,7 +35,7 @@ export function NavigatorRoot(handle: Handle<NavigatorRootContext>) {
 		get scale() {
 			if (size.width === 0) return 1
 			return Projection.scaleFor(
-				Px.Numeric,
+				QN.Numeric,
 				rootCtx.timeline.size,
 				Px.Px(size.width),
 			)
@@ -42,18 +43,18 @@ export function NavigatorRoot(handle: Handle<NavigatorRootContext>) {
 		get projection() {
 			const timeline = rootCtx.timeline
 			return makeProjection1D({
-				N: Px.Numeric,
+				N: QN.Numeric,
 				timeline: {
 					...timeline,
-					view: Span.make(Px.Numeric, 0, timeline.size),
+					view: Span.make(QN.Numeric, 0, timeline.size),
 				},
 				viewportWidthPx: Px.Px(size.width || 1),
 			})
 		},
 		get zoomWindow() {
 			const timeline = rootCtx.timeline
-			return Span.transform(timeline.view, (v) =>
-				Projection.toScreen(Px.Numeric, Px.Numeric.zero, v, this.scale),
+			return Span.map(timeline.view, (v) =>
+				Projection.toScreen(QN.Numeric, QN.Numeric.zero, v, this.scale),
 			)
 		},
 		get height() {

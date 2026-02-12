@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { Projection1D } from '../../foundation/projection1d'
+import * as QN from '@daw/core/lib/qn'
 import * as Px from '@daw/core/lib/px'
 import type { TimelineHostEnv, TimelineTheme } from '../core'
 import { DawSkeletonSceneRenderer } from './scene'
@@ -21,19 +22,19 @@ function createMockProjection(options: {
 	viewStart?: number
 	viewSize?: number
 	scale?: number
-}): Projection1D<Px.Px> {
+}): Projection1D<QN.QN> {
 	const { viewStart = 0, viewSize = 100, scale = 1 } = options
 
 	return {
 		scale,
 		viewportWidthPx: Px.Px(viewSize * scale),
-		size: Px.Px(1000),
+		size: QN.QN(1000),
 		view: {
-			start: Px.Px(viewStart),
-			size: Px.Px(viewSize),
+			start: QN.QN(viewStart),
+			size: QN.QN(viewSize),
 		},
-		contentToScreenX: (x: Px.Px) => Px.Px((Number(x) - viewStart) * scale),
-		screenToContentX: (x: Px.Px) => Px.Px(Number(x) / scale + viewStart),
+		contentToScreenX: (x: QN.QN) => Px.Px((Number(x) - viewStart) * scale),
+		screenToContentX: (x: Px.Px) => QN.QN(Number(x) / scale + viewStart),
 	}
 }
 
@@ -80,8 +81,8 @@ function createClip(
 	return {
 		id,
 		trackId,
-		start: Px.Px(start),
-		end: Px.Px(end),
+		start: QN.QN(start),
+		end: QN.QN(end),
 		title,
 	}
 }
@@ -109,7 +110,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 				const data = createDawData([], [])
 				const projection = createMockProjection({
 					viewStart: 0,
-					viewSize: 250, // Should show grid at 0, 100, 200
+					viewSize: 250, // Should show grid at 0, 4, 8, ...
 					scale: 1,
 				})
 				const env = createMockEnv({})
@@ -125,7 +126,7 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 					(n) => n.kind === 'line' && n.stroke.color === MOCK_THEME.gridLine,
 				)
 
-				// Grid lines at intervals of 100, plus buffer
+				// Grid lines at intervals of 4 QN, plus buffer
 				expect(gridLines.length).toBeGreaterThanOrEqual(3)
 			})
 
@@ -151,9 +152,6 @@ describe('timeline/renderers/daw-skeleton/scene', () => {
 
 				// Should have grid lines - exact count depends on view
 				expect(gridLines.length).toBeGreaterThan(0)
-
-				// First grid line should be at content position 0, which is screen x = -50 + 0.5
-				// (but only visible ones are generated based on view)
 			})
 
 			it('calculates track height with fitToHeight for dom clip positioning', () => {

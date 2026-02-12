@@ -2,6 +2,7 @@ import type { Handle, RemixNode } from "@remix-run/component";
 import { cn } from "@daw/utils";
 
 import * as Px from "@daw/core/lib/px";
+import * as QN from "@daw/core/lib/qn";
 import * as Span from "@daw/core/lib/span";
 import * as Timeline from "@daw/core/lib/timeline";
 import { deltaFrom, zoomFactorFromDelta } from "../utils/interaction-math";
@@ -13,8 +14,8 @@ import type { TimelineRootContext } from "./timeline-root";
 type Idle = { kind: "idle" };
 type Pan = {
   kind: "pan";
-  initialTimeline: Timeline.Timeline<Px.Px>;
-  offset: Px.Px;
+  initialTimeline: Timeline.Timeline<QN.QN>;
+  offset: QN.QN;
 };
 
 type Interaction = Idle | Pan;
@@ -30,10 +31,10 @@ export function NavigatorTrack(handle: Handle) {
     e.preventDefault();
     const factor = zoomFactorFromDelta(-e.deltaY, ZOOM_RATE);
     const nextTimeline = Timeline.zoomAt(
-      Px.Numeric,
+      QN.Numeric,
       rootCtx.timeline,
       factor,
-      Span.center(Px.Numeric, rootCtx.timeline.view),
+      Span.center(QN.Numeric, rootCtx.timeline.view),
     );
     rootCtx.setTimeline(nextTimeline);
   }
@@ -46,14 +47,14 @@ export function NavigatorTrack(handle: Handle) {
     el.setPointerCapture(e.pointerId);
     const pointer = navCtx.getPointerPosition(e);
 
-    const offset = Px.divide(rootCtx.timeline.view.size, 2);
-    const delta = deltaFrom({
+    const offset = QN.divide(rootCtx.timeline.view.size, 2);
+    const delta = deltaFrom(QN.Numeric, {
       x: Px.Px(pointer.x),
       scale: navCtx.scale,
       offset,
       from: rootCtx.timeline.view.start,
     });
-    const nextTimeline = Timeline.panBy(Px.Numeric, rootCtx.timeline, delta);
+    const nextTimeline = Timeline.panBy(QN.Numeric, rootCtx.timeline, delta);
     rootCtx.setTimeline(nextTimeline);
     rootCtx.setIsInteracting(true);
     interaction = {
@@ -75,13 +76,13 @@ export function NavigatorTrack(handle: Handle) {
 
     el.setPointerCapture(e.pointerId);
     const pointer = navCtx.getPointerPosition(e);
-    const delta = deltaFrom({
+    const delta = deltaFrom(QN.Numeric, {
       scale: navCtx.scale,
       x: Px.Px(pointer.x),
       offset: interaction.offset,
       from: rootCtx.timeline.view.start,
     });
-    const nextTimeline = Timeline.panBy(Px.Numeric, rootCtx.timeline, delta);
+    const nextTimeline = Timeline.panBy(QN.Numeric, rootCtx.timeline, delta);
     rootCtx.setTimeline(nextTimeline);
   }
 

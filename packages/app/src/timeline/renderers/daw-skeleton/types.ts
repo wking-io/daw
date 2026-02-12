@@ -1,10 +1,10 @@
-import type * as Px from '@daw/core/lib/px'
+import type { QN } from '@daw/core/lib/qn'
 
 export type DawClip = Readonly<{
 	id: string
 	trackId: string
-	start: Px.Px
-	end: Px.Px
+	start: QN
+	end: QN
 	title: string
 }>
 

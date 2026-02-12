@@ -3,6 +3,7 @@ import { cn } from "@daw/utils";
 
 import * as Projection from "@daw/core/lib/projection";
 import * as Px from "@daw/core/lib/px";
+import * as QN from "@daw/core/lib/qn";
 import * as Span from "@daw/core/lib/span";
 import * as Timeline from "@daw/core/lib/timeline";
 import { deltaFrom, zoomFactorFromDelta } from "../utils/interaction-math";
@@ -38,7 +39,7 @@ export function ZoomWindow(handle: Handle) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
   const navCtx: NavigatorRootContext = handle.context.get(NavigatorRoot);
   let isAltKeyPressed = false;
-  let interaction: Interaction<Px.Px> = { kind: "idle" };
+  let interaction: Interaction<QN.QN> = { kind: "idle" };
 
   // Scrub state
   let isScrubbing = false;
@@ -71,10 +72,10 @@ export function ZoomWindow(handle: Handle) {
     const { initialTimeline } = interaction;
     const factor = zoomFactorFromDelta(cumulativeDelta, 350);
     const nextTimeline = Timeline.zoomAt(
-      Px.Numeric,
+      QN.Numeric,
       initialTimeline,
       factor,
-      Span.center(Px.Numeric, initialTimeline.view),
+      Span.center(QN.Numeric, initialTimeline.view),
     );
     rootCtx.setTimeline(nextTimeline);
   }
@@ -130,7 +131,7 @@ export function ZoomWindow(handle: Handle) {
 
       el.setPointerCapture(e.pointerId);
       const pointer = navCtx.getPointerPosition(e);
-      const offset = deltaFrom({
+      const offset = deltaFrom(QN.Numeric, {
         x: Px.Px(pointer.x),
         scale: navCtx.scale,
         offset: rootCtx.timeline.view.start,
@@ -154,13 +155,13 @@ export function ZoomWindow(handle: Handle) {
       }
 
       const pointer = navCtx.getPointerPosition(e);
-      const delta = deltaFrom({
+      const delta = deltaFrom(QN.Numeric, {
         scale: navCtx.scale,
         x: Px.Px(pointer.x),
         offset: interaction.offset,
         from: rootCtx.timeline.view.start,
       });
-      const nextTimeline = Timeline.panBy(Px.Numeric, rootCtx.timeline, delta);
+      const nextTimeline = Timeline.panBy(QN.Numeric, rootCtx.timeline, delta);
       rootCtx.setTimeline(nextTimeline);
     }
 
@@ -203,19 +204,19 @@ export function ZoomWindow(handle: Handle) {
 
       const pointer = navCtx.getPointerPosition(e);
       const pointerTimelinePos = Projection.fromScreen(
-        Px.Numeric,
-        Px.Numeric.zero,
+        QN.Numeric,
+        QN.Numeric.zero,
         Px.Px(pointer.x),
         navCtx.scale,
       );
 
       if (interaction.direction === "L") {
-        const delta = Px.subtract(pointerTimelinePos, rootCtx.timeline.view.start);
-        const nextTimeline = Timeline.resizeLeftBy(Px.Numeric, rootCtx.timeline, delta);
+        const delta = QN.subtract(pointerTimelinePos, rootCtx.timeline.view.start);
+        const nextTimeline = Timeline.resizeLeftBy(QN.Numeric, rootCtx.timeline, delta);
         rootCtx.setTimeline(nextTimeline);
       } else {
-        const delta = Px.subtract(pointerTimelinePos, Span.end(Px.Numeric, rootCtx.timeline.view));
-        const nextTimeline = Timeline.resizeRightBy(Px.Numeric, rootCtx.timeline, delta);
+        const delta = QN.subtract(pointerTimelinePos, Span.end(QN.Numeric, rootCtx.timeline.view));
+        const nextTimeline = Timeline.resizeRightBy(QN.Numeric, rootCtx.timeline, delta);
         rootCtx.setTimeline(nextTimeline);
       }
     }

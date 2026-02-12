@@ -11,6 +11,7 @@ import {
   NoteId,
   PatternId,
   ProjectId,
+  QN,
   TrackId,
 } from "../../ids";
 import { ProjectVersion } from "../../versions";
@@ -26,7 +27,6 @@ import {
   Project,
   type Track,
 } from "../project";
-import { QN } from "../qn";
 
 const createBaseProject = (): Project => ({
   id: ProjectId.make("proj-1"),

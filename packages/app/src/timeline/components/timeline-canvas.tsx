@@ -2,6 +2,7 @@ import type { Handle } from '@remix-run/component'
 
 import type { Projection1D } from '../foundation/projection1d'
 import type * as Px from '@daw/core/lib/px'
+import type * as QN from '@daw/core/lib/qn'
 import type { TimelineHostEnv } from '../renderers/core'
 import type { SceneRenderer } from '../renderers/types'
 import { readTimelineTheme } from '../lib/theme'
@@ -15,7 +16,7 @@ export function TimelineCanvas(handle: Handle) {
 	let canvasEl: HTMLCanvasElement
 
 	return (props: {
-		projection: Projection1D<Px.Px>
+		projection: Projection1D<QN.QN>
 		size: { width: number; height: number }
 		height: number
 		surface: 'main' | 'navigator'

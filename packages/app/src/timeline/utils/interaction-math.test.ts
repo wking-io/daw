@@ -6,68 +6,68 @@ describe('timeline/utils/interaction-math', () => {
 	describe('deltaFrom', () => {
 		it('returns zero delta when pointer matches offset at origin', () => {
 			// scale=1, pointer at 100px screen, offset 100px → at=100, nextStart=0, delta=0
-			const result = deltaFrom({
+			const result = deltaFrom(Px.Numeric, {
 				x: Px.Px(100),
 				scale: 1,
 				offset: Px.Px(100),
 			})
-			expect(result).toBe(0)
+			expect(result).toBe(Px.Px(0))
 		})
 
 		it('computes delta from origin when no from is provided', () => {
 			// scale=1, pointer at 200px, offset 50px → at=200, nextStart=150, delta=150
-			const result = deltaFrom({
+			const result = deltaFrom(Px.Numeric, {
 				x: Px.Px(200),
 				scale: 1,
 				offset: Px.Px(50),
 			})
-			expect(result).toBe(150)
+			expect(result).toBe(Px.Px(150))
 		})
 
 		it('computes delta relative to from', () => {
 			// scale=1, pointer at 200px, offset 50px → at=200, nextStart=150
 			// from=100 → delta = 150-100 = 50
-			const result = deltaFrom({
+			const result = deltaFrom(Px.Numeric, {
 				x: Px.Px(200),
 				scale: 1,
 				offset: Px.Px(50),
 				from: Px.Px(100),
 			})
-			expect(result).toBe(50)
+			expect(result).toBe(Px.Px(50))
 		})
 
 		it('accounts for scale when converting screen to timeline', () => {
 			// scale=2, pointer at 200px screen → at = 0 + 200/2 = 100 timeline
 			// offset=30 → nextStart=70, from=0 → delta=70
-			const result = deltaFrom({
+			const result = deltaFrom(Px.Numeric, {
 				x: Px.Px(200),
 				scale: 2,
 				offset: Px.Px(30),
 			})
-			expect(result).toBe(70)
+			expect(result).toBe(Px.Px(70))
 		})
 
 		it('returns negative delta when pointer is before from', () => {
 			// scale=1, pointer at 50px, offset 0 → at=50, nextStart=50
 			// from=100 → delta = 50-100 = -50
-			const result = deltaFrom({
+			const result = deltaFrom(Px.Numeric, {
 				x: Px.Px(50),
 				scale: 1,
 				offset: Px.Px(0),
 				from: Px.Px(100),
 			})
-			expect(result).toBe(-50)
+			expect(result).toBe(Px.Px(-50))
 		})
 
 		it('works with fractional scale', () => {
 			// scale=0.5, pointer at 100px screen → at = 0 + 100/0.5 = 200 timeline
 			// offset=0 → nextStart=200, from=0 → delta=200
-			const result = deltaFrom({
+			const result = deltaFrom(Px.Numeric, {
 				x: Px.Px(100),
 				scale: 0.5,
 				offset: Px.Px(0),
 			})
-			expect(result).toBe(200)
+			expect(result).toBe(Px.Px(200))
 		})
 	})
 

@@ -1,8 +1,8 @@
 import { Schema } from "effect";
 import { ulid } from "ulid";
 
-// Re-export QN from domain for convenience (branded number type for quarter-note positions)
-export { QN } from "./domain/qn";
+// Re-export QN schema for use in Schema.Struct definitions
+export { QNSchema as QN } from "./lib/qn";
 
 export type ValidId =
   | "ProjectId"

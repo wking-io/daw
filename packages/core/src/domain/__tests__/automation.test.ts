@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Schema } from "effect";
 import type { AutomationLaneId, AutomationPointId, ProjectId, TrackId } from "../../ids";
 import { AutomationLane, AutomationPoint } from "../automation";
-import type { QN } from "../qn";
+import type { QN } from "../../lib/qn";
 
 describe("AutomationLane schema", () => {
   const validLane = {

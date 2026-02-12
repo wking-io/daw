@@ -1,3 +1,4 @@
+import type { QN } from '@daw/core/lib/qn'
 import * as Px from '@daw/core/lib/px'
 import type { InteractiveNode, Scene, SceneNode } from '../../scene'
 import { point, rect, stroke } from '../../scene'
@@ -11,7 +12,7 @@ import type { DawAction, DawClip, DawData, DawUiState } from './types'
 
 const DEFAULT_TRACK_HEIGHT_PX = 28
 const CLIP_VERTICAL_PADDING = 3
-const GRID_MAJOR_INTERVAL = 100
+const GRID_QN_INTERVAL = 4 // grid line every 4 QN (1 bar in 4/4)
 
 // =============================================================================
 // Color Utilities
@@ -128,7 +129,7 @@ type ClipLayout = {
 function computeClipLayouts(args: {
 	data: DawData
 	ui: DawUiState
-	projection: { contentToScreenX: (x: Px.Px) => Px.Px }
+	projection: { contentToScreenX: (x: QN) => Px.Px }
 	trackHeightPx: Px.Px
 }): ClipLayout[] {
 	const { data, ui, projection, trackHeightPx } = args
@@ -187,22 +188,21 @@ function buildMainCanvasNodes(args: {
 	const { projection, env } = args
 	const nodes: SceneNode<never>[] = []
 
-	const canvasWidth = env.canvas.widthPx
 	const canvasHeight = env.canvas.heightPx
 
-	// Vertical grid lines (content-space every 100 px)
+	// Vertical grid lines (content-space every GRID_QN_INTERVAL quarter notes)
 	const viewStart = Number(projection.view.start)
 	const viewEnd = viewStart + Number(projection.view.size)
 	const first =
-		Math.floor(viewStart / GRID_MAJOR_INTERVAL) * GRID_MAJOR_INTERVAL
+		Math.floor(viewStart / GRID_QN_INTERVAL) * GRID_QN_INTERVAL
 
 	const gridStroke = stroke(env.theme.gridLine, 1)
 	for (
 		let t = first;
-		t <= viewEnd + GRID_MAJOR_INTERVAL;
-		t += GRID_MAJOR_INTERVAL
+		t <= viewEnd + GRID_QN_INTERVAL;
+		t += GRID_QN_INTERVAL
 	) {
-		const x = Px.Px(Number(projection.contentToScreenX(Px.Px(t))) + 0.5)
+		const x = Px.Px(Number(projection.contentToScreenX(t as QN)) + 0.5)
 		nodes.push({
 			kind: 'line',
 			points: [point(x, Px.Px(0)), point(x, canvasHeight)],

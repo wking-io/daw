@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { type QN, QNNumeric } from "../qn";
+import { type QN, Numeric as QNNumeric } from "../../lib/qn";
 
 describe("QNNumeric", () => {
   it("add adds two QN values", () => {

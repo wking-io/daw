@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Schema } from "effect";
 import type { AudioFileId, ClipId, PatternId, ProjectId, TrackId } from "../../ids";
 import { Clip } from "../clip";
-import type { QN } from "../qn";
+import type { QN } from "../../lib/qn";
 
 describe("Clip schema", () => {
   const validMidiClip = {
