@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { QNSpan } from "../domain/clip";
-import { AudioFileId, ClipId, PatternId, QN, TrackId } from "../ids";
+import * as QN from "../lib/qn";
+import { AudioFileId, ClipId, PatternId, TrackId } from "../ids";
 
 export const ClipCreateMidi = Schema.Struct({
   t: Schema.Literal("clip.createMidi"),
@@ -31,7 +32,7 @@ export type ClipDelete = Schema.Schema.Type<typeof ClipDelete>;
 export const ClipMove = Schema.Struct({
   t: Schema.Literal("clip.move"),
   clipId: ClipId,
-  startQN: QN,
+  startQN: QN.Schema,
   trackId: Schema.optional(TrackId),
 });
 export type ClipMove = Schema.Schema.Type<typeof ClipMove>;
@@ -47,7 +48,7 @@ export const ClipSetLoop = Schema.Struct({
   t: Schema.Literal("clip.setLoop"),
   clipId: ClipId,
   enabled: Schema.Boolean,
-  length: Schema.optional(QN),
+  length: Schema.optional(QN.Schema),
 });
 export type ClipSetLoop = Schema.Schema.Type<typeof ClipSetLoop>;
 

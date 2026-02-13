@@ -28,8 +28,11 @@ export type SurfaceColor =
   | "blush"
   | "primary";
 
+export type SurfaceVariant = "default" | "full";
+
 export interface SurfaceSetup {
   color?: SurfaceColor;
+  variant?: SurfaceVariant;
 }
 
 export interface SurfaceProps extends Props<"div"> {
@@ -309,6 +312,28 @@ const colorClasses: Record<SurfaceColor, ColorClassConfig> = {
   },
 };
 
+interface VariantClassConfig {
+  root: string;
+  rootAfter: string;
+  inner: string;
+  innerBefore: string;
+}
+
+const variantClasses: Record<SurfaceVariant, VariantClassConfig> = {
+  default: {
+    root: "rounded-sm",
+    rootAfter: "after:rounded-[3.5px]",
+    inner: "rounded-sm border-[0.5px]",
+    innerBefore: "before:rounded-sm",
+  },
+  full: {
+    root: "rounded-none",
+    rootAfter: "after:rounded-none",
+    inner: "rounded-none border-y-[0.5px] border-x-0",
+    innerBefore: "before:rounded-none",
+  },
+};
+
 export interface SurfaceRootProps extends Props<"div"> {}
 
 export interface SurfaceInnerProps extends Props<"div"> {
@@ -321,6 +346,7 @@ export interface SurfaceInnerProps extends Props<"div"> {
 export function SurfaceRoot(_handle: Handle, setup: SurfaceSetup = {}) {
   const color = setup.color ?? "default";
   const config = colorClasses[color];
+  const v = variantClasses[setup.variant ?? "default"];
 
   return (props: SurfaceRootProps) => {
     const { class: classes = "relative", ...rest } = props;
@@ -328,8 +354,10 @@ export function SurfaceRoot(_handle: Handle, setup: SurfaceSetup = {}) {
     return (
       <div
         class={cn(
-          "rounded-sm shadow-recess dark:shadow-background/40",
-          "after:rounded-[3.5px] after:pointer-events-none after:absolute after:inset-[0.5px] after:shadow-highlight after:transition",
+          v.root,
+          "shadow-recess dark:shadow-background/40",
+          v.rootAfter,
+          "after:pointer-events-none after:absolute after:inset-[0.5px] after:shadow-highlight after:transition",
           config.highlight,
           classes,
         )}
@@ -342,6 +370,7 @@ export function SurfaceRoot(_handle: Handle, setup: SurfaceSetup = {}) {
 export function SurfaceInner(_handle: Handle, setup: SurfaceSetup = {}) {
   const color = setup.color ?? "default";
   const config = colorClasses[color];
+  const v = variantClasses[setup.variant ?? "default"];
 
   return (props: SurfaceInnerProps) => {
     const {
@@ -357,8 +386,10 @@ export function SurfaceInner(_handle: Handle, setup: SurfaceSetup = {}) {
     const innerProps = {
       children,
       class: cn(
-        "flex items-center justify-center text-xs h-7 rounded-sm block transition cursor-pointer bg-linear-to-b text-shadow-xxs dark:text-shadow-xs border-[0.5px] dark:border-background/40 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10 outline-none bg-clip-padding",
-        "before:rounded-sm before:pointer-events-none before:absolute before:inset-0 before:border before:border-sky-5 before:ring-2 before:ring-sky-5/20 before:transition",
+        "flex items-center justify-center text-xs h-7 block transition cursor-pointer bg-linear-to-b text-shadow-xxs dark:text-shadow-xs dark:border-background/40 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10 outline-none bg-clip-padding",
+        v.inner,
+        v.innerBefore,
+        "before:pointer-events-none before:absolute before:inset-0 before:border before:border-sky-5 before:ring-2 before:ring-sky-5/20 before:transition",
         "focus-visible:before:opacity-100",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         config.base,
@@ -383,6 +414,7 @@ export function SurfaceInner(_handle: Handle, setup: SurfaceSetup = {}) {
 export function SurfaceElement(_handle: Handle, setup: SurfaceSetup = {}) {
   const color = setup.color ?? "default";
   const config = colorClasses[color];
+  const v = variantClasses[setup.variant ?? "default"];
 
   return (props: SurfaceProps) => {
     const {
@@ -398,8 +430,10 @@ export function SurfaceElement(_handle: Handle, setup: SurfaceSetup = {}) {
     const innerProps = {
       children,
       class: cn(
-        "flex items-center justify-center text-xs h-7 rounded-sm block transition cursor-pointer bg-linear-to-b text-shadow-xxs dark:text-shadow-xs border-[0.5px] dark:border-background/40 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10 outline-none bg-clip-padding",
-        "before:rounded-sm before:pointer-events-none before:absolute before:inset-0 before:border before:border-sky-5 before:ring-2 before:ring-sky-5/20 before:transition",
+        "flex items-center justify-center text-xs h-7 block transition cursor-pointer bg-linear-to-b text-shadow-xxs dark:text-shadow-xs dark:border-background/40 shadow-input shadow-oatmeal-12/5 dark:shadow-oatmeal-12/10 outline-none bg-clip-padding",
+        v.inner,
+        v.innerBefore,
+        "before:pointer-events-none before:absolute before:inset-0 before:border before:border-sky-5 before:ring-2 before:ring-sky-5/20 before:transition",
         "focus-visible:before:opacity-100",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         config.base,
@@ -416,8 +450,10 @@ export function SurfaceElement(_handle: Handle, setup: SurfaceSetup = {}) {
     return (
       <div
         class={cn(
-          "rounded-sm relative shadow-recess dark:shadow-background/40",
-          "after:rounded-[3.5px] after:pointer-events-none after:absolute after:inset-[0.5px] after:shadow-highlight after:transition",
+          v.root,
+          "relative shadow-recess dark:shadow-background/40",
+          v.rootAfter,
+          "after:pointer-events-none after:absolute after:inset-[0.5px] after:shadow-highlight after:transition",
           config.highlight,
         )}
       >

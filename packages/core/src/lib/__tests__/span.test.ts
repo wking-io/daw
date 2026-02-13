@@ -89,5 +89,4 @@ describe("lib/span", () => {
       expect(updated).toEqual({ start: 10, size: 50 });
     });
   });
-
 });

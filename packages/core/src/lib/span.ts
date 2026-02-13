@@ -1,3 +1,4 @@
+import { Schema as S } from "effect";
 import type { Numeric } from "./numeric";
 
 export type Span<A extends number> = {
@@ -39,3 +40,9 @@ export const withSize = <A extends number>(s: Span<A>, size: A): Span<A> => ({
   ...s,
   size,
 });
+
+export const Schema = <A, I, R>(inner: S.Schema<A, I, R>) =>
+  S.Struct({
+    start: inner,
+    size: inner,
+  });

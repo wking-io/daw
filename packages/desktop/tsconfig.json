@@ -2,10 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "lib": [
-      "ESNext",
-      "DOM"
-    ],
+    "lib": ["ESNext", "DOM"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -25,20 +22,10 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "@base-ui/remix": [
-        "../base-ui/packages/remix/src/index.ts"
-      ],
-      "@base-ui/remix/*": [
-        "../base-ui/packages/remix/src/*/index.ts"
-      ],
-      "@app/*": [
-        "../app/src/*"
-      ]
+      "@base-ui/remix": ["../base-ui/packages/remix/src/index.ts"],
+      "@base-ui/remix/*": ["../base-ui/packages/remix/src/*/index.ts"],
+      "@app/*": ["../app/src/*"]
     }
   },
-  "include": [
-    "src",
-    "scripts",
-    "../base-ui/packages/remix/src"
-  ]
+  "include": ["src", "scripts", "../base-ui/packages/remix/src"]
 }

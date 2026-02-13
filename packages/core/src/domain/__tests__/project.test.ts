@@ -11,9 +11,9 @@ import {
   NoteId,
   PatternId,
   ProjectId,
-  QN,
   TrackId,
 } from "../../ids";
+import * as QN from "../../lib/qn";
 import { ProjectVersion } from "../../versions";
 import {
   type AudioFile,
@@ -61,8 +61,8 @@ const createClip = (id: string, trackId: string): Clip => ({
   id: ClipId.make(id),
   projectId: ProjectId.make("proj-1"),
   trackId: TrackId.make(trackId),
-  span: { start: QN.make(0), size: QN.make(4) },
-  loop: { enabled: false, length: QN.make(4) },
+  span: { start: QN.QN(0), size: QN.QN(4) },
+  loop: { enabled: false, length: QN.QN(4) },
   sortOrder: 0,
   payload: { kind: "midi", patternId: PatternId.make("pattern-1") },
 });
@@ -78,7 +78,7 @@ const createMidiNote = (id: string): MidiNote => ({
   id: NoteId.make(id),
   pitch: 60,
   velocity: 100,
-  span: { start: QN.make(0), size: QN.make(1) },
+  span: { start: QN.QN(0), size: QN.QN(1) },
 });
 
 const createAutomationLane = (
@@ -95,7 +95,7 @@ const createAutomationLane = (
 
 const createAutomationPoint = (id: string): AutomationPoint => ({
   id: AutomationPointId.make(id),
-  timeQN: QN.make(0),
+  timeQN: QN.QN(0),
   value: 0.5,
   curve: "linear",
 });
@@ -449,12 +449,12 @@ describe("Project.evolve", () => {
       const event: EditorEvent = {
         t: "clip.moved",
         clipId: ClipId.make("clip-1"),
-        start: QN.make(8),
+        start: QN.QN(8),
       };
 
       const result = evolve(project, event);
 
-      expect(first(result.clips).span.start).toBe(QN.make(8));
+      expect(first(result.clips).span.start).toBe(QN.QN(8));
     });
 
     it("handles clip.moved with track change", () => {
@@ -466,13 +466,13 @@ describe("Project.evolve", () => {
       const event: EditorEvent = {
         t: "clip.moved",
         clipId: ClipId.make("clip-1"),
-        start: QN.make(8),
+        start: QN.QN(8),
         trackId: TrackId.make("track-2"),
       };
 
       const result = evolve(project, event);
 
-      expect(first(result.clips).span.start).toBe(QN.make(8));
+      expect(first(result.clips).span.start).toBe(QN.QN(8));
       expect(first(result.clips).trackId).toBe(TrackId.make("track-2"));
     });
 
@@ -484,12 +484,12 @@ describe("Project.evolve", () => {
       const event: EditorEvent = {
         t: "clip.resized",
         clipId: ClipId.make("clip-1"),
-        span: { start: QN.make(0), size: QN.make(8) },
+        span: { start: QN.QN(0), size: QN.QN(8) },
       };
 
       const result = evolve(project, event);
 
-      expect(first(result.clips).span.size).toBe(QN.make(8));
+      expect(first(result.clips).span.size).toBe(QN.QN(8));
     });
 
     it("handles clip.loopChanged", () => {
@@ -501,13 +501,13 @@ describe("Project.evolve", () => {
         t: "clip.loopChanged",
         clipId: ClipId.make("clip-1"),
         enabled: true,
-        length: QN.make(2),
+        length: QN.QN(2),
       };
 
       const result = evolve(project, event);
 
       expect(first(result.clips).loop.enabled).toBe(true);
-      expect(first(result.clips).loop.length).toBe(QN.make(2));
+      expect(first(result.clips).loop.length).toBe(QN.QN(2));
     });
   });
 
@@ -571,15 +571,15 @@ describe("Project.evolve", () => {
         t: "midi.noteMoved",
         patternId: PatternId.make("pattern-1"),
         noteId: NoteId.make("note-1"),
-        span: { start: QN.make(4), size: QN.make(2) },
+        span: { start: QN.QN(4), size: QN.QN(2) },
       };
 
       const result = evolve(project, event);
       const pattern = first(result.midiPatterns);
       const note = first(pattern.notes);
 
-      expect(note.span.start).toBe(QN.make(4));
-      expect(note.span.size).toBe(QN.make(2));
+      expect(note.span.start).toBe(QN.QN(4));
+      expect(note.span.size).toBe(QN.QN(2));
     });
 
     it("handles midi.noteVelocityChanged", () => {
@@ -699,7 +699,7 @@ describe("Project.evolve", () => {
         t: "automation.pointMoved",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: AutomationPointId.make("point-1"),
-        time: QN.make(4),
+        time: QN.QN(4),
         value: 0.8,
       };
 
@@ -707,7 +707,7 @@ describe("Project.evolve", () => {
       const lane = first(result.automationLanes);
       const point = first(lane.points);
 
-      expect(point.timeQN).toBe(QN.make(4));
+      expect(point.timeQN).toBe(QN.QN(4));
       expect(point.value).toBe(0.8);
     });
 
@@ -722,14 +722,14 @@ describe("Project.evolve", () => {
         t: "automation.pointMoved",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: AutomationPointId.make("point-1"),
-        time: QN.make(4),
+        time: QN.QN(4),
       };
 
       const result = evolve(project, event);
       const lane = first(result.automationLanes);
       const point = first(lane.points);
 
-      expect(point.timeQN).toBe(QN.make(4));
+      expect(point.timeQN).toBe(QN.QN(4));
       expect(point.value).toBe(0.5);
     });
 
@@ -1080,7 +1080,7 @@ describe("Project.decide", () => {
         trackId: TrackId.make("track-1"),
         clipId: Ids.generate("ClipId"),
         newPatternId: Ids.generate("PatternId"),
-        span: { start: QN.make(0), size: QN.make(4) },
+        span: { start: QN.QN(0), size: QN.QN(4) },
       };
 
       const events = decide(project, command);
@@ -1104,7 +1104,7 @@ describe("Project.decide", () => {
         t: "clip.createAudio",
         trackId: TrackId.make("track-1"),
         clipId: Ids.generate("ClipId"),
-        span: { start: QN.make(0), size: QN.make(4) },
+        span: { start: QN.QN(0), size: QN.QN(4) },
         audioFileId: AudioFileId.make("audio-1"),
       };
 
@@ -1145,7 +1145,7 @@ describe("Project.decide", () => {
       const command: EditorCommandPayload = {
         t: "clip.move",
         clipId: ClipId.make("clip-1"),
-        startQN: QN.make(8),
+        startQN: QN.QN(8),
       };
 
       const events = decide(project, command);
@@ -1154,7 +1154,7 @@ describe("Project.decide", () => {
       expect(events[0]).toEqual({
         t: "clip.moved",
         clipId: ClipId.make("clip-1"),
-        start: QN.make(8),
+        start: QN.QN(8),
       });
     });
 
@@ -1166,7 +1166,7 @@ describe("Project.decide", () => {
       const command: EditorCommandPayload = {
         t: "clip.resize",
         clipId: ClipId.make("clip-1"),
-        span: { start: QN.make(0), size: QN.make(8) },
+        span: { start: QN.QN(0), size: QN.QN(8) },
       };
 
       const events = decide(project, command);
@@ -1175,7 +1175,7 @@ describe("Project.decide", () => {
       expect(events[0]).toEqual({
         t: "clip.resized",
         clipId: ClipId.make("clip-1"),
-        span: { start: QN.make(0), size: QN.make(8) },
+        span: { start: QN.QN(0), size: QN.QN(8) },
       });
     });
 
@@ -1188,7 +1188,7 @@ describe("Project.decide", () => {
         t: "clip.setLoop",
         clipId: ClipId.make("clip-1"),
         enabled: true,
-        length: QN.make(2),
+        length: QN.QN(2),
       };
 
       const events = decide(project, command);
@@ -1198,7 +1198,7 @@ describe("Project.decide", () => {
         t: "clip.loopChanged",
         clipId: ClipId.make("clip-1"),
         enabled: true,
-        length: QN.make(2),
+        length: QN.QN(2),
       });
     });
   });
@@ -1236,7 +1236,7 @@ describe("Project.decide", () => {
         noteId: Ids.generate("NoteId"),
         pitch: 60,
         velocity: 100,
-        span: { start: QN.make(0), size: QN.make(1) },
+        span: { start: QN.QN(0), size: QN.QN(1) },
       };
 
       const events = decide(project, command);
@@ -1280,7 +1280,7 @@ describe("Project.decide", () => {
         t: "midi.moveNote",
         patternId: PatternId.make("pattern-1"),
         noteId: NoteId.make("note-1"),
-        span: { start: QN.make(4), size: QN.make(2) },
+        span: { start: QN.QN(4), size: QN.QN(2) },
       };
 
       const events = decide(project, command);
@@ -1290,7 +1290,7 @@ describe("Project.decide", () => {
         t: "midi.noteMoved",
         patternId: PatternId.make("pattern-1"),
         noteId: NoteId.make("note-1"),
-        span: { start: QN.make(4), size: QN.make(2) },
+        span: { start: QN.QN(4), size: QN.QN(2) },
       });
     });
 
@@ -1393,7 +1393,7 @@ describe("Project.decide", () => {
         t: "automation.addPoint",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: Ids.generate("AutomationPointId"),
-        timeQN: QN.make(4),
+        timeQN: QN.QN(4),
         value: 0.8,
         curve: "expo",
       };
@@ -1404,7 +1404,7 @@ describe("Project.decide", () => {
       const event0 = first(events);
       expect(event0.t).toBe("automation.pointAdded");
       if (event0.t === "automation.pointAdded") {
-        expect(event0.point.timeQN).toBe(QN.make(4));
+        expect(event0.point.timeQN).toBe(QN.QN(4));
         expect(event0.point.value).toBe(0.8);
         expect(event0.point.curve).toBe("expo");
       }
@@ -1444,7 +1444,7 @@ describe("Project.decide", () => {
         t: "automation.movePoint",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: AutomationPointId.make("point-1"),
-        timeQN: QN.make(4),
+        timeQN: QN.QN(4),
         value: 0.8,
       };
 
@@ -1455,7 +1455,7 @@ describe("Project.decide", () => {
         t: "automation.pointMoved",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: AutomationPointId.make("point-1"),
-        time: QN.make(4),
+        time: QN.QN(4),
         value: 0.8,
       });
     });

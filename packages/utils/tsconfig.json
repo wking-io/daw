@@ -3,21 +3,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@utils/*": [
-        "src/*"
-      ]
+      "@utils/*": ["src/*"]
     },
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "strict": true,
     "noEmit": true,
     "composite": true
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

@@ -15,7 +15,7 @@
     "./domain/automation": "./src/domain/automation.ts",
     "./domain/clip": "./src/domain/clip.ts",
     "./domain/midi": "./src/domain/midi.ts",
-"./domain/track": "./src/domain/track.ts",
+    "./domain/track": "./src/domain/track.ts",
     "./commands/command": "./src/commands/command.ts",
     "./commands/project-ops": "./src/commands/project-ops.ts",
     "./commands/editor-ops": "./src/commands/editor-ops.ts",
@@ -37,6 +37,7 @@
     "./lib/scroll": "./src/lib/scroll.ts",
     "./lib/timeline": "./src/lib/timeline.ts",
     "./lib/qn": "./src/lib/qn.ts",
+    "./lib/ruler": "./src/lib/ruler.ts",
     "./lib/time-signature": "./src/lib/time-signature.ts"
   },
   "scripts": {

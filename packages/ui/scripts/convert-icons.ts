@@ -8,9 +8,7 @@ const svgGlob = new Bun.Glob("*.svg");
 
 const toPascalCase = (value: string) => {
   const parts = value.split(/[^a-zA-Z0-9]+/).filter(Boolean);
-  const combined = parts
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join("");
+  const combined = parts.map((part) => part[0]?.toUpperCase() + part.slice(1)).join("");
   if (!combined) return "Icon";
   if (!/^[A-Za-z_]/.test(combined)) return `Icon${combined}`;
   return combined;

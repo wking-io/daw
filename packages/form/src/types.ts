@@ -42,9 +42,7 @@ export interface FormState {
  */
 export type StructFieldsFromSchema<S> = S extends Schema.Struct<infer Fields> ? Fields : never;
 
-export interface CreateFormOptions<
-  S extends Schema.Struct<any>,
-> {
+export interface CreateFormOptions<S extends Schema.Struct<any>> {
   /** Effect Schema defining the form structure and validation rules */
   readonly schema: S;
   /**

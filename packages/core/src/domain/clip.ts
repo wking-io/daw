@@ -1,15 +1,14 @@
 import { Schema } from "effect";
-import { AudioFileId, ClipId, PatternId, ProjectId, QN, TrackId } from "../ids";
+import { AudioFileId, ClipId, PatternId, ProjectId, TrackId } from "../ids";
+import * as QN from "../lib/qn";
+import * as Span from "../lib/span";
 
-export const QNSpan = Schema.Struct({
-  start: QN,
-  size: QN,
-});
+export const QNSpan = Span.Schema(QN.Schema);
 export type QNSpan = Schema.Schema.Type<typeof QNSpan>;
 
 export const ClipLoop = Schema.Struct({
   enabled: Schema.Boolean,
-  length: QN,
+  length: QN.Schema,
 });
 export type ClipLoop = Schema.Schema.Type<typeof ClipLoop>;
 
