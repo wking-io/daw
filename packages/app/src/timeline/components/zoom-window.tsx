@@ -235,7 +235,7 @@ export function ZoomWindow(handle: Handle) {
           pointerup: handleInteractionEnd,
         }}
         class={cn(
-          "group/zoom-window absolute top-0 bottom-0 rounded-[3px] border border-neutral-400 group-data-active:border-neutral-300 hover:border-neutral-300",
+          "group/zoom-window absolute top-0 bottom-0 rounded-[3px] border border-zoom-control group-data-active:border-zoom-control-active hover:border-zoom-control-active ring-1 ring-layer-1",
           isAltKeyPressed ? "cursor-zoom-out" : "cursor-move",
           props.class,
         )}
@@ -250,7 +250,7 @@ export function ZoomWindow(handle: Handle) {
           on={{ pointerdown: handleResizeStart("L") }}
           class="absolute top-0 bottom-0 -left-1 w-2.5 cursor-ew-resize"
         >
-          <div class="absolute top-1/2 left-1 h-3/4 w-0.5 -translate-y-1/2 rounded-r-[2px] group-hover/zoom-window:bg-neutral-300" />
+          <div class="absolute top-1/2 left-1 h-3/4 w-0.5 -translate-y-1/2 rounded-r-[2px] group-hover/zoom-window:bg-zoom-control-active" />
         </div>
         {/* Right resize handle */}
         <div
@@ -258,7 +258,7 @@ export function ZoomWindow(handle: Handle) {
           on={{ pointerdown: handleResizeStart("R") }}
           class="absolute top-0 -right-1 bottom-0 w-2.5 cursor-ew-resize"
         >
-          <div class="absolute top-1/2 right-1 h-3/4 w-0.5 -translate-y-1/2 rounded-l-[2px] group-hover/zoom-window:bg-neutral-300" />
+          <div class="absolute top-1/2 right-1 h-3/4 w-0.5 -translate-y-1/2 rounded-l-[2px] group-hover/zoom-window:bg-zoom-control-active" />
         </div>
       </div>
     );

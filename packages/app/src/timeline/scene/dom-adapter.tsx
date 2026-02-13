@@ -60,7 +60,7 @@ function SceneNodeElement() {
       case "group":
         return (
           <div
-            style={groupToStyle(node.clip)}
+            style={groupToStyle(node.clip, node.borderRadius)}
             on={handlers}
             role={interactive ? "button" : undefined}
             tabIndex={interactive ? 0 : undefined}
@@ -129,7 +129,7 @@ function textToStyle(
   };
 }
 
-function groupToStyle(clip?: Rect): Record<string, string | number> {
+function groupToStyle(clip?: Rect, borderRadius?: number): Record<string, string | number> {
   if (!clip) {
     return {
       position: "absolute",
@@ -144,5 +144,6 @@ function groupToStyle(clip?: Rect): Record<string, string | number> {
     width: clip.width,
     height: clip.height,
     overflow: "hidden",
+    ...(borderRadius ? { borderRadius } : {}),
   };
 }

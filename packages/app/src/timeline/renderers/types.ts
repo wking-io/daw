@@ -1,7 +1,7 @@
-import type { Projection1D } from '../foundation/projection1d'
-import type * as QN from '@daw/core/lib/qn'
-import type { Scene } from '../scene'
-import type { TimelineHostEnv } from './core'
+import type { Projection1D } from "../foundation/projection1d";
+import type * as QN from "@daw/core/lib/qn";
+import type { Scene } from "../scene";
+import type { TimelineHostEnv } from "./core";
 
 // =============================================================================
 // Scene Graph Renderer Interface (new)
@@ -11,11 +11,11 @@ import type { TimelineHostEnv } from './core'
  * Arguments passed to buildScene.
  */
 export type BuildSceneArgs<Data, UiState> = Readonly<{
-	data: Data
-	projection: Projection1D<QN.QN>
-	ui: UiState
-	env: TimelineHostEnv
-}>
+  data: Data;
+  projection: Projection1D<QN.QN>;
+  ui: UiState;
+  env: TimelineHostEnv;
+}>;
 
 /**
  * A scene graph based timeline renderer.
@@ -29,12 +29,12 @@ export type BuildSceneArgs<Data, UiState> = Readonly<{
  * @template Action - Actions that can be dispatched from interactions
  */
 export type SceneRenderer<Data, UiState, Action> = Readonly<{
-	/** Unique identifier for this renderer */
-	kind: string
+  /** Unique identifier for this renderer */
+  kind: string;
 
-	/**
-	 * Build a scene graph from the input data.
-	 * This is a pure function that describes what to render.
-	 */
-	buildScene: (args: BuildSceneArgs<Data, UiState>) => Scene<Action>
-}>
+  /**
+   * Build a scene graph from the input data.
+   * This is a pure function that describes what to render.
+   */
+  buildScene: (args: BuildSceneArgs<Data, UiState>) => Scene<Action>;
+}>;

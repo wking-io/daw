@@ -18,14 +18,16 @@ import {
   NavigatorDom,
   NavigatorTrack,
   ProjectionCanvas,
-  ProjectionDom,
+  ProjectionContent,
+  ProjectionTrackList,
+  RulerCanvas,
   ZoomWindow,
 } from "./timeline/components";
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
 import { DawSkeletonSceneRenderer } from "./timeline/renderers/daw-skeleton/scene";
 import { demoDawData } from "./timeline/demo/daw-data";
-import type { DawAction, DawUiState } from "./timeline/renderers/daw-skeleton/types";
+import type { DawAction, DawUiState, RulerSettings } from "./timeline/renderers/daw-skeleton/types";
 
 type Theme = "light" | "dark";
 
@@ -106,6 +108,14 @@ function MainApp(handle: Handle) {
   const [getTabs, setTabs] = getAtom(handle, tabsAtom);
   let selectedClipId: string | null = null;
 
+  // Ruler debug settings
+  let rulerSettings: RulerSettings = {};
+
+  const handleRulerSetting = (key: keyof RulerSettings, value: number) => {
+    rulerSettings = { ...rulerSettings, [key]: value };
+    handle.update();
+  };
+
   const handleDawAction = (action: DawAction) => {
     switch (action.type) {
       case "select-clip":
@@ -163,6 +173,12 @@ function MainApp(handle: Handle) {
   return () => {
     const { openTabs, activeTabId } = getTabs();
     const dawUIState: DawUiState = { selectedClipId };
+    const dawData = { ...demoDawData, rulerSettings };
+
+    const gridPx = rulerSettings.minSpacingPx ?? 20;
+    const labelPx = rulerSettings.minLabelSpacingPx ?? 80;
+    const maxSub = rulerSettings.maxSubdivisions ?? 128;
+    const maxSubPow = Math.round(Math.log2(maxSub));
 
     return (
       <CreateProjectDialog.Root>
@@ -180,7 +196,7 @@ function MainApp(handle: Handle) {
                   setup={{ activateOnFocus: false }}
                   class={cn(
                     "flex relative bg-layer-1 rounded-sm shadow-recess shadow-foreground/10 dark:shadow-background/40",
-                    "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+                    "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:before:border-background/40",
                   )}
                 >
                   {openTabs.map((t) => (
@@ -222,46 +238,97 @@ function MainApp(handle: Handle) {
             <Tabs.Panel setup={{ value: tab.id }}>
               <div class="mt-4">
                 <TimelineRoot>
-                  {/* Navigator (minimap) */}
                   <div
                     class={cn(
                       "user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
-                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
                     )}
                   >
-                    <NavigatorRoot height={26} class="relative h-full w-full overflow-hidden">
+                    <NavigatorRoot class="relative h-full w-full overflow-hidden">
                       <NavigatorTrack>
                         <NavigatorCanvas
                           renderer={DawSkeletonSceneRenderer}
-                          data={demoDawData}
+                          data={dawData}
                           ui={dawUIState}
                         />
                         <NavigatorDom
                           renderer={DawSkeletonSceneRenderer}
-                          data={demoDawData}
+                          data={dawData}
                           ui={dawUIState}
                           dispatch={handleDawAction}
                         />
                         <ZoomWindow />
                       </NavigatorTrack>
                     </NavigatorRoot>
-
-                    {/* Projection (main view) */}
-                    <ProjectionRoot height={240} class="">
-                      <ProjectionCanvas
-                        renderer={DawSkeletonSceneRenderer}
-                        data={demoDawData}
-                        ui={dawUIState}
-                      />
-                      <ProjectionDom
-                        renderer={DawSkeletonSceneRenderer}
-                        data={demoDawData}
-                        ui={dawUIState}
-                        dispatch={handleDawAction}
-                      />
-                    </ProjectionRoot>
                   </div>
+
+                  <ProjectionRoot>
+                    <RulerCanvas
+                      timeSignature={dawData.timeSignature}
+                      minSpacingPx={rulerSettings.minSpacingPx}
+                      minLabelSpacingPx={rulerSettings.minLabelSpacingPx}
+                      maxSubdivisions={rulerSettings.maxSubdivisions}
+                    />
+                    <div
+                      class={cn(
+                        "user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                        "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                      )}
+                    >
+                      <ProjectionContent>
+                        <ProjectionCanvas
+                          renderer={DawSkeletonSceneRenderer}
+                          data={dawData}
+                          ui={dawUIState}
+                        />
+                        <ProjectionTrackList
+                          data={dawData}
+                          ui={dawUIState}
+                          dispatch={handleDawAction}
+                        />
+                      </ProjectionContent>
+                    </div>
+                  </ProjectionRoot>
                 </TimelineRoot>
+
+                <div class="flex items-center gap-6 px-4 py-2 text-xs text-foreground-muted font-mono">
+                  <label class="flex items-center gap-2">
+                    Grid {gridPx}px
+                    <input
+                      type="range"
+                      min="5"
+                      max="100"
+                      step="5"
+                      value={gridPx}
+                      on={{ input: (e: Event) => handleRulerSetting("minSpacingPx", Number((e.target as HTMLInputElement).value)) }}
+                      class="w-24"
+                    />
+                  </label>
+                  <label class="flex items-center gap-2">
+                    Label {labelPx}px
+                    <input
+                      type="range"
+                      min="20"
+                      max="200"
+                      step="10"
+                      value={labelPx}
+                      on={{ input: (e: Event) => handleRulerSetting("minLabelSpacingPx", Number((e.target as HTMLInputElement).value)) }}
+                      class="w-24"
+                    />
+                  </label>
+                  <label class="flex items-center gap-2">
+                    Subdivisions {maxSub}
+                    <input
+                      type="range"
+                      min="2"
+                      max="8"
+                      step="1"
+                      value={maxSubPow}
+                      on={{ input: (e: Event) => handleRulerSetting("maxSubdivisions", Math.pow(2, Number((e.target as HTMLInputElement).value))) }}
+                      class="w-24"
+                    />
+                  </label>
+                </div>
               </div>
             </Tabs.Panel>
           ))}
