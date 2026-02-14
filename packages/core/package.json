@@ -38,6 +38,7 @@
     "./lib/timeline": "./src/lib/timeline.ts",
     "./lib/qn": "./src/lib/qn.ts",
     "./lib/ruler": "./src/lib/ruler.ts",
+    "./lib/size": "./src/lib/size.ts",
     "./lib/time-signature": "./src/lib/time-signature.ts"
   },
   "scripts": {

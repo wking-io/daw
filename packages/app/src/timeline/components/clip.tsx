@@ -1,7 +1,7 @@
 import type { Handle, Props } from "@remix-run/component";
 import { cn } from "@daw/utils";
-
-import type { DawAction, DawClip, TrackColor } from "../renderers/daw-skeleton/types";
+import * as Px from "@daw/core/lib/px";
+import type { UIAction, Clip as UIClip, TrackColor } from "../renderers/timeline/types";
 
 interface ClipColorConfig {
   highlight: string;
@@ -30,7 +30,8 @@ const clipColorClasses: Record<TrackColor, ClipColorConfig> = {
     selected: "from-oatmeal-2/40 ring-1 ring-oatmeal-0/60",
   },
   strawberry: {
-    highlight: "shadow-strawberry-8/40 after:shadow-strawberry-0/30 after:dark:shadow-strawberry-0/20",
+    highlight:
+      "shadow-strawberry-8/40 after:shadow-strawberry-0/30 after:dark:shadow-strawberry-0/20",
     base: "border-strawberry-8/40 via-strawberry-5/0 dark:via-strawberry-6/0 via-40% to-strawberry-2/25 text-shadow-strawberry-12/15 text-strawberry-0",
     from: "from-strawberry-2/15",
     bg: "bg-strawberry-5 dark:bg-strawberry-6",
@@ -204,24 +205,25 @@ export interface ClipSetup {
 }
 
 export interface ClipProps extends Props<"div"> {
-  clip: DawClip;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  id: UIClip["id"];
+  title: UIClip["title"];
+  x: Px.Px;
+  y: Px.Px;
+  width: Px.Px;
+  height: Px.Px;
   isSelected: boolean;
-  dispatch: (action: DawAction) => void;
+  dispatch: (action: UIAction) => void;
 }
 
 export function Clip(_handle: Handle, setup: ClipSetup) {
   const config = clipColorClasses[setup.color];
 
   return (props: ClipProps) => {
-    const { clip, x, y, width, height, isSelected, dispatch, ...rest } = props;
+    const { id, title, x, y, width, height, isSelected, dispatch, ...rest } = props;
 
     const onPointerDown = (e: PointerEvent) => {
       e.stopPropagation();
-      dispatch({ type: "select-clip", clipId: clip.id });
+      dispatch({ type: "select-clip", clipId: id });
     };
 
     return (
@@ -251,7 +253,7 @@ export function Clip(_handle: Handle, setup: ClipSetup) {
           )}
           on={{ pointerdown: onPointerDown }}
         >
-          <span class="truncate">{clip.title}</span>
+          <span class="truncate">{title}</span>
         </div>
       </div>
     );

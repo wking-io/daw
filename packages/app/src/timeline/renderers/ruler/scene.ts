@@ -1,15 +1,20 @@
 import { computeRulerTicks } from "@daw/core/lib/ruler";
+import * as Px from "@daw/core/lib/px";
 import type { TimeSignature } from "@daw/core/lib/time-signature";
 import type { Scene, SceneNode } from "../../scene";
 import { point, stroke, textStyle } from "../../scene";
 import type { BuildSceneArgs, SceneRenderer } from "../types";
+import type { TimelineTheme } from "../core";
 
 export type RulerData = Readonly<{
   timeSignature: TimeSignature;
-  minSpacingPx?: number;
-  minLabelSpacingPx?: number;
+  height: number;
+  minSpacing?: number;
+  minLabelSpacing?: number;
   maxSubdivisions?: number;
 }>;
+
+export type RulerEnv = Readonly<{ theme: TimelineTheme }>;
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -23,11 +28,10 @@ const LABEL_Y = 8;
 // Renderer
 // ---------------------------------------------------------------------------
 
-export const RulerSceneRenderer: SceneRenderer<RulerData, void, never> = {
+export const RulerSceneRenderer: SceneRenderer<RulerData, void, never, RulerEnv> = {
   kind: "ruler",
 
-  buildScene({ data, projection, env }: BuildSceneArgs<RulerData, void>): Scene<never> {
-    const height = Number(env.canvas.heightPx);
+  buildScene({ data, projection, env }: BuildSceneArgs<RulerData, void, RulerEnv>): Scene<never> {
     const nodes: SceneNode<never>[] = [];
 
     const result = computeRulerTicks({
@@ -35,28 +39,24 @@ export const RulerSceneRenderer: SceneRenderer<RulerData, void, never> = {
       viewSize: projection.view.size,
       scale: projection.scale,
       timeSignature: data.timeSignature,
-      minSpacingPx: data.minSpacingPx,
-      minLabelSpacingPx: data.minLabelSpacingPx,
-      maxSubdivisions: data.maxSubdivisions,
+      minSpacing: data.minSpacing != null ? Px.Px(data.minSpacing) : undefined,
+      minLabelSpacing: data.minLabelSpacing != null ? Px.Px(data.minLabelSpacing) : undefined,
+      maxSubdivisions: data.maxSubdivisions != null ? Px.Px(data.maxSubdivisions) : undefined,
     });
-
-    console.log(env.theme.gridLabel);
 
     const tickStroke = stroke(env.theme.gridLine, 1);
     const labelStyle = textStyle(LABEL_FONT, env.theme.gridLabel, "left", "top");
 
-    const width = Number(env.canvas.widthPx);
-
     for (const tick of result.ticks) {
       const screenX = Number(projection.contentToScreenX(tick.position));
-      if (screenX <= 1 || screenX >= width - 1) continue;
+      if (screenX <= 1 || screenX >= projection.containerWidth - 1) continue;
 
       const x = screenX + 0.5; // +0.5 for crisp 1px line
-      const topY = tick.label ? LABEL_Y : height - 4;
+      const topY = tick.label ? LABEL_Y : data.height - 4;
 
       nodes.push({
         kind: "line",
-        points: [point(x, topY), point(x, height)],
+        points: [point(x, topY), point(x, data.height)],
         stroke: tickStroke,
       });
 

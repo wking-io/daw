@@ -7,7 +7,6 @@ import * as Span from "@daw/core/lib/span";
 import * as Timeline from "@daw/core/lib/timeline";
 import { deltaFrom, zoomFactorFromDelta } from "../utils/interaction-math";
 import { NavigatorRoot } from "./navigator-root";
-import type { NavigatorRootContext } from "./navigator-root";
 import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
 
@@ -24,7 +23,7 @@ const ZOOM_RATE = 350;
 
 export function NavigatorTrack(handle: Handle) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
-  const navCtx: NavigatorRootContext = handle.context.get(NavigatorRoot);
+  const navCtx = handle.context.get(NavigatorRoot);
   let interaction: Interaction = { kind: "idle" };
 
   function handleWheel(e: WheelEvent) {

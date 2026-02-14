@@ -1,15 +1,15 @@
 import type { RemixNode } from "@remix-run/component";
 
 import type { InteractiveNode, Point, Rect, Stroke, TextStyle } from "./types";
-import type { DawAction } from "../renderers/daw-skeleton/types";
+import type { UIAction } from "../renderers/timeline/types";
 
 /**
  * Render a list of interactive scene nodes to Remix elements.
  * This is the DOM adapter for the scene graph.
  */
 export function renderToDom(
-  nodes: readonly InteractiveNode<DawAction>[],
-  dispatch: (action: DawAction) => void,
+  nodes: readonly InteractiveNode<UIAction>[],
+  dispatch: (action: UIAction) => void,
 ): RemixNode {
   return nodes.map((node, index) => (
     <SceneNodeElement key={index} node={node} dispatch={dispatch} />
@@ -17,7 +17,7 @@ export function renderToDom(
 }
 
 function SceneNodeElement() {
-  return (props: { node: InteractiveNode<DawAction>; dispatch: (action: DawAction) => void }) => {
+  return (props: { node: InteractiveNode<UIAction>; dispatch: (action: UIAction) => void }) => {
     const { node, dispatch } = props;
 
     function handlePointerDown(e: PointerEvent) {
@@ -68,7 +68,7 @@ function SceneNodeElement() {
             {node.children.map((child, index) => (
               <SceneNodeElement
                 key={index}
-                node={child as InteractiveNode<DawAction>}
+                node={child as InteractiveNode<UIAction>}
                 dispatch={dispatch}
               />
             ))}

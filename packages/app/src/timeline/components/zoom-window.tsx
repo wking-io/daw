@@ -8,7 +8,6 @@ import * as Span from "@daw/core/lib/span";
 import * as Timeline from "@daw/core/lib/timeline";
 import { deltaFrom, zoomFactorFromDelta } from "../utils/interaction-math";
 import { NavigatorRoot } from "./navigator-root";
-import type { NavigatorRootContext } from "./navigator-root";
 import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
 
@@ -37,13 +36,15 @@ const isWebKit =
 
 export function ZoomWindow(handle: Handle) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
-  const navCtx: NavigatorRootContext = handle.context.get(NavigatorRoot);
+  const projection = handle.context.get(NavigatorRoot);
   let isAltKeyPressed = false;
   let interaction: Interaction<QN.QN> = { kind: "idle" };
 
   // Scrub state
   let isScrubbing = false;
   let cumulativeDelta = 0;
+
+  handle.on(projection, { change: () => handle.update() });
 
   // Track Alt key globally
   handle.on(window, {
@@ -130,11 +131,11 @@ export function ZoomWindow(handle: Handle) {
       e.stopPropagation();
 
       el.setPointerCapture(e.pointerId);
-      const pointer = navCtx.getPointerPosition(e);
+      const pointer = projection.getPointerPosition(e);
       const offset = deltaFrom(QN.Numeric, {
         x: Px.Px(pointer.x),
-        scale: navCtx.scale,
-        offset: rootCtx.timeline.view.start,
+        scale: projection.scale,
+        offset: projection.view.start,
       });
       rootCtx.setIsInteracting(true);
       interaction = {
@@ -154,9 +155,9 @@ export function ZoomWindow(handle: Handle) {
         return;
       }
 
-      const pointer = navCtx.getPointerPosition(e);
+      const pointer = projection.getPointerPosition(e);
       const delta = deltaFrom(QN.Numeric, {
-        scale: navCtx.scale,
+        scale: projection.scale,
         x: Px.Px(pointer.x),
         offset: interaction.offset,
         from: rootCtx.timeline.view.start,
@@ -202,12 +203,12 @@ export function ZoomWindow(handle: Handle) {
         return;
       }
 
-      const pointer = navCtx.getPointerPosition(e);
+      const pointer = projection.getPointerPosition(e);
       const pointerTimelinePos = Projection.fromScreen(
         QN.Numeric,
         QN.Numeric.zero,
         Px.Px(pointer.x),
-        navCtx.scale,
+        projection.scale,
       );
 
       if (interaction.direction === "L") {
@@ -240,8 +241,8 @@ export function ZoomWindow(handle: Handle) {
           props.class,
         )}
         style={{
-          left: `${navCtx.zoomWindow.start}px`,
-          width: `${navCtx.zoomWindow.size}px`,
+          left: `${projection.zoomWindow.start}px`,
+          width: `${projection.zoomWindow.size}px`,
         }}
       >
         {/* Left resize handle */}

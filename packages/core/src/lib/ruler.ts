@@ -1,6 +1,6 @@
 // ruler.ts — Adaptive beat ruler for timeline
-import type { QN } from "./qn";
-import { QN as makeQN } from "./qn";
+import * as QN from "./qn";
+import * as Px from "./px";
 import type { TimeSignature } from "./time-signature";
 import { EPSILON } from "./math";
 
@@ -8,7 +8,7 @@ import { EPSILON } from "./math";
 export type TickTier = number;
 
 export type RulerTick = Readonly<{
-  position: QN;
+  position: QN.QN;
   tier: TickTier;
   label: string | null;
 }>;
@@ -16,37 +16,41 @@ export type RulerTick = Readonly<{
 export type RulerResult = Readonly<{
   ticks: readonly RulerTick[];
   finestTier: TickTier;
-  barSizeQN: number;
-  beatSizeQN: number;
+  barSize: QN.QN;
+  beatSize: QN.QN;
 }>;
 
 export type RulerInput = Readonly<{
-  viewStart: QN;
-  viewSize: QN;
+  viewStart: QN.QN;
+  viewSize: QN.QN;
   scale: number; // px per QN
   timeSignature: TimeSignature;
-  minSpacingPx?: number; // default 40 — minimum px between grid lines
-  minLabelSpacingPx?: number; // default 80 — minimum px between labels
-  maxSubdivisions?: number; // default 16 — finest subdivision per beat (16 = 64ths, 32 = 128ths, etc.)
+  minSpacing?: Px.Px; // default 40 — minimum px between grid lines
+  minLabelSpacing?: Px.Px; // default 80 — minimum px between labels
+  maxSubdivisions?: Px.Px; // default 16 — finest subdivision per beat (16 = 64ths, 32 = 128ths, etc.)
 }>;
 
-const SIXTEENTH_QN = 0.25;
-const DEFAULT_MIN_SPACING_PX = 20;
-const DEFAULT_MIN_LABEL_SPACING_PX = 80;
+const SIXTEENTH = 0.25;
+const DEFAULT_MIN_SPACING = 20;
+const DEFAULT_MIN_LABEL_SPACING = 80;
 const DEFAULT_MAX_SUBDIVISIONS = 128;
 const MAX_MULTI_BAR = 4096;
 
-export function barSizeQN(ts: TimeSignature): number {
-  return ts.numerator * (4 / ts.denominator);
+export function barSize(ts: TimeSignature): QN.QN {
+  return QN.QN(ts.numerator * (4 / ts.denominator));
 }
 
-export function beatSizeQN(ts: TimeSignature): number {
-  return 4 / ts.denominator;
+export function beatSize(ts: TimeSignature): QN.QN {
+  return QN.QN(4 / ts.denominator);
 }
 
 /** Walk tier intervals finest→coarsest, return the first that meets spacing. */
 function findFinestInterval(
-  beat: number, bar: number, scale: number, minSpacing: number, maxSubdiv: number,
+  beat: number,
+  bar: number,
+  scale: number,
+  minSpacing: number,
+  maxSubdiv: number,
 ): number {
   // Sub-beat: beat/maxSubdiv, beat/(maxSubdiv/2), ..., beat/2
   for (let div = maxSubdiv; div >= 2; div /= 2) {
@@ -60,10 +64,10 @@ function findFinestInterval(
 }
 
 /** Format a QN position as bars[.beats[.sixteenths]] (all 1-indexed, trailing 1s omitted). */
-function formatPosition(pos: number, beat: number, bar: number): string {
-  const sixteenthsPerBeat = Math.round(beat / SIXTEENTH_QN);
-  const sixteenthsPerBar = Math.round(bar / SIXTEENTH_QN);
-  const total = Math.round(pos / SIXTEENTH_QN);
+function formatPosition(pos: number, beat: QN.QN, bar: QN.QN): string {
+  const sixteenthsPerBeat = Math.round(beat / SIXTEENTH);
+  const sixteenthsPerBar = Math.round(bar / SIXTEENTH);
+  const total = Math.round(pos / SIXTEENTH);
 
   const barIdx = Math.floor(total / sixteenthsPerBar);
   const rem = total - barIdx * sixteenthsPerBar;
@@ -92,11 +96,11 @@ function intervalToTier(interval: number, beat: number, bar: number): number {
 
 export function computeRulerTicks(input: RulerInput): RulerResult {
   const { viewStart, viewSize, scale, timeSignature } = input;
-  const minSpacing = input.minSpacingPx ?? DEFAULT_MIN_SPACING_PX;
-  const minLabelSpacing = input.minLabelSpacingPx ?? DEFAULT_MIN_LABEL_SPACING_PX;
+  const minSpacing = input.minSpacing ?? DEFAULT_MIN_SPACING;
+  const minLabelSpacing = input.minLabelSpacing ?? DEFAULT_MIN_LABEL_SPACING;
   const maxSubdiv = input.maxSubdivisions ?? DEFAULT_MAX_SUBDIVISIONS;
-  const beat = beatSizeQN(timeSignature);
-  const bar = barSizeQN(timeSignature);
+  const beat = beatSize(timeSignature);
+  const bar = barSize(timeSignature);
 
   // Finest visible interval and its tier (for grid lines)
   const step = findFinestInterval(beat, bar, scale, minSpacing, maxSubdiv);
@@ -158,12 +162,14 @@ export function computeRulerTicks(input: RulerInput): RulerResult {
     }
 
     // Labels: tiers at/above label threshold, plus half-bar beats when that spacing qualifies
-    const isHalfBarBeat = halfBarFitsLabels && tier === 4 &&
-      (idx % barStep) / beatStep === halfBarBeatOffset;
-    const label = (tier >= finestLabelTier || isHalfBarBeat) && tier >= 2
-      ? formatPosition(pos, beat, bar) : null;
-    ticks.push({ position: makeQN(pos), tier, label });
+    const isHalfBarBeat =
+      halfBarFitsLabels && tier === 4 && (idx % barStep) / beatStep === halfBarBeatOffset;
+    const label =
+      (tier >= finestLabelTier || isHalfBarBeat) && tier >= 2
+        ? formatPosition(pos, beat, bar)
+        : null;
+    ticks.push({ position: QN.QN(pos), tier, label });
   }
 
-  return { ticks, finestTier, barSizeQN: bar, beatSizeQN: beat };
+  return { ticks, finestTier, barSize: bar, beatSize: beat };
 }

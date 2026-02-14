@@ -6,6 +6,8 @@ export type Px = number & Brand.Brand<"Px">;
 export const Px = Brand.nominal<Px>();
 export const Schema = S.Number.pipe(S.fromBrand(Px));
 
+export const zero = Px(0);
+
 export const add = (a: Px, b: Px): Px => Px(N.add(a, b));
 
 export const subtract = (a: Px, b: Px): Px => Px(N.subtract(a, b));
@@ -32,7 +34,7 @@ export const gte = (a: Px, b: Px): boolean => N.gte(a, b);
 
 export const Numeric: N.Numeric<Px> = {
   make: Px,
-  zero: Px(0),
+  zero,
   add,
   subtract,
   multiply,

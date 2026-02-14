@@ -1,31 +1,61 @@
 import type { Handle } from "@remix-run/component";
 
-import type { SceneRenderer } from "../renderers/types";
+import * as Px from "@daw/core/lib/px";
 import { ProjectionRoot } from "./projection-root";
-import type { ProjectionRootContext } from "./projection-root";
-import { TimelineCanvas } from "./timeline-canvas";
+import { cn } from "@daw/utils";
+import type { UIData, UIState } from "../renderers/timeline/types";
+import { TimelineSceneRenderer } from "../renderers/timeline/scene";
+import { renderToCanvas } from "../scene";
+import { prepareCanvas } from "../utils/prepare-canvas";
+import type { TimelineEnv } from "../renderers/core";
+import { readTimelineTheme } from "../lib/theme";
 
 export function ProjectionCanvas(handle: Handle) {
-  const projCtx: ProjectionRootContext = handle.context.get(ProjectionRoot);
+  const projection = handle.context.get(ProjectionRoot);
+  let canvasEl: HTMLCanvasElement;
 
-  return (props: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    renderer: SceneRenderer<any, any, any>;
-    data?: unknown;
-    ui?: unknown;
-    class?: string;
-  }) => {
+  handle.on(projection, { change: () => handle.update() });
+
+  return ({ data, state, fitToHeight }: { data: UIData; state: UIState; fitToHeight: boolean }) => {
+    const dpr = window.devicePixelRatio || 1;
+
+    handle.queueTask(() => {
+      if (!canvasEl) return;
+
+      const cssH = canvasEl.parentElement?.clientHeight ?? 0;
+
+      const ctx = prepareCanvas({
+        canvas: canvasEl,
+        cssW: Math.max(1, projection.containerWidth),
+        cssH,
+        dpr,
+      });
+
+      if (!ctx) return;
+
+      const env: TimelineEnv = {
+        surface: "main",
+        fitToHeight,
+        canvasHeight: Px.Px(cssH),
+        theme: readTimelineTheme(),
+      };
+
+      const scene = TimelineSceneRenderer.buildScene({
+        data,
+        projection,
+        state,
+        env,
+      });
+
+      renderToCanvas(ctx, scene.canvas);
+    });
     return (
-      <TimelineCanvas
-        projection={projCtx.projection}
-        size={projCtx.size}
-        height={projCtx.height}
-        surface="main"
-        fitToHeight={true}
-        renderer={props.renderer}
-        data={props.data ?? {}}
-        ui={props.ui ?? {}}
-        class={props.class}
+      <canvas
+        connect={(node: HTMLCanvasElement) => {
+          canvasEl = node;
+        }}
+        draggable={false}
+        class={cn("absolute pointer-events-none inset-0")}
       />
     );
   };

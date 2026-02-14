@@ -1,11 +1,5 @@
-import type { Projection1D } from "../foundation/projection1d";
-import type { Px } from "@daw/core/lib/px";
-
-export type CanvasEnv = Readonly<{
-  dpr: number;
-  widthPx: Px;
-  heightPx: Px;
-}>;
+import * as Px from "@daw/core/lib/px";
+import type { ProjectionContext } from "../lib/projection-context";
 
 export type TimelineTheme = Readonly<{
   gridLine: string;
@@ -14,28 +8,28 @@ export type TimelineTheme = Readonly<{
   resolveColor: (name: string) => string;
 }>;
 
-export type TimelineHostEnv = Readonly<{
-  canvas: CanvasEnv;
+export type TimelineEnv = Readonly<{
   surface: "main" | "navigator";
-  /** If true, the renderer should scale/compress vertical layout to fit `canvas.heightPx`. */
+  /** If true, the renderer should scale/compress vertical layout to fit `canvasHeight`. */
   fitToHeight: boolean;
+  canvasHeight: Px.Px;
   theme: TimelineTheme;
 }>;
 
-export type TimelineRendererCore<Data, UiState, Action, RenderModel = unknown> = Readonly<{
+export type TimelineRendererCore<Data, State, Action, RenderModel = unknown> = Readonly<{
   kind: string;
   buildModel: (args: {
     data: Data;
-    projection: Projection1D<Px>;
-    ui: UiState;
-    env: TimelineHostEnv;
+    projection: ProjectionContext;
+    state: State;
+    env: TimelineEnv;
   }) => RenderModel;
   drawCanvas?: (args: {
     ctx: CanvasRenderingContext2D;
     model: RenderModel;
-    projection: Projection1D<Px>;
-    ui: UiState;
-    env: TimelineHostEnv;
+    projection: ProjectionContext;
+    state: State;
+    env: TimelineEnv;
   }) => void;
   /**
    * Optional pure hit-testing. If provided, the UI host can implement pointer handling
@@ -43,10 +37,10 @@ export type TimelineRendererCore<Data, UiState, Action, RenderModel = unknown> =
    */
   hitTest?: (args: {
     model: RenderModel;
-    projection: Projection1D<Px>;
-    ui: UiState;
-    env: TimelineHostEnv;
-    xPx: Px;
-    yPx: Px;
+    projection: ProjectionContext;
+    state: State;
+    env: TimelineEnv;
+    x: Px.Px;
+    y: Px.Px;
   }) => Action | null;
 }>;

@@ -6,6 +6,8 @@ export type QN = number & Brand.Brand<"QN">;
 export const QN = Brand.nominal<QN>();
 export const Schema = S.Number.pipe(S.fromBrand(QN));
 
+export const zero = QN(0);
+
 export const add = (a: QN, b: QN): QN => QN(N.add(a, b));
 
 export const subtract = (a: QN, b: QN): QN => QN(N.subtract(a, b));
@@ -32,7 +34,7 @@ export const gte = (a: QN, b: QN): boolean => N.gte(a, b);
 
 export const Numeric: N.Numeric<QN> = {
   make: QN,
-  zero: QN(0),
+  zero,
   add,
   subtract,
   multiply,

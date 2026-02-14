@@ -1,8 +1,8 @@
 import * as QN from "@daw/core/lib/qn";
 import * as TimeSignature from "@daw/core/lib/time-signature";
-import type { DawData } from "../renderers/daw-skeleton/types";
+import type { UIData } from "../renderers/timeline/types";
 
-export const demoDawData: DawData = {
+export const demoDawData: UIData = {
   timeSignature: TimeSignature.common,
   tracks: [
     { id: "t1", name: "Drums", color: "tangerine" },

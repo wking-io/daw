@@ -15,7 +15,6 @@ import { Button } from "./components/button";
 import { TimelineRoot } from "./timeline/components/timeline-root";
 import {
   NavigatorCanvas,
-  NavigatorDom,
   NavigatorTrack,
   ProjectionCanvas,
   ProjectionContent,
@@ -25,9 +24,8 @@ import {
 } from "./timeline/components";
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
-import { DawSkeletonSceneRenderer } from "./timeline/renderers/daw-skeleton/scene";
 import { demoDawData } from "./timeline/demo/daw-data";
-import type { DawAction, DawUiState, RulerSettings } from "./timeline/renderers/daw-skeleton/types";
+import type { UIAction, UIState, RulerSettings } from "./timeline/renderers/timeline/types";
 
 type Theme = "light" | "dark";
 
@@ -116,7 +114,7 @@ function MainApp(handle: Handle) {
     handle.update();
   };
 
-  const handleDawAction = (action: DawAction) => {
+  const handleUIAction = (action: UIAction) => {
     switch (action.type) {
       case "select-clip":
         selectedClipId = action.clipId;
@@ -172,11 +170,11 @@ function MainApp(handle: Handle) {
 
   return () => {
     const { openTabs, activeTabId } = getTabs();
-    const dawUIState: DawUiState = { selectedClipId };
+    const dawUIState: UIState = { selectedClipId };
     const dawData = { ...demoDawData, rulerSettings };
 
-    const gridPx = rulerSettings.minSpacingPx ?? 20;
-    const labelPx = rulerSettings.minLabelSpacingPx ?? 80;
+    const gridPx = rulerSettings.minSpacing ?? 20;
+    const labelPx = rulerSettings.minLabelSpacing ?? 80;
     const maxSub = rulerSettings.maxSubdivisions ?? 128;
     const maxSubPow = Math.round(Math.log2(maxSub));
 
@@ -246,17 +244,7 @@ function MainApp(handle: Handle) {
                   >
                     <NavigatorRoot class="relative h-full w-full overflow-hidden">
                       <NavigatorTrack>
-                        <NavigatorCanvas
-                          renderer={DawSkeletonSceneRenderer}
-                          data={dawData}
-                          ui={dawUIState}
-                        />
-                        <NavigatorDom
-                          renderer={DawSkeletonSceneRenderer}
-                          data={dawData}
-                          ui={dawUIState}
-                          dispatch={handleDawAction}
-                        />
+                        <NavigatorCanvas data={dawData} state={dawUIState} />
                         <ZoomWindow />
                       </NavigatorTrack>
                     </NavigatorRoot>
@@ -265,26 +253,22 @@ function MainApp(handle: Handle) {
                   <ProjectionRoot>
                     <RulerCanvas
                       timeSignature={dawData.timeSignature}
-                      minSpacingPx={rulerSettings.minSpacingPx}
-                      minLabelSpacingPx={rulerSettings.minLabelSpacingPx}
+                      minSpacing={rulerSettings.minSpacing}
+                      minLabelSpacing={rulerSettings.minLabelSpacing}
                       maxSubdivisions={rulerSettings.maxSubdivisions}
                     />
                     <div
                       class={cn(
-                        "user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                        "sticky left-0 user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
                         "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
                       )}
                     >
                       <ProjectionContent>
-                        <ProjectionCanvas
-                          renderer={DawSkeletonSceneRenderer}
-                          data={dawData}
-                          ui={dawUIState}
-                        />
+                        <ProjectionCanvas data={dawData} state={dawUIState} fitToHeight={true} />
                         <ProjectionTrackList
                           data={dawData}
-                          ui={dawUIState}
-                          dispatch={handleDawAction}
+                          state={dawUIState}
+                          dispatch={handleUIAction}
                         />
                       </ProjectionContent>
                     </div>
@@ -298,9 +282,15 @@ function MainApp(handle: Handle) {
                       type="range"
                       min="5"
                       max="100"
-                      step="5"
+                      step="1"
                       value={gridPx}
-                      on={{ input: (e: Event) => handleRulerSetting("minSpacingPx", Number((e.target as HTMLInputElement).value)) }}
+                      on={{
+                        input: (e: Event) =>
+                          handleRulerSetting(
+                            "minSpacing",
+                            Number((e.target as HTMLInputElement).value),
+                          ),
+                      }}
                       class="w-24"
                     />
                   </label>
@@ -310,9 +300,15 @@ function MainApp(handle: Handle) {
                       type="range"
                       min="20"
                       max="200"
-                      step="10"
+                      step="1"
                       value={labelPx}
-                      on={{ input: (e: Event) => handleRulerSetting("minLabelSpacingPx", Number((e.target as HTMLInputElement).value)) }}
+                      on={{
+                        input: (e: Event) =>
+                          handleRulerSetting(
+                            "minLabelSpacing",
+                            Number((e.target as HTMLInputElement).value),
+                          ),
+                      }}
                       class="w-24"
                     />
                   </label>
@@ -324,7 +320,13 @@ function MainApp(handle: Handle) {
                       max="8"
                       step="1"
                       value={maxSubPow}
-                      on={{ input: (e: Event) => handleRulerSetting("maxSubdivisions", Math.pow(2, Number((e.target as HTMLInputElement).value))) }}
+                      on={{
+                        input: (e: Event) =>
+                          handleRulerSetting(
+                            "maxSubdivisions",
+                            Math.pow(2, Number((e.target as HTMLInputElement).value)),
+                          ),
+                      }}
                       class="w-24"
                     />
                   </label>

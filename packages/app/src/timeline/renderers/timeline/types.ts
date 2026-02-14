@@ -27,7 +27,7 @@ export type TrackColor =
   | "blush"
   | "primary";
 
-export type DawClip = Readonly<{
+export type Clip = Readonly<{
   id: string;
   trackId: string;
   start: QN;
@@ -35,27 +35,27 @@ export type DawClip = Readonly<{
   title: string;
 }>;
 
-export type DawTrack = Readonly<{
+export type Track = Readonly<{
   id: string;
   name: string;
   color: TrackColor;
 }>;
 
 export type RulerSettings = Readonly<{
-  minSpacingPx?: number;
-  minLabelSpacingPx?: number;
+  minSpacing?: number;
+  minLabelSpacing?: number;
   maxSubdivisions?: number;
 }>;
 
-export type DawData = Readonly<{
-  tracks: readonly DawTrack[];
-  clips: readonly DawClip[];
-  timeSignature: TimeSignature;
+export type UIData = Readonly<{
+  tracks: readonly Track[];
+  clips: readonly Clip[];
   rulerSettings?: RulerSettings;
+  timeSignature: TimeSignature;
 }>;
 
-export type DawUiState = Readonly<{
+export type UIState = Readonly<{
   selectedClipId: string | null;
 }>;
 
-export type DawAction = Readonly<{ type: "select-clip"; clipId: string | null }>;
+export type UIAction = Readonly<{ type: "select-clip"; clipId: string | null }>;

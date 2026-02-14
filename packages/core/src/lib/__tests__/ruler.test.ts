@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { QN } from "../qn";
 import * as TimeSignature from "../time-signature";
-import { computeRulerTicks, barSizeQN, beatSizeQN } from "../ruler";
+import { computeRulerTicks, barSize, beatSize } from "../ruler";
+import { Px } from "../px";
 import type { RulerInput } from "../ruler";
 
 function input(overrides: Partial<RulerInput> = {}): RulerInput {
@@ -10,47 +11,47 @@ function input(overrides: Partial<RulerInput> = {}): RulerInput {
     viewSize: QN(16),
     scale: 50,
     timeSignature: TimeSignature.common,
-    minSpacingPx: 40,
-    minLabelSpacingPx: 80,
-    maxSubdivisions: 16,
+    minSpacing: Px(40),
+    minLabelSpacing: Px(80),
+    maxSubdivisions: Px(16),
     ...overrides,
   };
 }
 
 describe("lib/ruler", () => {
-  describe("barSizeQN", () => {
+  describe("barSize", () => {
     it("4/4 → 4", () => {
-      expect(barSizeQN(TimeSignature.common)).toBe(4);
+      expect(barSize(TimeSignature.common)).toBe(QN(4));
     });
 
     it("3/4 → 3", () => {
-      expect(barSizeQN(TimeSignature.waltz)).toBe(3);
+      expect(barSize(TimeSignature.waltz)).toBe(QN(3));
     });
 
     it("6/8 → 3", () => {
-      expect(barSizeQN(TimeSignature.compound)).toBe(3);
+      expect(barSize(TimeSignature.compound)).toBe(QN(3));
     });
 
     it("2/2 → 4", () => {
-      expect(barSizeQN(TimeSignature.cut)).toBe(4);
+      expect(barSize(TimeSignature.cut)).toBe(QN(4));
     });
   });
 
-  describe("beatSizeQN", () => {
+  describe("beatSize", () => {
     it("4/4 → 1", () => {
-      expect(beatSizeQN(TimeSignature.common)).toBe(1);
+      expect(beatSize(TimeSignature.common)).toBe(QN(1));
     });
 
     it("3/4 → 1", () => {
-      expect(beatSizeQN(TimeSignature.waltz)).toBe(1);
+      expect(beatSize(TimeSignature.waltz)).toBe(QN(1));
     });
 
     it("6/8 → 0.5", () => {
-      expect(beatSizeQN(TimeSignature.compound)).toBe(0.5);
+      expect(beatSize(TimeSignature.compound)).toBe(QN(0.5));
     });
 
     it("2/2 → 2", () => {
-      expect(beatSizeQN(TimeSignature.cut)).toBe(2);
+      expect(beatSize(TimeSignature.cut)).toBe(QN(2));
     });
   });
 
@@ -113,18 +114,18 @@ describe("lib/ruler", () => {
     });
 
     describe("3/4 and 6/8 produce correct bar/beat sizes", () => {
-      it("3/4 has barSizeQN=3 and beatSizeQN=1", () => {
+      it("3/4 has barSize=3 and beatSize=1", () => {
         const result = computeRulerTicks(input({ timeSignature: TimeSignature.waltz, scale: 50 }));
-        expect(result.barSizeQN).toBe(3);
-        expect(result.beatSizeQN).toBe(1);
+        expect(result.barSize).toBe(QN(3));
+        expect(result.beatSize).toBe(QN(1));
       });
 
-      it("6/8 has barSizeQN=3 and beatSizeQN=0.5", () => {
+      it("6/8 has barSize=3 and beatSize=0.5", () => {
         const result = computeRulerTicks(
           input({ timeSignature: TimeSignature.compound, scale: 100 }),
         );
-        expect(result.barSizeQN).toBe(3);
-        expect(result.beatSizeQN).toBe(0.5);
+        expect(result.barSize).toBe(QN(3));
+        expect(result.beatSize).toBe(QN(0.5));
       });
     });
 
@@ -249,8 +250,8 @@ describe("lib/ruler", () => {
       });
 
       it("half-bar beat has no label when spacing too tight", () => {
-        // minLabelSpacingPx=120: bar/2*50=100<120 → no half-bar labels
-        const result = computeRulerTicks(input({ scale: 50, minLabelSpacingPx: 120 }));
+        // minLabelSpacing=120: bar/2*50=100<120 → no half-bar labels
+        const result = computeRulerTicks(input({ scale: 50, minLabelSpacing: Px(120) }));
         const halfBarBeat = result.ticks.find(
           (t) => (t.position as number) === 2 && t.tier === 4,
         );
@@ -278,9 +279,9 @@ describe("lib/ruler", () => {
         expect(beat2!.label).toBeNull();
       });
 
-      it("custom minLabelSpacingPx overrides default", () => {
-        // scale=50, minLabelSpacingPx=40: beat * 50 = 50px >= 40 → beats get labels
-        const result = computeRulerTicks(input({ scale: 50, minLabelSpacingPx: 40 }));
+      it("custom minLabelSpacing overrides default", () => {
+        // scale=50, minLabelSpacing=40: beat * 50 = 50px >= 40 → beats get labels
+        const result = computeRulerTicks(input({ scale: 50, minLabelSpacing: Px(40) }));
         const beatTick = result.ticks.find(
           (t) => (t.position as number) === 1 && t.tier === 4,
         );
@@ -314,16 +315,16 @@ describe("lib/ruler", () => {
         expect(barAt8!.label).toBe("-1");
       });
 
-      it("custom minSpacingPx", () => {
+      it("custom minSpacing", () => {
         // With minSpacing=20: beat/2 (0.5) * 50 = 25px >= 20 → tier 3 (eighths)
-        const result = computeRulerTicks(input({ scale: 50, minSpacingPx: 20 }));
+        const result = computeRulerTicks(input({ scale: 50, minSpacing: Px(20) }));
         expect(result.finestTier).toBe(3);
       });
 
       it("maxSubdivisions=32 enables 128th note ticks", () => {
         // beat/32 (0.03125) * 1600 = 50px >= 40 → tier -1 (128ths)
         const result = computeRulerTicks(
-          input({ scale: 1600, maxSubdivisions: 32, viewSize: QN(4) }),
+          input({ scale: 1600, maxSubdivisions: Px(32), viewSize: QN(4) }),
         );
         expect(result.finestTier).toBe(-1);
         const tier128 = result.ticks.filter((t) => t.tier === -1);
@@ -334,7 +335,7 @@ describe("lib/ruler", () => {
         // beat/4 (0.25) = finest, even at high zoom beat/8 won't appear
         // scale=800: beat/4*800=200>=40, beat/8 not in the set
         const result = computeRulerTicks(
-          input({ scale: 800, maxSubdivisions: 4, viewSize: QN(4) }),
+          input({ scale: 800, maxSubdivisions: Px(4), viewSize: QN(4) }),
         );
         expect(result.finestTier).toBe(2); // sixteenths
         const subSixteenths = result.ticks.filter((t) => t.tier < 2);

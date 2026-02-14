@@ -22,8 +22,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "@base-ui/remix": ["../base-ui/packages/remix/src/index.ts"],
-      "@base-ui/remix/*": ["../base-ui/packages/remix/src/*/index.ts"],
       "@app/*": ["../app/src/*"]
     }
   },

@@ -2,52 +2,70 @@ import type { Handle } from "@remix-run/component";
 import { cn } from "@daw/utils";
 
 import type { TimeSignature } from "@daw/core/lib/time-signature";
-import type { SceneRenderer } from "../renderers/types";
-import { RulerSceneRenderer } from "../renderers/ruler/scene";
+import { RulerSceneRenderer, type RulerEnv } from "../renderers/ruler/scene";
 import { ProjectionRoot } from "./projection-root";
-import type { ProjectionRootContext } from "./projection-root";
-import { TimelineCanvas } from "./timeline-canvas";
+import { renderToCanvas } from "../scene";
+import { prepareCanvas } from "../utils/prepare-canvas";
+import { readTimelineTheme } from "../lib/theme";
 
 const DEFAULT_RULER_HEIGHT = 22;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const renderer = RulerSceneRenderer as SceneRenderer<any, any, any>;
-
 export function RulerCanvas(handle: Handle) {
-  const projCtx: ProjectionRootContext = handle.context.get(ProjectionRoot);
+  const projection = handle.context.get(ProjectionRoot);
+  let canvasEl: HTMLCanvasElement;
 
-  return (props: {
+  handle.on(projection, { change: () => handle.update() });
+
+  return ({
+    class: classes,
+    height = DEFAULT_RULER_HEIGHT,
+    ...rest
+  }: {
     timeSignature: TimeSignature;
     height?: number;
     class?: string;
-    minSpacingPx?: number;
-    minLabelSpacingPx?: number;
+    minSpacing?: number;
+    minLabelSpacing?: number;
     maxSubdivisions?: number;
   }) => {
-    const h = props.height ?? DEFAULT_RULER_HEIGHT;
+    handle.queueTask(() => {
+      if (!canvasEl) return;
+
+      const env: RulerEnv = {
+        theme: readTimelineTheme(),
+      };
+
+      const ctx = prepareCanvas({
+        canvas: canvasEl,
+        cssW: Math.max(1, projection.containerWidth),
+        cssH: height,
+        dpr: window.devicePixelRatio || 1,
+      });
+      if (!ctx) return;
+
+      const scene = RulerSceneRenderer.buildScene({
+        data: { ...rest, height },
+        projection,
+        state: undefined,
+        env,
+      });
+      renderToCanvas(ctx, scene.canvas);
+    });
 
     return (
       <div
         class={cn(
-          "relative bg-layer-2 border-y border-t-layer-4/80 dark:border-t-foreground/12 border-b-layer-4/40 dark:border-b-foreground/6",
-          props.class,
+          "sticky left-0 relative bg-layer-2 border-y border-t-layer-4/80 dark:border-t-foreground/12 border-b-layer-4/40 dark:border-b-foreground/6",
+          classes,
         )}
-        style={{ height: `${h}px` }}
+        style={{ height: `${height}px` }}
       >
-        <TimelineCanvas
-          projection={projCtx.projection}
-          size={{ width: projCtx.size.width, height: h }}
-          height={h}
-          surface="main"
-          fitToHeight={false}
-          renderer={renderer}
-          data={{
-            timeSignature: props.timeSignature,
-            minSpacingPx: props.minSpacingPx,
-            minLabelSpacingPx: props.minLabelSpacingPx,
-            maxSubdivisions: props.maxSubdivisions,
+        <canvas
+          connect={(node: HTMLCanvasElement) => {
+            canvasEl = node;
           }}
-          ui={undefined}
+          draggable={false}
+          class={cn("absolute pointer-events-none inset-0")}
         />
       </div>
     );

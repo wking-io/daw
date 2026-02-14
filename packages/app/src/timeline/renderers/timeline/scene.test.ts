@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import type { Projection1D } from "../../foundation/projection1d";
 import * as QN from "@daw/core/lib/qn";
 import * as Px from "@daw/core/lib/px";
 import * as TimeSignature from "@daw/core/lib/time-signature";
-import type { TimelineHostEnv, TimelineTheme } from "../core";
-import { DawSkeletonSceneRenderer } from "./scene";
-import type { DawClip, DawData, DawTrack, DawUiState, TrackColor } from "./types";
+import type { TimelineEnv, TimelineTheme } from "../core";
+import { ProjectionContext } from "../../lib/projection-context";
+import { TimelineSceneRenderer } from "./scene";
+import type { Clip, UIData, Track, UIState, TrackColor } from "./types";
 
 const MOCK_THEME: TimelineTheme = {
   gridLine: "oklch(37.67% 0.0074 66.2)",
@@ -21,43 +21,37 @@ function createMockProjection(options: {
   viewStart?: number;
   viewSize?: number;
   scale?: number;
-}): Projection1D<QN.QN> {
+}): ProjectionContext {
   const { viewStart = 0, viewSize = 100, scale = 1 } = options;
+  const width = viewSize * scale;
 
-  return {
-    scale,
-    viewportWidthPx: Px.Px(viewSize * scale),
+  const timeline = {
     size: QN.QN(1000),
-    view: {
-      start: QN.QN(viewStart),
-      size: QN.QN(viewSize),
-    },
-    contentToScreenX: (x: QN.QN) => Px.Px((Number(x) - viewStart) * scale),
-    screenToContentX: (x: Px.Px) => QN.QN(Number(x) / scale + viewStart),
+    view: { start: QN.QN(viewStart), size: QN.QN(viewSize) },
+    min: QN.QN(0),
   };
+
+  const ctx = new ProjectionContext(timeline);
+  ctx.setContainerWidth(Px.Px(width));
+  return ctx;
 }
 
 function createMockEnv(options: {
-  width?: number;
-  height?: number;
+  canvasHeight?: number;
   fitToHeight?: boolean;
   surface?: "main" | "navigator";
-}): TimelineHostEnv {
-  const { width = 400, height = 200, fitToHeight = true, surface = "main" } = options;
+} = {}): TimelineEnv {
+  const { canvasHeight = 200, fitToHeight = true, surface = "main" } = options;
 
   return {
-    canvas: {
-      dpr: 1,
-      widthPx: Px.Px(width),
-      heightPx: Px.Px(height),
-    },
     surface,
     fitToHeight,
+    canvasHeight: Px.Px(canvasHeight),
     theme: MOCK_THEME,
   };
 }
 
-function createTrack(id: string, name: string, color: TrackColor = "iris"): DawTrack {
+function createTrack(id: string, name: string, color: TrackColor = "iris"): Track {
   return { id, name, color };
 }
 
@@ -67,7 +61,7 @@ function createClip(
   start: number,
   end: number,
   title: string,
-): DawClip {
+): Clip {
   return {
     id,
     trackId,
@@ -77,11 +71,11 @@ function createClip(
   };
 }
 
-function createDawData(tracks: DawTrack[], clips: DawClip[]): DawData {
+function createUIData(tracks: Track[], clips: Clip[]): UIData {
   return { tracks, clips, timeSignature: TimeSignature.common };
 }
 
-function createUiState(selectedClipId: string | null = null): DawUiState {
+function createUiState(selectedClipId: string | null = null): UIState {
   return { selectedClipId };
 }
 
@@ -90,14 +84,14 @@ function createUiState(selectedClipId: string | null = null): DawUiState {
 // =============================================================================
 
 describe("timeline/renderers/daw-skeleton/scene", () => {
-  describe("DawSkeletonSceneRenderer", () => {
+  describe("TimelineSceneRenderer", () => {
     it("has correct kind", () => {
-      expect(DawSkeletonSceneRenderer.kind).toBe("daw-skeleton");
+      expect(TimelineSceneRenderer.kind).toBe("daw-skeleton");
     });
 
     describe("buildScene - canvas nodes", () => {
       it("generates vertical grid lines from ruler ticks", () => {
-        const data = createDawData([], []);
+        const data = createUIData([], []);
         const projection = createMockProjection({
           viewStart: 0,
           viewSize: 16,
@@ -105,10 +99,10 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -119,7 +113,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("positions grid lines based on view offset", () => {
-        const data = createDawData([], []);
+        const data = createUIData([], []);
         const projection = createMockProjection({
           viewStart: 50,
           viewSize: 16,
@@ -127,10 +121,10 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -141,7 +135,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("calculates track height with fitToHeight for dom clip positioning", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -156,12 +150,12 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ height: 200, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 200, fitToHeight: true });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -194,17 +188,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("uses default track height when fitToHeight is false for dom clip positioning", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
           [createClip("c1", "t1", 0, 50, "Clip 1"), createClip("c2", "t2", 0, 50, "Clip 2")],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ height: 200, fitToHeight: false });
+        const env = createMockEnv({ canvasHeight: 200, fitToHeight: false });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -226,14 +220,14 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - dom nodes", () => {
       it("always includes background hit area for deselection", () => {
-        const data = createDawData([], []);
-        const projection = createMockProjection({});
-        const env = createMockEnv({ width: 400, height: 200 });
+        const data = createUIData([], []);
+        const projection = createMockProjection({ scale: 4 });
+        const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -246,17 +240,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("generates clip group nodes", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Clip 1")],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ height: 100, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 100, fitToHeight: true });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -275,7 +269,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("positions clips correctly on their tracks", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
           [
             createClip("c1", "t1", 0, 50, "Track 1 Clip"),
@@ -283,12 +277,12 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ height: 200, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 200, fitToHeight: true });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -311,17 +305,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("calculates clip width from start/end positions", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 10, 60, "Clip")],
         );
         const projection = createMockProjection({ scale: 2 });
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -343,7 +337,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("applies selected styling to selected clip using track color", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1", "tangerine")],
           [
             createClip("c1", "t1", 0, 50, "Selected"),
@@ -353,10 +347,10 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState("c1"), // c1 is selected
+          state: createUiState("c1"), // c1 is selected
           env,
         });
 
@@ -384,7 +378,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("uses different colors for clips on different tracks", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1", "strawberry"),
             createTrack("t2", "Track 2", "emerald"),
@@ -395,12 +389,12 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ height: 200, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 200, fitToHeight: true });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -429,17 +423,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("includes clip title as text node", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "My Awesome Clip")],
         );
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -457,7 +451,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("skips clips with invalid track IDs", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [
             createClip("c1", "t1", 0, 50, "Valid"),
@@ -467,10 +461,10 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -480,17 +474,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("ensures minimum clip width of 1px", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 50, 50, "Zero Width")], // start === end
         );
         const projection = createMockProjection({ scale: 1 });
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -504,14 +498,14 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("handles empty tracks array", () => {
-        const data = createDawData([], []);
+        const data = createUIData([], []);
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -532,14 +526,14 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           createClip("c3", "t2", 0, 80, "Clip 3"),
           createClip("c4", "t3", 20, 90, "Clip 4"),
         ];
-        const data = createDawData(tracks, clips);
+        const data = createUIData(tracks, clips);
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -559,7 +553,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - integration", () => {
       it("produces complete scene with canvas and dom nodes", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
           [createClip("c1", "t1", 0, 100, "Clip A"), createClip("c2", "t2", 50, 150, "Clip B")],
         );
@@ -568,12 +562,12 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           viewSize: 200,
           scale: 1,
         });
-        const env = createMockEnv({ width: 200, height: 100 });
+        const env = createMockEnv({ canvasHeight: 100 });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState("c1"),
+          state: createUiState("c1"),
           env,
         });
 
@@ -593,17 +587,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - navigator surface", () => {
       it("returns empty dom array for navigator surface", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Clip 1")],
         );
         const projection = createMockProjection({});
         const env = createMockEnv({ surface: "navigator" });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -612,7 +606,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render track lane backgrounds for navigator", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -622,15 +616,15 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         );
         const projection = createMockProjection({});
         const env = createMockEnv({
-          height: 300,
+          canvasHeight: 300,
           fitToHeight: true,
           surface: "navigator",
         });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -644,21 +638,21 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("renders clips as simple filled rects for navigator", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 50, "Clip 1"), createClip("c2", "t1", 60, 100, "Clip 2")],
         );
         const projection = createMockProjection({ scale: 1 });
         const env = createMockEnv({
-          height: 100,
+          canvasHeight: 100,
           fitToHeight: true,
           surface: "navigator",
         });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -674,17 +668,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render text or borders for navigator clips", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Clip with title")],
         );
         const projection = createMockProjection({});
         const env = createMockEnv({ surface: "navigator" });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -698,7 +692,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("renders track separator lines for navigator", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -708,15 +702,15 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         );
         const projection = createMockProjection({});
         const env = createMockEnv({
-          height: 300,
+          canvasHeight: 300,
           fitToHeight: true,
           surface: "navigator",
         });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -731,14 +725,14 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render track separators for single track in navigator", () => {
-        const data = createDawData([createTrack("t1", "Track 1")], []);
+        const data = createUIData([createTrack("t1", "Track 1")], []);
         const projection = createMockProjection({});
         const env = createMockEnv({ surface: "navigator" });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -748,7 +742,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render track separators for more than 4 tracks in navigator", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -760,15 +754,15 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         );
         const projection = createMockProjection({});
         const env = createMockEnv({
-          height: 500,
+          canvasHeight: 500,
           fitToHeight: true,
           surface: "navigator",
         });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -778,7 +772,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("renders track separators for exactly 4 tracks in navigator", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -789,15 +783,15 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         );
         const projection = createMockProjection({});
         const env = createMockEnv({
-          height: 400,
+          canvasHeight: 400,
           fitToHeight: true,
           surface: "navigator",
         });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
@@ -807,17 +801,17 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("ignores selection state for navigator clips", () => {
-        const data = createDawData(
+        const data = createUIData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Selected Clip")],
         );
         const projection = createMockProjection({});
         const env = createMockEnv({ surface: "navigator" });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState("c1"), // c1 is selected
+          state: createUiState("c1"), // c1 is selected
           env,
         });
 
@@ -829,7 +823,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("uses track colors for navigator clips", () => {
-        const data = createDawData(
+        const data = createUIData(
           [
             createTrack("t1", "Track 1", "strawberry"),
             createTrack("t2", "Track 2", "emerald"),
@@ -841,15 +835,15 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         );
         const projection = createMockProjection({ scale: 1 });
         const env = createMockEnv({
-          height: 200,
+          canvasHeight: 200,
           fitToHeight: true,
           surface: "navigator",
         });
 
-        const scene = DawSkeletonSceneRenderer.buildScene({
+        const scene = TimelineSceneRenderer.buildScene({
           data,
           projection,
-          ui: createUiState(),
+          state: createUiState(),
           env,
         });
 
