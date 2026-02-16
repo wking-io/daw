@@ -21,7 +21,13 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   let suppressScrollEvents = false;
 
   function onScroll(e: Event) {
-    if (suppressScrollEvents || e.currentTarget instanceof HTMLElement === false) return;
+    if (
+      suppressScrollEvents ||
+      rootCtx.isInteracting ||
+      e.currentTarget instanceof HTMLElement === false
+    ) {
+      return;
+    }
 
     const nextStart = Scroll.fromScroll(
       QN.Numeric,
@@ -78,6 +84,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
         }}
         on={{
           scroll: onScroll,
+          wheel: { listener: onWheel, passive: false },
         }}
         class={cn(
           "no-scrollbar relative overflow-x-auto overflow-y-hidden overscroll-x-none",
