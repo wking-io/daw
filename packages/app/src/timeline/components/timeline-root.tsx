@@ -6,6 +6,7 @@ import * as Span from "@daw/core/lib/span";
 export type TimelineRootContext = {
   get timeline(): Timeline.Timeline<QN.QN>;
   setTimeline: (next: Timeline.Timeline<QN.QN>) => void;
+  panByPixels: (deltaPixels: number) => void;
   get isInteracting(): boolean;
   setIsInteracting: (isInteracting: boolean) => void;
 };
@@ -29,6 +30,12 @@ export function TimelineRoot(handle: Handle<TimelineRootContext>) {
     },
     setTimeline(next: Timeline.Timeline<QN.QN>) {
       currentTimeline = next;
+      handle.update();
+    },
+    panByPixels(deltaPixels: number) {
+      const delta = QN.QN(deltaPixels * 0.1);
+      if (delta === 0) return;
+      currentTimeline = Timeline.panBy(QN.Numeric, currentTimeline, delta);
       handle.update();
     },
     get isInteracting() {

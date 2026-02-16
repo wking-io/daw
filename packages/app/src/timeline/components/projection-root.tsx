@@ -26,6 +26,11 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   let containerNode: HTMLElement | null = null;
   let suppressScrollEvents = false;
 
+  function onWheel(e: WheelEvent) {
+    e.preventDefault();
+    rootCtx.panByPixels(e.deltaX);
+  }
+
   function onScroll(e: Event) {
     if (
       suppressScrollEvents ||

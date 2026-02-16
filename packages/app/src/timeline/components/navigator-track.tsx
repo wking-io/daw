@@ -28,7 +28,7 @@ export function NavigatorTrack(handle: Handle) {
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
-    const factor = zoomFactorFromDelta(-e.deltaY, ZOOM_RATE);
+    const factor = zoomFactorFromDelta(-e.deltaY, rootCtx.timeline.view.size);
     const nextTimeline = Timeline.zoomAt(
       QN.Numeric,
       rootCtx.timeline,
