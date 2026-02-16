@@ -11,7 +11,7 @@ export { NavigatorCanvas } from "./navigator-canvas";
 export { NavigatorContent } from "./navigator-content";
 
 // Projection exports
-export { ProjectionRoot as Projection, ProjectionContext } from "./projection-root";
+export { ProjectionRoot as Projection } from "./projection-root";
 
 export { ProjectionCanvas } from "./projection-canvas";
 export { ProjectionContent } from "./projection-content";

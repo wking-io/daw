@@ -1,5 +1,4 @@
 import type { Handle, Props } from "@remix-run/component";
-
 import * as QN from "@daw/core/lib/qn";
 import * as Timeline from "@daw/core/lib/timeline";
 import * as Span from "@daw/core/lib/span";
@@ -14,7 +13,7 @@ export type TimelineRootContext = {
 function makeInitialTimeline(): Timeline.Timeline<QN.QN> {
   return {
     size: QN.QN(500),
-    min: QN.QN(4),
+    min: QN.QN(0.25),
     view: Span.make(QN.Numeric, 32, 64),
   };
 }

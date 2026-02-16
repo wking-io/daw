@@ -11,7 +11,37 @@ import { NavigatorRoot } from "./navigator-root";
 import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
 
+const MIN_ZOOM_WINDOW_PX = 20;
+
 type Direction = "L" | "R";
+type Anchor = "L" | "R" | "center";
+
+function clampZoomWindow(
+  raw: Span.Span<Px.Px>,
+  containerWidth: Px.Px,
+  anchor: Anchor,
+): Span.Span<Px.Px> {
+  if (raw.size >= MIN_ZOOM_WINDOW_PX) {
+    return raw;
+  }
+
+  const max = Px.subtract(containerWidth, MIN_ZOOM_WINDOW_PX);
+  let start: Px.Px;
+
+  if (anchor === "L") {
+    // Right edge stays fixed
+    start = raw.start + raw.size - MIN_ZOOM_WINDOW_PX;
+  } else if (anchor === "R") {
+    // Left edge stays fixed
+    start = raw.start;
+  } else {
+    // Center on the raw midpoint
+    start = raw.start + raw.size / 2 - MIN_ZOOM_WINDOW_PX / 2;
+  }
+
+  return Span.make(Px.numeric, Px.clamp(start, Px.zero, max), MIN_ZOOM_WINDOW_PX);
+}
+
 type Idle = { kind: "idle" };
 type Pan<A extends number> = {
   kind: "pan";
@@ -22,6 +52,7 @@ type Resize<A extends number> = {
   kind: "resize";
   initialTimeline: Timeline.Timeline<A>;
   direction: Direction;
+  pointerOffset: A;
 };
 type Zoom<A extends number> = {
   kind: "zoom";
@@ -185,10 +216,28 @@ export function ZoomWindow(handle: Handle) {
         e.stopPropagation();
 
         el.setPointerCapture(e.pointerId);
+
+        // Capture offset between pointer and the real view edge so the
+        // first resize event produces zero delta (avoids a jump when the
+        // zoom window is visually clamped to MIN_ZOOM_WINDOW_PX).
+        const pointer = projection.getPointerPosition(e);
+        const pointerTimelinePos = Projection.fromScreen(
+          QN.Numeric,
+          QN.Numeric.zero,
+          Px.Px(pointer.x),
+          projection.scale,
+        );
+        const edge =
+          direction === "L"
+            ? rootCtx.timeline.view.start
+            : Span.end(QN.Numeric, rootCtx.timeline.view);
+        const pointerOffset = QN.subtract(pointerTimelinePos, edge);
+
         interaction = {
           kind: "resize",
           direction,
           initialTimeline: rootCtx.timeline,
+          pointerOffset,
         };
       };
     }
@@ -211,12 +260,14 @@ export function ZoomWindow(handle: Handle) {
         projection.scale,
       );
 
+      const adjusted = QN.subtract(pointerTimelinePos, interaction.pointerOffset);
+
       if (interaction.direction === "L") {
-        const delta = QN.subtract(pointerTimelinePos, rootCtx.timeline.view.start);
+        const delta = QN.subtract(adjusted, rootCtx.timeline.view.start);
         const nextTimeline = Timeline.resizeLeftBy(QN.Numeric, rootCtx.timeline, delta);
         rootCtx.setTimeline(nextTimeline);
       } else {
-        const delta = QN.subtract(pointerTimelinePos, Span.end(QN.Numeric, rootCtx.timeline.view));
+        const delta = QN.subtract(adjusted, Span.end(QN.Numeric, rootCtx.timeline.view));
         const nextTimeline = Timeline.resizeRightBy(QN.Numeric, rootCtx.timeline, delta);
         rootCtx.setTimeline(nextTimeline);
       }
@@ -225,6 +276,14 @@ export function ZoomWindow(handle: Handle) {
     function handlePickMoveEvent(e: PointerEvent) {
       return interaction.kind === "resize" ? handleResize(e) : handlePan(e);
     }
+
+    const anchor: Anchor =
+      interaction.kind === "resize" ? interaction.direction : "center";
+    const zoomWindow = clampZoomWindow(
+      projection.zoomWindow,
+      projection.containerWidth,
+      anchor,
+    );
 
     return (
       <div
@@ -241,8 +300,8 @@ export function ZoomWindow(handle: Handle) {
           props.class,
         )}
         style={{
-          left: `${projection.zoomWindow.start}px`,
-          width: `${projection.zoomWindow.size}px`,
+          left: `${zoomWindow.start}px`,
+          width: `${zoomWindow.size}px`,
         }}
       >
         {/* Left resize handle */}

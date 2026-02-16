@@ -1,6 +1,7 @@
 .DS_Store
 node_modules
 **/*.tsbuildinfo
+.cursor/debug.log
 .worktrees
 .env
 .idea
@@ -22,6 +23,3 @@ target
 
 # Local dev files
 *.bun-build
-
-# Forked repos
-base-ui

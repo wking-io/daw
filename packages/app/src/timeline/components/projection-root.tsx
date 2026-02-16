@@ -1,5 +1,5 @@
 import type { Handle, Props } from "@remix-run/component";
-
+import * as Projection from "@daw/core/lib/projection";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Scroll from "@daw/core/lib/scroll";
@@ -7,14 +7,20 @@ import * as Timeline from "@daw/core/lib/timeline";
 import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
 import { cn } from "@daw/utils";
-import { ProjectionContext } from "../lib/projection-context";
+import { ProjectionContext, type ProjectionRules } from "../lib/projection-context";
 
-export { ProjectionContext };
+const timelineRules: ProjectionRules = {
+  scale: (ctx) => {
+    if (ctx.containerWidth === 0) return 1;
+    return Projection.scaleFor(QN.Numeric, ctx.timeline.view.size, ctx.containerWidth);
+  },
+  origin: (ctx) => ctx.timeline.view.start,
+};
 
 export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
 
-  const projectionCtx: ProjectionContext = new ProjectionContext(rootCtx.timeline);
+  const projectionCtx: ProjectionContext = new ProjectionContext(rootCtx.timeline, timelineRules);
   handle.context.set(projectionCtx);
 
   let containerNode: HTMLElement | null = null;

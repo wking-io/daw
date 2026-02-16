@@ -73,39 +73,55 @@ describe("timeline/utils/interaction-math", () => {
 
   describe("zoomFactorFromDelta", () => {
     it("returns 1 for zero delta (no zoom)", () => {
-      expect(zoomFactorFromDelta(0)).toBe(1);
+      expect(zoomFactorFromDelta(0, 2)).toBe(1);
     });
 
     it("returns factor > 1 for negative delta (zoom in)", () => {
-      const factor = zoomFactorFromDelta(-100);
+      const factor = zoomFactorFromDelta(-100, 16);
       expect(factor).toBeGreaterThan(1);
     });
 
     it("returns factor < 1 for positive delta (zoom out)", () => {
-      const factor = zoomFactorFromDelta(100);
+      const factor = zoomFactorFromDelta(100, 16);
       expect(factor).toBeLessThan(1);
       expect(factor).toBeGreaterThan(0);
     });
 
-    it("doubles at delta = -rate", () => {
-      expect(zoomFactorFromDelta(-350)).toBeCloseTo(2);
+    it("doubles at delta = -rate when viewSize = 2 (log2 = 1)", () => {
+      // viewSize=2 → log2(2)=1 → logRate = rate*1 = rate
+      expect(zoomFactorFromDelta(-50, 2)).toBeCloseTo(2);
     });
 
-    it("halves at delta = +rate", () => {
-      expect(zoomFactorFromDelta(350)).toBeCloseTo(0.5);
-    });
-
-    it("uses custom rate", () => {
-      // rate=100, delta=-100 → 2^(100/100) = 2
-      expect(zoomFactorFromDelta(-100, 100)).toBeCloseTo(2);
-      // rate=100, delta=100 → 2^(-100/100) = 0.5
-      expect(zoomFactorFromDelta(100, 100)).toBeCloseTo(0.5);
+    it("halves at delta = +rate when viewSize = 2 (log2 = 1)", () => {
+      expect(zoomFactorFromDelta(50, 2)).toBeCloseTo(0.5);
     });
 
     it("is symmetric: inverse deltas produce reciprocal factors", () => {
-      const zoomIn = zoomFactorFromDelta(-200);
-      const zoomOut = zoomFactorFromDelta(200);
+      const zoomIn = zoomFactorFromDelta(-200, 16);
+      const zoomOut = zoomFactorFromDelta(200, 16);
       expect(zoomIn * zoomOut).toBeCloseTo(1);
+    });
+
+    it("zooms slower when view is large (zoomed out)", () => {
+      const factorSmallView = zoomFactorFromDelta(-100, 4); // log2(4)=2
+      const factorLargeView = zoomFactorFromDelta(-100, 256); // log2(256)=8
+      // Same delta, but large view produces smaller factor (less zoom)
+      expect(factorLargeView).toBeLessThan(factorSmallView);
+      expect(factorLargeView).toBeGreaterThan(1);
+    });
+
+    it("zooms faster when view is small (zoomed in)", () => {
+      const factorSmallView = zoomFactorFromDelta(-100, 2); // log2(2)=1
+      const factorMediumView = zoomFactorFromDelta(-100, 16); // log2(16)=4
+      // Small view produces larger factor (more zoom)
+      expect(factorSmallView).toBeGreaterThan(factorMediumView);
+    });
+
+    it("clamps log scaling to minimum of 1", () => {
+      // viewSize < 2 → log2 < 1, clamped to 1
+      const factorAt1 = zoomFactorFromDelta(-100, 1);
+      const factorAt05 = zoomFactorFromDelta(-100, 0.5);
+      expect(factorAt1).toBe(factorAt05); // both use logRate = rate * 1
     });
   });
 });
