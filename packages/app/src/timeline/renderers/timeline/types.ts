@@ -1,5 +1,5 @@
-import type { Clip } from "@daw/core/domain/clip";
 import type { Project } from "@daw/core/domain/project";
+import type { ProjectView } from "@daw/core/lib/project-view";
 
 /** Color palette name for track coloring. Matches SurfaceColor palette names. */
 export type TrackColor =
@@ -27,27 +27,10 @@ export type TrackColor =
   | "blush"
   | "primary";
 
-export type RulerSettings = Readonly<{
-  minSpacing?: number;
-  minLabelSpacing?: number;
-  maxSubdivisions?: number;
-}>;
-
 export type TimelineData = Readonly<{
   project: Project;
-  rulerSettings?: RulerSettings;
+  view: ProjectView;
 }>;
-
-export function resolveClipTitle(clip: Clip, project: Project): string {
-  const { payload } = clip;
-  if (payload.kind === "midi") {
-    return project.midiPatterns.find((p) => p.id === payload.patternId)?.name ?? "Untitled";
-  }
-  if (payload.kind === "audio") {
-    return project.audioFiles.find((f) => f.id === payload.audioFileId)?.name ?? "Untitled";
-  }
-  return "Untitled";
-}
 
 export type UIState = Readonly<{
   selectedClipId: string | null;

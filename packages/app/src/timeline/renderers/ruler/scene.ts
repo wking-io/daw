@@ -1,5 +1,4 @@
 import { computeRulerTicks } from "@daw/core/lib/ruler";
-import * as Px from "@daw/core/lib/px";
 import type { TimeSignature } from "@daw/core/lib/time-signature";
 import type { Scene, SceneNode } from "../../scene";
 import { point, stroke, textStyle } from "../../scene";
@@ -9,9 +8,6 @@ import type { TimelineTheme } from "../core";
 export type RulerData = Readonly<{
   timeSignature: TimeSignature;
   height: number;
-  minSpacing?: number;
-  minLabelSpacing?: number;
-  maxSubdivisions?: number;
 }>;
 
 export type RulerEnv = Readonly<{ theme: TimelineTheme }>;
@@ -39,9 +35,6 @@ export const RulerSceneRenderer: SceneRenderer<RulerData, void, never, RulerEnv>
       viewSize: projection.view.size,
       scale: projection.scale,
       timeSignature: data.timeSignature,
-      minSpacing: data.minSpacing != null ? Px.Px(data.minSpacing) : undefined,
-      minLabelSpacing: data.minLabelSpacing != null ? Px.Px(data.minLabelSpacing) : undefined,
-      maxSubdivisions: data.maxSubdivisions != null ? Px.Px(data.maxSubdivisions) : undefined,
     });
 
     const tickStroke = stroke(env.theme.gridLine, 1);

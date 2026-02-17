@@ -16,7 +16,15 @@ export function ProjectionCanvas(handle: Handle) {
 
   handle.on(projection, { change: () => handle.update() });
 
-  return ({ data, state, fitToHeight }: { data: TimelineData; state: UIState; fitToHeight: boolean }) => {
+  return ({
+    data,
+    state,
+    fitToHeight,
+  }: {
+    data: TimelineData;
+    state: UIState;
+    fitToHeight: boolean;
+  }) => {
     const dpr = window.devicePixelRatio || 1;
 
     handle.queueTask(() => {

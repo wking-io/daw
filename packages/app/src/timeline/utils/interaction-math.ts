@@ -22,6 +22,6 @@ export function deltaFrom<A extends number>(
 }
 
 export function zoomFactorFromDelta(dy: number, viewSize: number): number {
-  const logRate = 50 * Math.max(Math.log2(viewSize), 1);
+  const logRate = 50 * Math.log2(1 + viewSize);
   return Math.pow(2, -dy / logRate);
 }

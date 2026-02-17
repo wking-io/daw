@@ -25,7 +25,8 @@ import {
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
 import { demoProject } from "./timeline/demo/daw-data";
-import type { UIAction, UIState, RulerSettings, TimelineData } from "./timeline/renderers/timeline/types";
+import * as ProjectView from "@daw/core/lib/project-view";
+import type { UIAction, UIState, TimelineData } from "./timeline/renderers/timeline/types";
 
 type Theme = "light" | "dark";
 
@@ -106,13 +107,8 @@ function MainApp(handle: Handle) {
   const [getTabs, setTabs] = getAtom(handle, tabsAtom);
   let selectedClipId: string | null = null;
 
-  // Ruler debug settings
-  let rulerSettings: RulerSettings = {};
-
-  const handleRulerSetting = (key: keyof RulerSettings, value: number) => {
-    rulerSettings = { ...rulerSettings, [key]: value };
-    handle.update();
-  };
+  // Build view once from demo data
+  const demoView = ProjectView.fromProject(demoProject);
 
   const handleUIAction = (action: UIAction) => {
     switch (action.type) {
@@ -171,12 +167,7 @@ function MainApp(handle: Handle) {
   return () => {
     const { openTabs, activeTabId } = getTabs();
     const dawUIState: UIState = { selectedClipId };
-    const dawData: TimelineData = { project: demoProject, rulerSettings };
-
-    const gridPx = rulerSettings.minSpacing ?? 20;
-    const labelPx = rulerSettings.minLabelSpacing ?? 80;
-    const maxSub = rulerSettings.maxSubdivisions ?? 128;
-    const maxSubPow = Math.round(Math.log2(maxSub));
+    const dawData: TimelineData = { project: demoProject, view: demoView };
 
     return (
       <CreateProjectDialog.Root>
@@ -251,12 +242,7 @@ function MainApp(handle: Handle) {
                   </div>
 
                   <ProjectionRoot>
-                    <RulerCanvas
-                      timeSignature={dawData.project.timeSignature}
-                      minSpacing={rulerSettings.minSpacing}
-                      minLabelSpacing={rulerSettings.minLabelSpacing}
-                      maxSubdivisions={rulerSettings.maxSubdivisions}
-                    />
+                    <RulerCanvas timeSignature={dawData.project.timeSignature} />
                     <div
                       class={cn(
                         "sticky left-0 user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
@@ -274,63 +260,6 @@ function MainApp(handle: Handle) {
                     </div>
                   </ProjectionRoot>
                 </TimelineRoot>
-
-                <div class="flex items-center gap-6 px-4 py-2 text-xs text-foreground-muted font-mono">
-                  <label class="flex items-center gap-2">
-                    Grid {gridPx}px
-                    <input
-                      type="range"
-                      min="5"
-                      max="100"
-                      step="1"
-                      value={gridPx}
-                      on={{
-                        input: (e: Event) =>
-                          handleRulerSetting(
-                            "minSpacing",
-                            Number((e.target as HTMLInputElement).value),
-                          ),
-                      }}
-                      class="w-24"
-                    />
-                  </label>
-                  <label class="flex items-center gap-2">
-                    Label {labelPx}px
-                    <input
-                      type="range"
-                      min="20"
-                      max="200"
-                      step="1"
-                      value={labelPx}
-                      on={{
-                        input: (e: Event) =>
-                          handleRulerSetting(
-                            "minLabelSpacing",
-                            Number((e.target as HTMLInputElement).value),
-                          ),
-                      }}
-                      class="w-24"
-                    />
-                  </label>
-                  <label class="flex items-center gap-2">
-                    Subdivisions {maxSub}
-                    <input
-                      type="range"
-                      min="2"
-                      max="8"
-                      step="1"
-                      value={maxSubPow}
-                      on={{
-                        input: (e: Event) =>
-                          handleRulerSetting(
-                            "maxSubdivisions",
-                            Math.pow(2, Number((e.target as HTMLInputElement).value)),
-                          ),
-                      }}
-                      class="w-24"
-                    />
-                  </label>
-                </div>
               </div>
             </Tabs.Panel>
           ))}

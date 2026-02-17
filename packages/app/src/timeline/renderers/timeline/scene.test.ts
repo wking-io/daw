@@ -4,6 +4,7 @@ import type { MidiPattern } from "@daw/core/domain/project";
 import type { Track } from "@daw/core/domain/track";
 import * as QN from "@daw/core/lib/qn";
 import * as Px from "@daw/core/lib/px";
+import * as PV from "@daw/core/lib/project-view";
 import * as Span from "@daw/core/lib/span";
 import * as TimeSignature from "@daw/core/lib/time-signature";
 import { ProjectVersion } from "@daw/core/versions";
@@ -49,11 +50,13 @@ function createMockProjection(options: {
   return ctx;
 }
 
-function createMockEnv(options: {
-  canvasHeight?: number;
-  fitToHeight?: boolean;
-  surface?: "main" | "navigator";
-} = {}): TimelineEnv {
+function createMockEnv(
+  options: {
+    canvasHeight?: number;
+    fitToHeight?: boolean;
+    surface?: "main" | "navigator";
+  } = {},
+): TimelineEnv {
   const { canvasHeight = 200, fitToHeight = true, surface = "main" } = options;
 
   return {
@@ -110,21 +113,26 @@ function createClip(
   };
 }
 
-function createTimelineData(tracks: Track[], clipEntries: ReturnType<typeof createClip>[]): TimelineData {
+function createTimelineData(
+  tracks: Track[],
+  clipEntries: ReturnType<typeof createClip>[],
+): TimelineData {
+  const project = {
+    id: PROJECT_ID,
+    name: "Test Project",
+    version: ProjectVersion.make(0),
+    bpm: 120,
+    timeSignature: TimeSignature.common,
+    tracks,
+    clips: clipEntries.map((e) => e.clip),
+    midiPatterns: clipEntries.map((e) => e.pattern),
+    automationLanes: [],
+    audioFiles: [],
+    deletedAt: Option.none(),
+  };
   return {
-    project: {
-      id: PROJECT_ID,
-      name: "Test Project",
-      version: ProjectVersion.make(0),
-      bpm: 120,
-      timeSignature: TimeSignature.common,
-      tracks,
-      clips: clipEntries.map((e) => e.clip),
-      midiPatterns: clipEntries.map((e) => e.pattern),
-      automationLanes: [],
-      audioFiles: [],
-      deletedAt: Option.none(),
-    },
+    project,
+    view: PV.fromProject(project),
   };
 }
 
@@ -432,10 +440,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
       it("uses different colors for clips on different tracks", () => {
         const data = createTimelineData(
-          [
-            createTrack("t1", "Track 1", "strawberry"),
-            createTrack("t2", "Track 2", "emerald"),
-          ],
+          [createTrack("t1", "Track 1", "strawberry"), createTrack("t2", "Track 2", "emerald")],
           [
             createClip("c1", "t1", 0, 50, "Strawberry Clip"),
             createClip("c2", "t2", 0, 50, "Emerald Clip"),
@@ -714,9 +719,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         expect(rects.length).toBe(2);
 
         // Clip rects should use resolved track color (default "iris")
-        const clipRects = rects.filter(
-          (r) => r.kind === "rect" && r.fill === "resolved-iris",
-        );
+        const clipRects = rects.filter((r) => r.kind === "rect" && r.fill === "resolved-iris");
         expect(clipRects.length).toBe(2);
       });
 
@@ -877,10 +880,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
       it("uses track colors for navigator clips", () => {
         const data = createTimelineData(
-          [
-            createTrack("t1", "Track 1", "strawberry"),
-            createTrack("t2", "Track 2", "emerald"),
-          ],
+          [createTrack("t1", "Track 1", "strawberry"), createTrack("t2", "Track 2", "emerald")],
           [
             createClip("c1", "t1", 0, 50, "Strawberry Clip"),
             createClip("c2", "t2", 0, 50, "Emerald Clip"),

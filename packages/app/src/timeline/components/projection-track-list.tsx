@@ -1,11 +1,12 @@
 import type { Handle } from "@remix-run/component";
+import * as Bucket from "@daw/core/lib/bucket-index";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Span from "@daw/core/lib/span";
 
 import { ProjectionRoot } from "./projection-root";
 import { Clip, type ClipProps } from "./clip";
-import { resolveClipTitle } from "../renderers/timeline/types";
+import { resolveClipTitle } from "@daw/core/lib/project-view";
 import type { UIAction, TimelineData, UIState, TrackColor } from "../renderers/timeline/types";
 import type { ProjectionContext } from "../lib/projection-context";
 
@@ -40,42 +41,43 @@ function computeClips({
   projection: ProjectionContext;
   trackHeight: Px.Px;
 }): ClipData[] {
-  const { project } = data;
-  const trackById = new Map<string, { index: number; color: TrackColor }>();
-  for (let i = 0; i < project.tracks.length; i++) {
-    const track = project.tracks[i]!;
-    trackById.set(track.id, { index: i, color: track.color as TrackColor });
-  }
+  const { view } = data;
+  const visibleClips = Bucket.queryTracks(view.clipIndex, view.trackOrder, projection.view);
 
-  return project.clips.reduce<ClipData[]>((clips, clip) => {
-    const trackInfo = trackById.get(clip.trackId);
-    if (trackInfo == null) return clips;
+  const clips: ClipData[] = [];
+  for (const [trackId, clipIds] of visibleClips) {
+    const track = view.trackById.get(trackId);
+    const trackRow = view.trackIndex.get(trackId);
+    if (!track || trackRow == null) continue;
 
-    const clipEnd = Span.end(QN.Numeric, clip.span);
-    const left = projection.contentToScreenX(clip.span.start);
-    const right = projection.contentToScreenX(clipEnd);
-    const width = Px.max(Px.Px(1), Px.subtract(right, left));
+    for (const clipId of clipIds) {
+      const clip = view.clipById.get(clipId);
+      if (!clip) continue;
 
-    const top = Px.multiply(Px.add(trackHeight, CLIP_VERTICAL_PADDING), trackInfo.index);
-    const height = Px.max(
-      Px.Px(1),
-      Px.subtract(trackHeight, Px.multiply(CLIP_VERTICAL_PADDING, 2)),
-    );
+      const clipEnd = Span.end(QN.Numeric, clip.span);
+      const left = projection.contentToScreenX(clip.span.start);
+      const right = projection.contentToScreenX(clipEnd);
+      const width = Px.max(Px.Px(1), Px.subtract(right, left));
 
-    return [
-      ...clips,
-      {
+      const top = Px.multiply(Px.add(trackHeight, CLIP_VERTICAL_PADDING), trackRow);
+      const height = Px.max(
+        Px.Px(1),
+        Px.subtract(trackHeight, Px.multiply(CLIP_VERTICAL_PADDING, 2)),
+      );
+
+      clips.push({
         id: clip.id,
-        title: resolveClipTitle(clip, project),
+        title: resolveClipTitle(clip, view),
         x: left,
         y: top,
         width,
         height,
         isSelected: state.selectedClipId === clip.id,
-        trackColor: trackInfo.color,
-      },
-    ];
-  }, []);
+        trackColor: track.color as TrackColor,
+      });
+    }
+  }
+  return clips;
 }
 
 export function ProjectionTrackList(handle: Handle) {
@@ -94,7 +96,7 @@ export function ProjectionTrackList(handle: Handle) {
     dispatch: (action: UIAction) => void;
   }) => {
     const trackHeight = computeTrackHeight({
-      trackCount: data.project.tracks.length,
+      trackCount: data.view.trackOrder.length,
       fitToHeight: true,
       canvasHeight: containerHeight,
     });

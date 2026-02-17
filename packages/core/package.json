@@ -39,7 +39,9 @@
     "./lib/qn": "./src/lib/qn.ts",
     "./lib/ruler": "./src/lib/ruler.ts",
     "./lib/size": "./src/lib/size.ts",
-    "./lib/time-signature": "./src/lib/time-signature.ts"
+    "./lib/time-signature": "./src/lib/time-signature.ts",
+    "./lib/bucket-index": "./src/lib/bucket-index.ts",
+    "./lib/project-view": "./src/lib/project-view.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

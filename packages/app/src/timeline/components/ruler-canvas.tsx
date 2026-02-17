@@ -24,9 +24,6 @@ export function RulerCanvas(handle: Handle) {
     timeSignature: TimeSignature;
     height?: number;
     class?: string;
-    minSpacing?: number;
-    minLabelSpacing?: number;
-    maxSubdivisions?: number;
   }) => {
     handle.queueTask(() => {
       if (!canvasEl) return;

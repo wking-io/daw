@@ -25,21 +25,22 @@ function clampZoomWindow(
     return raw;
   }
 
-  const max = Px.subtract(containerWidth, MIN_ZOOM_WINDOW_PX);
+  const minPx = Px.Px(MIN_ZOOM_WINDOW_PX);
+  const max = Px.subtract(containerWidth, minPx);
   let start: Px.Px;
 
   if (anchor === "L") {
     // Right edge stays fixed
-    start = raw.start + raw.size - MIN_ZOOM_WINDOW_PX;
+    start = Px.subtract(Px.add(raw.start, raw.size), minPx);
   } else if (anchor === "R") {
     // Left edge stays fixed
     start = raw.start;
   } else {
     // Center on the raw midpoint
-    start = raw.start + raw.size / 2 - MIN_ZOOM_WINDOW_PX / 2;
+    start = Px.Px(Number(raw.start) + Number(raw.size) / 2 - MIN_ZOOM_WINDOW_PX / 2);
   }
 
-  return Span.make(Px.numeric, Px.clamp(start, Px.zero, max), MIN_ZOOM_WINDOW_PX);
+  return Span.make(Px.Numeric, Px.clamp(start, Px.zero, max), MIN_ZOOM_WINDOW_PX);
 }
 
 type Idle = { kind: "idle" };
@@ -102,7 +103,7 @@ export function ZoomWindow(handle: Handle) {
     // Handle zoom
     if (interaction.kind !== "zoom") return;
     const { initialTimeline } = interaction;
-    const factor = zoomFactorFromDelta(cumulativeDelta, 350);
+    const factor = zoomFactorFromDelta(cumulativeDelta, projection.view.size);
     const nextTimeline = Timeline.zoomAt(
       QN.Numeric,
       initialTimeline,
@@ -262,14 +263,20 @@ export function ZoomWindow(handle: Handle) {
 
       const adjusted = QN.subtract(pointerTimelinePos, interaction.pointerOffset);
 
+      // Enforce visual min: resize cannot shrink the view below what
+      // MIN_ZOOM_WINDOW_PX represents at the current navigator scale.
+      const visualMin = QN.QN(MIN_ZOOM_WINDOW_PX / projection.scale);
+      const effectiveMin = QN.max(rootCtx.timeline.min, visualMin);
+      const constrained = { ...rootCtx.timeline, min: effectiveMin };
+
       if (interaction.direction === "L") {
         const delta = QN.subtract(adjusted, rootCtx.timeline.view.start);
-        const nextTimeline = Timeline.resizeLeftBy(QN.Numeric, rootCtx.timeline, delta);
-        rootCtx.setTimeline(nextTimeline);
+        const nextTimeline = Timeline.resizeLeftBy(QN.Numeric, constrained, delta);
+        rootCtx.setTimeline({ ...nextTimeline, min: rootCtx.timeline.min });
       } else {
         const delta = QN.subtract(adjusted, Span.end(QN.Numeric, rootCtx.timeline.view));
-        const nextTimeline = Timeline.resizeRightBy(QN.Numeric, rootCtx.timeline, delta);
-        rootCtx.setTimeline(nextTimeline);
+        const nextTimeline = Timeline.resizeRightBy(QN.Numeric, constrained, delta);
+        rootCtx.setTimeline({ ...nextTimeline, min: rootCtx.timeline.min });
       }
     }
 
@@ -277,13 +284,8 @@ export function ZoomWindow(handle: Handle) {
       return interaction.kind === "resize" ? handleResize(e) : handlePan(e);
     }
 
-    const anchor: Anchor =
-      interaction.kind === "resize" ? interaction.direction : "center";
-    const zoomWindow = clampZoomWindow(
-      projection.zoomWindow,
-      projection.containerWidth,
-      anchor,
-    );
+    const anchor: Anchor = interaction.kind === "resize" ? interaction.direction : "center";
+    const zoomWindow = clampZoomWindow(projection.zoomWindow, projection.containerWidth, anchor);
 
     return (
       <div

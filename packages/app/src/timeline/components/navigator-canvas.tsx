@@ -16,7 +16,15 @@ export function NavigatorCanvas(handle: Handle) {
 
   handle.on(projection, { change: () => handle.update() });
 
-  return ({ data, state, class: classes }: { data: TimelineData; state: UIState; class?: string }) => {
+  return ({
+    data,
+    state,
+    class: classes,
+  }: {
+    data: TimelineData;
+    state: UIState;
+    class?: string;
+  }) => {
     const dpr = window.devicePixelRatio || 1;
 
     handle.queueTask(() => {
