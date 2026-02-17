@@ -24,8 +24,8 @@ import {
 } from "./timeline/components";
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
-import { demoDawData } from "./timeline/demo/daw-data";
-import type { UIAction, UIState, RulerSettings } from "./timeline/renderers/timeline/types";
+import { demoProject } from "./timeline/demo/daw-data";
+import type { UIAction, UIState, RulerSettings, TimelineData } from "./timeline/renderers/timeline/types";
 
 type Theme = "light" | "dark";
 
@@ -171,7 +171,7 @@ function MainApp(handle: Handle) {
   return () => {
     const { openTabs, activeTabId } = getTabs();
     const dawUIState: UIState = { selectedClipId };
-    const dawData = { ...demoDawData, rulerSettings };
+    const dawData: TimelineData = { project: demoProject, rulerSettings };
 
     const gridPx = rulerSettings.minSpacing ?? 20;
     const labelPx = rulerSettings.minLabelSpacing ?? 80;
@@ -252,7 +252,7 @@ function MainApp(handle: Handle) {
 
                   <ProjectionRoot>
                     <RulerCanvas
-                      timeSignature={dawData.timeSignature}
+                      timeSignature={dawData.project.timeSignature}
                       minSpacing={rulerSettings.minSpacing}
                       minLabelSpacing={rulerSettings.minLabelSpacing}
                       maxSubdivisions={rulerSettings.maxSubdivisions}

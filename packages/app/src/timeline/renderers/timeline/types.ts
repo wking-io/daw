@@ -1,5 +1,5 @@
-import type { QN } from "@daw/core/lib/qn";
-import type { TimeSignature } from "@daw/core/lib/time-signature";
+import type { Clip } from "@daw/core/domain/clip";
+import type { Project } from "@daw/core/domain/project";
 
 /** Color palette name for track coloring. Matches SurfaceColor palette names. */
 export type TrackColor =
@@ -27,32 +27,27 @@ export type TrackColor =
   | "blush"
   | "primary";
 
-export type Clip = Readonly<{
-  id: string;
-  trackId: string;
-  start: QN;
-  end: QN;
-  title: string;
-}>;
-
-export type Track = Readonly<{
-  id: string;
-  name: string;
-  color: TrackColor;
-}>;
-
 export type RulerSettings = Readonly<{
   minSpacing?: number;
   minLabelSpacing?: number;
   maxSubdivisions?: number;
 }>;
 
-export type UIData = Readonly<{
-  tracks: readonly Track[];
-  clips: readonly Clip[];
+export type TimelineData = Readonly<{
+  project: Project;
   rulerSettings?: RulerSettings;
-  timeSignature: TimeSignature;
 }>;
+
+export function resolveClipTitle(clip: Clip, project: Project): string {
+  const { payload } = clip;
+  if (payload.kind === "midi") {
+    return project.midiPatterns.find((p) => p.id === payload.patternId)?.name ?? "Untitled";
+  }
+  if (payload.kind === "audio") {
+    return project.audioFiles.find((f) => f.id === payload.audioFileId)?.name ?? "Untitled";
+  }
+  return "Untitled";
+}
 
 export type UIState = Readonly<{
   selectedClipId: string | null;

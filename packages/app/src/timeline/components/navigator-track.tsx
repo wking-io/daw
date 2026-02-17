@@ -19,8 +19,6 @@ type Pan = {
 
 type Interaction = Idle | Pan;
 
-const ZOOM_RATE = 350;
-
 export function NavigatorTrack(handle: Handle) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
   const navCtx = handle.context.get(NavigatorRoot);

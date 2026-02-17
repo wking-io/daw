@@ -1,11 +1,17 @@
 import { describe, expect, it } from "bun:test";
+import type { Clip } from "@daw/core/domain/clip";
+import type { MidiPattern } from "@daw/core/domain/project";
+import type { Track } from "@daw/core/domain/track";
 import * as QN from "@daw/core/lib/qn";
 import * as Px from "@daw/core/lib/px";
+import * as Span from "@daw/core/lib/span";
 import * as TimeSignature from "@daw/core/lib/time-signature";
+import { ProjectVersion } from "@daw/core/versions";
+import { Option } from "effect";
 import type { TimelineEnv, TimelineTheme } from "../core";
 import { ProjectionContext } from "../../lib/projection-context";
 import { TimelineSceneRenderer } from "./scene";
-import type { Clip, UIData, Track, UIState, TrackColor } from "./types";
+import type { TimelineData, UIState, TrackColor } from "./types";
 
 const MOCK_THEME: TimelineTheme = {
   gridLine: "oklch(37.67% 0.0074 66.2)",
@@ -31,7 +37,14 @@ function createMockProjection(options: {
     min: QN.QN(0),
   };
 
-  const ctx = new ProjectionContext(timeline);
+  const rules = {
+    scale: () => scale,
+    origin: (ctx: ProjectionContext) => ctx.view.start,
+  };
+
+  const ctx = new ProjectionContext(timeline, rules);
+  // Stub dispatchEvent — Bun's test runner rejects `new Event()` for native EventTarget
+  ctx.dispatchEvent = () => true;
   ctx.setContainerWidth(Px.Px(width));
   return ctx;
 }
@@ -51,8 +64,23 @@ function createMockEnv(options: {
   };
 }
 
+const PROJECT_ID = "test-project" as any;
+let patternCounter = 0;
+
 function createTrack(id: string, name: string, color: TrackColor = "iris"): Track {
-  return { id, name, color };
+  return {
+    id: id as any,
+    projectId: PROJECT_ID,
+    type: "midi",
+    name,
+    color,
+    volumeDb: 0,
+    pan: 0,
+    mute: false,
+    solo: false,
+    sortOrder: 0,
+    deviceIds: [],
+  };
 }
 
 function createClip(
@@ -61,18 +89,43 @@ function createClip(
   start: number,
   end: number,
   title: string,
-): Clip {
+): { clip: Clip; pattern: MidiPattern } {
+  const patternId = `pattern-${++patternCounter}` as any;
   return {
-    id,
-    trackId,
-    start: QN.QN(start),
-    end: QN.QN(end),
-    title,
+    clip: {
+      id: id as any,
+      projectId: PROJECT_ID,
+      trackId: trackId as any,
+      span: Span.make(QN.Numeric, start, end - start),
+      loop: { enabled: false, length: QN.QN(end - start) },
+      sortOrder: 0,
+      payload: { kind: "midi", patternId },
+    },
+    pattern: {
+      id: patternId,
+      projectId: PROJECT_ID,
+      name: title,
+      notes: [],
+    },
   };
 }
 
-function createUIData(tracks: Track[], clips: Clip[]): UIData {
-  return { tracks, clips, timeSignature: TimeSignature.common };
+function createTimelineData(tracks: Track[], clipEntries: ReturnType<typeof createClip>[]): TimelineData {
+  return {
+    project: {
+      id: PROJECT_ID,
+      name: "Test Project",
+      version: ProjectVersion.make(0),
+      bpm: 120,
+      timeSignature: TimeSignature.common,
+      tracks,
+      clips: clipEntries.map((e) => e.clip),
+      midiPatterns: clipEntries.map((e) => e.pattern),
+      automationLanes: [],
+      audioFiles: [],
+      deletedAt: Option.none(),
+    },
+  };
 }
 
 function createUiState(selectedClipId: string | null = null): UIState {
@@ -91,7 +144,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - canvas nodes", () => {
       it("generates vertical grid lines from ruler ticks", () => {
-        const data = createUIData([], []);
+        const data = createTimelineData([], []);
         const projection = createMockProjection({
           viewStart: 0,
           viewSize: 16,
@@ -113,7 +166,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("positions grid lines based on view offset", () => {
-        const data = createUIData([], []);
+        const data = createTimelineData([], []);
         const projection = createMockProjection({
           viewStart: 50,
           viewSize: 16,
@@ -135,7 +188,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("calculates track height with fitToHeight for dom clip positioning", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -188,7 +241,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("uses default track height when fitToHeight is false for dom clip positioning", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
           [createClip("c1", "t1", 0, 50, "Clip 1"), createClip("c2", "t2", 0, 50, "Clip 2")],
         );
@@ -220,7 +273,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - dom nodes", () => {
       it("always includes background hit area for deselection", () => {
-        const data = createUIData([], []);
+        const data = createTimelineData([], []);
         const projection = createMockProjection({ scale: 4 });
         const env = createMockEnv({});
 
@@ -240,7 +293,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("generates clip group nodes", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Clip 1")],
         );
@@ -269,7 +322,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("positions clips correctly on their tracks", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
           [
             createClip("c1", "t1", 0, 50, "Track 1 Clip"),
@@ -305,7 +358,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("calculates clip width from start/end positions", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 10, 60, "Clip")],
         );
@@ -337,7 +390,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("applies selected styling to selected clip using track color", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1", "tangerine")],
           [
             createClip("c1", "t1", 0, 50, "Selected"),
@@ -378,7 +431,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("uses different colors for clips on different tracks", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1", "strawberry"),
             createTrack("t2", "Track 2", "emerald"),
@@ -423,7 +476,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("includes clip title as text node", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "My Awesome Clip")],
         );
@@ -451,7 +504,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("skips clips with invalid track IDs", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [
             createClip("c1", "t1", 0, 50, "Valid"),
@@ -474,7 +527,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("ensures minimum clip width of 1px", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 50, 50, "Zero Width")], // start === end
         );
@@ -498,7 +551,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("handles empty tracks array", () => {
-        const data = createUIData([], []);
+        const data = createTimelineData([], []);
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
@@ -526,7 +579,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           createClip("c3", "t2", 0, 80, "Clip 3"),
           createClip("c4", "t3", 20, 90, "Clip 4"),
         ];
-        const data = createUIData(tracks, clips);
+        const data = createTimelineData(tracks, clips);
         const projection = createMockProjection({});
         const env = createMockEnv({});
 
@@ -553,7 +606,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - integration", () => {
       it("produces complete scene with canvas and dom nodes", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
           [createClip("c1", "t1", 0, 100, "Clip A"), createClip("c2", "t2", 50, 150, "Clip B")],
         );
@@ -587,7 +640,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
     describe("buildScene - navigator surface", () => {
       it("returns empty dom array for navigator surface", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Clip 1")],
         );
@@ -606,7 +659,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render track lane backgrounds for navigator", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -638,7 +691,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("renders clips as simple filled rects for navigator", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 50, "Clip 1"), createClip("c2", "t1", 60, 100, "Clip 2")],
         );
@@ -668,7 +721,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render text or borders for navigator clips", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Clip with title")],
         );
@@ -692,7 +745,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("renders track separator lines for navigator", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -725,7 +778,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render track separators for single track in navigator", () => {
-        const data = createUIData([createTrack("t1", "Track 1")], []);
+        const data = createTimelineData([createTrack("t1", "Track 1")], []);
         const projection = createMockProjection({});
         const env = createMockEnv({ surface: "navigator" });
 
@@ -742,7 +795,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("does not render track separators for more than 4 tracks in navigator", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -772,7 +825,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("renders track separators for exactly 4 tracks in navigator", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1"),
             createTrack("t2", "Track 2"),
@@ -801,7 +854,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("ignores selection state for navigator clips", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "Selected Clip")],
         );
@@ -823,7 +876,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
       });
 
       it("uses track colors for navigator clips", () => {
-        const data = createUIData(
+        const data = createTimelineData(
           [
             createTrack("t1", "Track 1", "strawberry"),
             createTrack("t2", "Track 2", "emerald"),

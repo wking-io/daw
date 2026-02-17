@@ -1,9 +1,12 @@
 import type { Handle } from "@remix-run/component";
 import * as Px from "@daw/core/lib/px";
+import * as QN from "@daw/core/lib/qn";
+import * as Span from "@daw/core/lib/span";
 
 import { ProjectionRoot } from "./projection-root";
 import { Clip, type ClipProps } from "./clip";
-import type { UIAction, UIData, UIState, TrackColor } from "../renderers/timeline/types";
+import { resolveClipTitle } from "../renderers/timeline/types";
+import type { UIAction, TimelineData, UIState, TrackColor } from "../renderers/timeline/types";
 import type { ProjectionContext } from "../lib/projection-context";
 
 const DEFAULT_TRACK_HEIGHT = Px.Px(28);
@@ -32,23 +35,25 @@ function computeClips({
   projection,
   trackHeight,
 }: {
-  data: UIData;
+  data: TimelineData;
   state: UIState;
   projection: ProjectionContext;
   trackHeight: Px.Px;
 }): ClipData[] {
+  const { project } = data;
   const trackById = new Map<string, { index: number; color: TrackColor }>();
-  for (let i = 0; i < data.tracks.length; i++) {
-    const track = data.tracks[i]!;
-    trackById.set(track.id, { index: i, color: track.color });
+  for (let i = 0; i < project.tracks.length; i++) {
+    const track = project.tracks[i]!;
+    trackById.set(track.id, { index: i, color: track.color as TrackColor });
   }
 
-  return data.clips.reduce<ClipData[]>((clips, clip) => {
+  return project.clips.reduce<ClipData[]>((clips, clip) => {
     const trackInfo = trackById.get(clip.trackId);
     if (trackInfo == null) return clips;
 
-    const left = projection.contentToScreenX(clip.start);
-    const right = projection.contentToScreenX(clip.end);
+    const clipEnd = Span.end(QN.Numeric, clip.span);
+    const left = projection.contentToScreenX(clip.span.start);
+    const right = projection.contentToScreenX(clipEnd);
     const width = Px.max(Px.Px(1), Px.subtract(right, left));
 
     const top = Px.multiply(Px.add(trackHeight, CLIP_VERTICAL_PADDING), trackInfo.index);
@@ -61,7 +66,7 @@ function computeClips({
       ...clips,
       {
         id: clip.id,
-        title: clip.title,
+        title: resolveClipTitle(clip, project),
         x: left,
         y: top,
         width,
@@ -84,12 +89,12 @@ export function ProjectionTrackList(handle: Handle) {
     state,
     dispatch,
   }: {
-    data: UIData;
+    data: TimelineData;
     state: UIState;
     dispatch: (action: UIAction) => void;
   }) => {
     const trackHeight = computeTrackHeight({
-      trackCount: data.tracks.length,
+      trackCount: data.project.tracks.length,
       fitToHeight: true,
       canvasHeight: containerHeight,
     });

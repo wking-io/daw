@@ -1,10 +1,14 @@
+import type { Clip } from "@daw/core/domain/clip";
 import * as Px from "@daw/core/lib/px";
+import * as QN from "@daw/core/lib/qn";
 import { computeRulerTicks } from "@daw/core/lib/ruler";
+import * as Span from "@daw/core/lib/span";
 import type { InteractiveNode, Scene, SceneNode } from "../../scene";
 import { point, rect, stroke } from "../../scene";
 import type { SceneRenderer, BuildSceneArgs } from "../types";
 import type { TimelineEnv } from "../core";
-import type { UIAction, Clip, UIData, UIState, TrackColor } from "./types";
+import { resolveClipTitle } from "./types";
+import type { UIAction, TimelineData, UIState, TrackColor } from "./types";
 
 // =============================================================================
 // Constants
@@ -33,6 +37,7 @@ function computeTrackHeight({
 
 type ClipLayout = {
   clip: Clip;
+  title: string;
   x: Px.Px;
   y: Px.Px;
   width: Px.Px;
@@ -47,24 +52,26 @@ function computeClipLayouts({
   projection,
   trackHeight,
   verticalPadding = CLIP_VERTICAL_PADDING,
-}: Pick<BuildSceneArgs<UIData, UIState, TimelineEnv>, "data" | "state" | "projection"> & {
+}: Pick<BuildSceneArgs<TimelineData, UIState, TimelineEnv>, "data" | "state" | "projection"> & {
   trackHeight: Px.Px;
   verticalPadding?: number;
 }): ClipLayout[] {
+  const { project } = data;
   const trackById = new Map<string, { index: number; color: TrackColor }>();
-  for (let i = 0; i < data.tracks.length; i++) {
-    const track = data.tracks[i]!;
-    trackById.set(track.id, { index: i, color: track.color });
+  for (let i = 0; i < project.tracks.length; i++) {
+    const track = project.tracks[i]!;
+    trackById.set(track.id, { index: i, color: track.color as TrackColor });
   }
 
   const layouts: ClipLayout[] = [];
 
-  for (const clip of data.clips) {
+  for (const clip of project.clips) {
     const trackInfo = trackById.get(clip.trackId);
     if (trackInfo == null) continue;
 
-    const left = projection.contentToScreenX(clip.start);
-    const right = projection.contentToScreenX(clip.end);
+    const clipEnd = Span.end(QN.Numeric, clip.span);
+    const left = projection.contentToScreenX(clip.span.start);
+    const right = projection.contentToScreenX(clipEnd);
     const width = Px.max(Px.Px(1), Px.subtract(right, left));
 
     const top = Px.add(Px.multiply(trackHeight, trackInfo.index), Px.Px(verticalPadding));
@@ -72,6 +79,7 @@ function computeClipLayouts({
 
     layouts.push({
       clip,
+      title: resolveClipTitle(clip, project),
       x: left,
       y: top,
       width,
@@ -106,7 +114,7 @@ function buildMainCanvasNodes({
   projection,
   data,
   env,
-}: Pick<BuildSceneArgs<UIData, UIState, TimelineEnv>, "projection" | "data" | "env">): SceneNode<never>[] {
+}: Pick<BuildSceneArgs<TimelineData, UIState, TimelineEnv>, "projection" | "data" | "env">): SceneNode<never>[] {
   const nodes: SceneNode<never>[] = [];
 
   const rs = data.rulerSettings;
@@ -114,7 +122,7 @@ function buildMainCanvasNodes({
     viewStart: projection.view.start,
     viewSize: projection.view.size,
     scale: projection.scale,
-    timeSignature: data.timeSignature,
+    timeSignature: data.project.timeSignature,
     minSpacing: rs?.minSpacing != null ? Px.Px(rs.minSpacing) : undefined,
     minLabelSpacing: rs?.minLabelSpacing != null ? Px.Px(rs.minLabelSpacing) : undefined,
     maxSubdivisions: rs?.maxSubdivisions != null ? Px.Px(rs.maxSubdivisions) : undefined,
@@ -147,17 +155,17 @@ function buildNavigatorCanvasNodes({
   projection,
   trackHeight,
   env,
-}: Pick<BuildSceneArgs<UIData, UIState, TimelineEnv>, "data" | "projection" | "env"> & {
+}: Pick<BuildSceneArgs<TimelineData, UIState, TimelineEnv>, "data" | "projection" | "env"> & {
   clipLayouts: ClipLayout[];
   trackHeight: Px.Px;
 }): SceneNode<never>[] {
   const nodes: SceneNode<never>[] = [];
 
   // Only render track separator lines if 4 or fewer tracks
-  const showSeparators = data.tracks.length <= 4;
+  const showSeparators = data.project.tracks.length <= 4;
   if (showSeparators) {
     const borderStroke = stroke(env.theme.gridLine, 1);
-    for (let i = 1; i < data.tracks.length; i++) {
+    for (let i = 1; i < data.project.tracks.length; i++) {
       const y = Px.Px(Number(Px.multiply(trackHeight, i)) + 0.5); // +0.5 for crisp 1px line
       nodes.push({
         kind: "line",
@@ -185,7 +193,7 @@ function buildDomNodes({
   clipLayouts,
   projection,
   env,
-}: Pick<BuildSceneArgs<UIData, UIState, TimelineEnv>, "projection" | "env"> & {
+}: Pick<BuildSceneArgs<TimelineData, UIState, TimelineEnv>, "projection" | "env"> & {
   clipLayouts: ClipLayout[];
 }): InteractiveNode<UIAction>[] {
   const nodes: InteractiveNode<UIAction>[] = [];
@@ -227,7 +235,7 @@ function buildDomNodes({
             Px.Px(8), // padding-left
             Px.Px(Number(layout.height) / 2), // vertically centered (baseline: middle handles offset)
           ),
-          text: layout.clip.title,
+          text: layout.title,
           style: {
             font: "12px system-ui, sans-serif",
             color: `var(--color-${color}-primary-foreground)`,
@@ -253,12 +261,12 @@ function buildDomNodes({
  * - **main**: Full fidelity with canvas grid + DOM interactive clips
  * - **navigator**: Low fidelity canvas-only (track lanes + simple clip shapes, not interactive)
  */
-export const TimelineSceneRenderer: SceneRenderer<UIData, UIState, UIAction, TimelineEnv> = {
+export const TimelineSceneRenderer: SceneRenderer<TimelineData, UIState, UIAction, TimelineEnv> = {
   kind: "daw-skeleton",
 
   buildScene: ({ data, projection, state, env }): Scene<UIAction> => {
     const trackHeight = computeTrackHeight({
-      trackCount: data.tracks.length,
+      trackCount: data.project.tracks.length,
       fitToHeight: env.fitToHeight,
       canvasHeight: env.canvasHeight,
     });

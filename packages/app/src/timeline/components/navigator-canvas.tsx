@@ -3,7 +3,7 @@ import type { Handle } from "@remix-run/component";
 import * as Px from "@daw/core/lib/px";
 import { NavigatorRoot } from "./navigator-root";
 import { cn } from "@daw/utils";
-import type { UIData, UIState } from "../renderers/timeline/types";
+import type { TimelineData, UIState } from "../renderers/timeline/types";
 import { TimelineSceneRenderer } from "../renderers/timeline/scene";
 import { renderToCanvas } from "../scene";
 import { prepareCanvas } from "../utils/prepare-canvas";
@@ -16,7 +16,7 @@ export function NavigatorCanvas(handle: Handle) {
 
   handle.on(projection, { change: () => handle.update() });
 
-  return ({ data, state, class: classes }: { data: UIData; state: UIState; class?: string }) => {
+  return ({ data, state, class: classes }: { data: TimelineData; state: UIState; class?: string }) => {
     const dpr = window.devicePixelRatio || 1;
 
     handle.queueTask(() => {

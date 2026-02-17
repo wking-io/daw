@@ -1,7 +1,7 @@
 import type { Handle, Props } from "@remix-run/component";
 import { cn } from "@daw/utils";
 import * as Px from "@daw/core/lib/px";
-import type { UIAction, Clip as UIClip, TrackColor } from "../renderers/timeline/types";
+import type { UIAction, TrackColor } from "../renderers/timeline/types";
 
 interface ClipColorConfig {
   highlight: string;
@@ -205,8 +205,8 @@ export interface ClipSetup {
 }
 
 export interface ClipProps extends Props<"div"> {
-  id: UIClip["id"];
-  title: UIClip["title"];
+  id: string;
+  title: string;
   x: Px.Px;
   y: Px.Px;
   width: Px.Px;
