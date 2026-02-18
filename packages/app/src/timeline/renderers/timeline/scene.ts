@@ -239,17 +239,23 @@ function buildMainCanvasNodes({
     });
   }
 
-  // Vertical grid lines
+  // Vertical grid lines — batched by color
+  const linesByColor = new Map<string, [{ x: number; y: number }, { x: number; y: number }][]>();
   for (const tick of result.ticks) {
     const screenX = Number(projection.contentToScreenX(tick.position));
     if (screenX <= 1 || screenX >= projection.containerWidth - 1) continue;
 
-    const x = Px.Px(screenX + 0.5);
-    nodes.push({
-      kind: "line",
-      points: [point(x, Px.Px(0)), point(x, env.canvasHeight)],
-      stroke: stroke(gridLineColor(tick.tier, result.finestTier, env.theme), 1),
-    });
+    const x = screenX + 0.5;
+    const color = gridLineColor(tick.tier, result.finestTier, env.theme);
+    let segments = linesByColor.get(color);
+    if (!segments) {
+      segments = [];
+      linesByColor.set(color, segments);
+    }
+    segments.push([point(x, 0), point(x, Number(env.canvasHeight))]);
+  }
+  for (const [color, segments] of linesByColor) {
+    nodes.push({ kind: "lines", segments, stroke: stroke(color, 1) });
   }
 
   // Horizontal track separator lines

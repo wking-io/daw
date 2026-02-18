@@ -176,10 +176,12 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           env,
         });
 
-        const gridLines = scene.canvas.filter((n) => n.kind === "line");
+        const gridSegments = scene.canvas
+          .filter((n): n is { kind: "lines"; segments: readonly unknown[]; stroke: unknown } => n.kind === "lines")
+          .reduce((sum, n) => sum + n.segments.length, 0);
 
         // Beat-level ticks, minus edges filtered out
-        expect(gridLines.length).toBeGreaterThanOrEqual(3);
+        expect(gridSegments).toBeGreaterThanOrEqual(3);
       });
 
       it("positions grid lines based on view offset", () => {
@@ -198,10 +200,12 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           env,
         });
 
-        const gridLines = scene.canvas.filter((n) => n.kind === "line");
+        const gridSegments = scene.canvas
+          .filter((n): n is { kind: "lines"; segments: readonly unknown[]; stroke: unknown } => n.kind === "lines")
+          .reduce((sum, n) => sum + n.segments.length, 0);
 
         // Should have grid lines
-        expect(gridLines.length).toBeGreaterThan(0);
+        expect(gridSegments).toBeGreaterThan(0);
       });
 
       it("positions clips at per-track heights", () => {

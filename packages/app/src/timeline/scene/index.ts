@@ -6,6 +6,7 @@ export type {
   TextStyle,
   RectNode,
   LineNode,
+  LinesNode,
   TextNode,
   GroupNode,
   SceneNode,

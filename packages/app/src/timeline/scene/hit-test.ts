@@ -39,6 +39,7 @@ function hitTestNode<Action>(node: InteractiveNode<Action>, point: Point): Actio
       return null;
     }
 
+    case "lines":
     case "text": {
       return null;
     }

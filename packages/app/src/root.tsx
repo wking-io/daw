@@ -217,7 +217,7 @@ function MainApp(handle: Handle) {
               </div>
             </ControlBar.Content>
             <ControlBar.Content class="ml-auto pr-1 py-1">
-              <ControlPanel.Content class="no-drag" />
+              {/* <ControlPanel.Content class="no-drag" /> */}
             </ControlBar.Content>
           </ControlBar.Root>
 

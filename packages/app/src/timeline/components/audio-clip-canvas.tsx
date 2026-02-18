@@ -5,8 +5,9 @@ import { getPeakCache, drawWaveform } from "../lib/waveform";
 export function AudioClipCanvas(handle: Handle) {
   let canvasEl: HTMLCanvasElement;
   const cache = getPeakCache();
+  let prev = { audioFileId: "", offsetSec: NaN, durationSec: NaN, isSelected: false, cssW: 0, cssH: 0 };
 
-  handle.on(cache, { load: () => handle.update() });
+  handle.on(cache, { load: () => { prev.audioFileId = ""; handle.update(); } });
 
   return (props: {
     audioFileId: string;
@@ -27,6 +28,17 @@ export function AudioClipCanvas(handle: Handle) {
       const cssW = canvasEl.parentElement?.clientWidth ?? 0;
       const cssH = canvasEl.parentElement?.clientHeight ?? 0;
       if (cssW === 0 || cssH === 0) return;
+
+      // Skip redraw if only CSS position changed (scroll)
+      if (
+        prev.audioFileId === props.audioFileId &&
+        prev.offsetSec === props.offsetSec &&
+        prev.durationSec === props.durationSec &&
+        prev.isSelected === props.isSelected &&
+        prev.cssW === cssW &&
+        prev.cssH === cssH
+      ) return;
+      prev = { audioFileId: props.audioFileId, offsetSec: props.offsetSec, durationSec: props.durationSec, isSelected: props.isSelected, cssW, cssH };
 
       const ctx = prepareCanvas({ canvas: canvasEl, cssW, cssH, dpr });
       if (!ctx) return;

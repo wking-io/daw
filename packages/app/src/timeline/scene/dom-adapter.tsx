@@ -54,6 +54,7 @@ function SceneNodeElement() {
         );
 
       case "line":
+      case "lines":
         // Lines are typically canvas-only; skip in DOM
         return null;
 

@@ -40,6 +40,7 @@ export const RulerSceneRenderer: SceneRenderer<RulerData, void, never, RulerEnv>
     const tickStroke = stroke(env.theme.tick, 1);
     const labelStyle = textStyle(LABEL_FONT, env.theme.gridLabel, "left", "top");
 
+    const tickSegments: [{ x: number; y: number }, { x: number; y: number }][] = [];
     for (const tick of result.ticks) {
       const screenX = Number(projection.contentToScreenX(tick.position));
       if (screenX <= 1 || screenX >= projection.containerWidth - 1) continue;
@@ -47,11 +48,7 @@ export const RulerSceneRenderer: SceneRenderer<RulerData, void, never, RulerEnv>
       const x = screenX + 0.5; // +0.5 for crisp 1px line
       const topY = tick.label ? LABEL_Y : data.height - 4;
 
-      nodes.push({
-        kind: "line",
-        points: [point(x, topY), point(x, data.height)],
-        stroke: tickStroke,
-      });
+      tickSegments.push([point(x, topY), point(x, data.height)]);
 
       if (tick.label != null) {
         nodes.push({
@@ -61,6 +58,9 @@ export const RulerSceneRenderer: SceneRenderer<RulerData, void, never, RulerEnv>
           style: labelStyle,
         });
       }
+    }
+    if (tickSegments.length > 0) {
+      nodes.push({ kind: "lines", segments: tickSegments, stroke: tickStroke });
     }
 
     return { canvas: nodes, dom: [] };
