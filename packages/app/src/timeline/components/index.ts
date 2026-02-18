@@ -20,5 +20,9 @@ export { ProjectionTrackList } from "./projection-track-list";
 // Ruler
 export { RulerCanvas } from "./ruler-canvas";
 
+// Clip content renderers
+export { MidiClipCanvas } from "./midi-clip-canvas";
+export { AudioClipCanvas } from "./audio-clip-canvas";
+
 // Presentational
 export { InsetPanel } from "./inset-panel";

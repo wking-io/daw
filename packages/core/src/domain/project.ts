@@ -200,6 +200,24 @@ export function evolve(project: Project, event: EditorEvent): Project {
         })),
       };
 
+    case "track.compactChanged":
+      return {
+        ...project,
+        tracks: updateById(project.tracks, event.trackId, (t) => ({
+          ...t,
+          compact: event.compact,
+        })),
+      };
+
+    case "track.heightMultiplierChanged":
+      return {
+        ...project,
+        tracks: updateById(project.tracks, event.trackId, (t) => ({
+          ...t,
+          heightMultiplier: event.heightMultiplier,
+        })),
+      };
+
     case "track.clipsReordered": {
       const clipIdSet = new Set(event.clipIds);
       const orderMap = new Map<string, number>(
@@ -476,11 +494,13 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         projectId: project.id,
         type: command.type,
         name: command.name,
-        color: command.color ?? "#808080",
+        color: command.color ?? "primary",
         volumeDb: 0,
         pan: 0,
         mute: false,
         solo: false,
+        compact: false,
+        heightMultiplier: 4,
         sortOrder: command.index ?? project.tracks.length,
         deviceIds: [],
       };
@@ -541,6 +561,24 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
           t: "track.soloChanged",
           trackId: command.trackId,
           solo: command.solo,
+        },
+      ];
+
+    case "track.setCompact":
+      return [
+        {
+          t: "track.compactChanged",
+          trackId: command.trackId,
+          compact: command.compact,
+        },
+      ];
+
+    case "track.setHeightMultiplier":
+      return [
+        {
+          t: "track.heightMultiplierChanged",
+          trackId: command.trackId,
+          heightMultiplier: command.heightMultiplier,
         },
       ];
 

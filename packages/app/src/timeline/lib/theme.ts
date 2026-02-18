@@ -1,4 +1,5 @@
 import type { TimelineTheme } from "../renderers/core";
+import type { TrackColor } from "../renderers/timeline/types";
 
 function getCssVar(style: CSSStyleDeclaration, name: string): string {
   return style.getPropertyValue(name).trim();
@@ -7,8 +8,12 @@ function getCssVar(style: CSSStyleDeclaration, name: string): string {
 export function readTimelineTheme(el: Element = document.body): TimelineTheme {
   const style = getComputedStyle(el);
   return {
-    gridLine: getCssVar(style, "--color-gridline"),
+    tick: getCssVar(style, "--color-tick"),
+    gridLinePrimary: getCssVar(style, "--color-gridline-primary"),
+    gridLineSecondary: getCssVar(style, "--color-gridline-secondary"),
     gridLabel: getCssVar(style, "--color-gridlabel"),
-    resolveColor: (name: string) => getCssVar(style, `--color-${name}-primary`),
+    barBackground: getCssVar(style, "--color-layer-1"),
+    resolveColor: (color: TrackColor, name: string) => getCssVar(style, `--color-${color}-${name}`),
+    resolveClipColor: (name: string) => getCssVar(style, `--color-clip-${name}`),
   };
 }

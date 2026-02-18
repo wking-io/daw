@@ -51,6 +51,8 @@ function makeTrack(id: string, overrides: Partial<any> = {}): Track {
     pan: 0,
     mute: false,
     solo: false,
+    compact: false,
+    heightMultiplier: 4,
     sortOrder: 0,
     deviceIds: [],
     ...overrides,
@@ -294,17 +296,17 @@ describe("lib/project-view", () => {
       it("track.colorChanged updates color", () => {
         const view = PV.fromProject(
           makeProject({
-            tracks: [makeTrack("t1", { color: "red" })],
+            tracks: [makeTrack("t1", { color: "ruby" })],
           }),
         );
 
         PV.applyEvent(view, {
           t: "track.colorChanged",
           trackId: "t1",
-          color: "blue",
+          color: "cobalt",
         } as unknown as EditorEvent);
 
-        expect(view.trackById.get("t1")?.color).toBe("blue");
+        expect(view.trackById.get("t1")?.color).toBe("cobalt");
       });
 
       it("track.volumeChanged updates volume", () => {

@@ -176,6 +176,19 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
       break;
     }
 
+    case "track.compactChanged": {
+      const track = view.trackById.get(event.trackId);
+      if (track) view.trackById.set(event.trackId, { ...track, compact: event.compact });
+      break;
+    }
+
+    case "track.heightMultiplierChanged": {
+      const track = view.trackById.get(event.trackId);
+      if (track)
+        view.trackById.set(event.trackId, { ...track, heightMultiplier: event.heightMultiplier });
+      break;
+    }
+
     case "track.clipsReordered": {
       const orderMap = new Map<string, number>(event.clipIds.map((id, idx) => [id, idx] as const));
       for (const clipId of event.clipIds) {

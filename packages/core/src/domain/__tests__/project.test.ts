@@ -47,11 +47,13 @@ const createTrack = (id: string, overrides?: Partial<Track>): Track => ({
   projectId: ProjectId.make("proj-1"),
   type: "midi",
   name: "Track",
-  color: "#ff0000",
+  color: "ruby",
   volumeDb: 0,
   pan: 0,
   mute: false,
   solo: false,
+  compact: false,
+  heightMultiplier: 4,
   sortOrder: 0,
   deviceIds: [],
   ...overrides,
@@ -291,17 +293,17 @@ describe("Project.evolve", () => {
     it("handles track.colorChanged", () => {
       const project = {
         ...createBaseProject(),
-        tracks: [createTrack("track-1", { color: "#ff0000" })],
+        tracks: [createTrack("track-1", { color: "ruby" })],
       };
       const event: EditorEvent = {
         t: "track.colorChanged",
         trackId: TrackId.make("track-1"),
-        color: "#00ff00",
+        color: "emerald",
       };
 
       const result = evolve(project, event);
 
-      expect(first(result.tracks).color).toBe("#00ff00");
+      expect(first(result.tracks).color).toBe("emerald");
     });
 
     it("handles track.volumeChanged", () => {
@@ -890,7 +892,7 @@ describe("Project.decide", () => {
         trackId: Ids.generate("TrackId"),
         type: "midi",
         name: "New Track",
-        color: "#00ff00",
+        color: "emerald",
       };
 
       const events = decide(project, command);
@@ -901,7 +903,7 @@ describe("Project.decide", () => {
       if (event0.t === "track.created") {
         expect(event0.track.name).toBe("New Track");
         expect(event0.track.type).toBe("midi");
-        expect(event0.track.color).toBe("#00ff00");
+        expect(event0.track.color).toBe("emerald");
       }
     });
 
@@ -949,7 +951,7 @@ describe("Project.decide", () => {
       const command: EditorCommandPayload = {
         t: "track.setColor",
         trackId: TrackId.make("track-1"),
-        color: "#00ff00",
+        color: "emerald",
       };
 
       const events = decide(project, command);
@@ -958,7 +960,7 @@ describe("Project.decide", () => {
       expect(events[0]).toEqual({
         t: "track.colorChanged",
         trackId: TrackId.make("track-1"),
-        color: "#00ff00",
+        color: "emerald",
       });
     });
 

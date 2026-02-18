@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Track } from "../domain/track";
+import { Track, TrackColor } from "../domain/track";
 import * as Ids from "../ids";
 
 // Track events
@@ -25,7 +25,7 @@ export type TrackRenamed = Schema.Schema.Type<typeof TrackRenamed>;
 export const TrackColorChanged = Schema.Struct({
   t: Schema.Literal("track.colorChanged"),
   trackId: Ids.TrackId,
-  color: Schema.String,
+  color: TrackColor,
 });
 export type TrackColorChanged = Schema.Schema.Type<typeof TrackColorChanged>;
 
@@ -57,6 +57,20 @@ export const TrackSoloChanged = Schema.Struct({
 });
 export type TrackSoloChanged = Schema.Schema.Type<typeof TrackSoloChanged>;
 
+export const TrackCompactChanged = Schema.Struct({
+  t: Schema.Literal("track.compactChanged"),
+  trackId: Ids.TrackId,
+  compact: Schema.Boolean,
+});
+export type TrackCompactChanged = Schema.Schema.Type<typeof TrackCompactChanged>;
+
+export const TrackHeightMultiplierChanged = Schema.Struct({
+  t: Schema.Literal("track.heightMultiplierChanged"),
+  trackId: Ids.TrackId,
+  heightMultiplier: Schema.Number,
+});
+export type TrackHeightMultiplierChanged = Schema.Schema.Type<typeof TrackHeightMultiplierChanged>;
+
 export const TrackClipsReordered = Schema.Struct({
   t: Schema.Literal("track.clipsReordered"),
   trackId: Ids.TrackId,
@@ -73,6 +87,8 @@ export const TrackEvent = Schema.Union(
   TrackPanChanged,
   TrackMuteChanged,
   TrackSoloChanged,
+  TrackCompactChanged,
+  TrackHeightMultiplierChanged,
   TrackClipsReordered,
 );
 export type TrackEvent = Schema.Schema.Type<typeof TrackEvent>;

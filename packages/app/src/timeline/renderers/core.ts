@@ -1,17 +1,19 @@
 import * as Px from "@daw/core/lib/px";
 import type { ProjectionContext } from "../lib/projection-context";
+import type { TrackColor } from "./timeline/types";
 
 export type TimelineTheme = Readonly<{
-  gridLine: string;
+  tick: string;
+  gridLinePrimary: string;
+  gridLineSecondary: string;
   gridLabel: string;
-  /** Resolve a color palette name (e.g. "strawberry") to its primary CSS color value. */
-  resolveColor: (name: string) => string;
+  barBackground: string;
+  resolveColor: (color: TrackColor, name: string) => string;
+  resolveClipColor: (name: string) => string;
 }>;
 
 export type TimelineEnv = Readonly<{
   surface: "main" | "navigator";
-  /** If true, the renderer should scale/compress vertical layout to fit `canvasHeight`. */
-  fitToHeight: boolean;
   canvasHeight: Px.Px;
   theme: TimelineTheme;
 }>;

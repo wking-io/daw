@@ -14,17 +14,7 @@ export function ProjectionCanvas(handle: Handle) {
   const projection = handle.context.get(ProjectionRoot);
   let canvasEl: HTMLCanvasElement;
 
-  handle.on(projection, { change: () => handle.update() });
-
-  return ({
-    data,
-    state,
-    fitToHeight,
-  }: {
-    data: TimelineData;
-    state: UIState;
-    fitToHeight: boolean;
-  }) => {
+  return ({ data, state }: { data: TimelineData; state: UIState }) => {
     const dpr = window.devicePixelRatio || 1;
 
     handle.queueTask(() => {
@@ -43,7 +33,6 @@ export function ProjectionCanvas(handle: Handle) {
 
       const env: TimelineEnv = {
         surface: "main",
-        fitToHeight,
         canvasHeight: Px.Px(cssH),
         theme: readTimelineTheme(),
       };

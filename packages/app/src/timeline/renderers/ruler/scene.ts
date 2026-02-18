@@ -37,7 +37,7 @@ export const RulerSceneRenderer: SceneRenderer<RulerData, void, never, RulerEnv>
       timeSignature: data.timeSignature,
     });
 
-    const tickStroke = stroke(env.theme.gridLine, 1);
+    const tickStroke = stroke(env.theme.tick, 1);
     const labelStyle = textStyle(LABEL_FONT, env.theme.gridLabel, "left", "top");
 
     for (const tick of result.ticks) {

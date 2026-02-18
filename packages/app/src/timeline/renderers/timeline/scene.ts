@@ -2,7 +2,7 @@ import type { Clip } from "@daw/core/domain/clip";
 import * as BI from "@daw/core/lib/bucket-index";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
-import { computeRulerTicks, Tier } from "@daw/core/lib/ruler";
+import { barSize as computeBarSize, beatSize as computeBeatSize, computeRulerTicks, Tier } from "@daw/core/lib/ruler";
 import * as Span from "@daw/core/lib/span";
 import type { InteractiveNode, Scene, SceneNode } from "../../scene";
 import { point, rect, stroke } from "../../scene";
@@ -10,29 +10,21 @@ import type { SceneRenderer, BuildSceneArgs } from "../types";
 import type { TimelineEnv } from "../core";
 import { resolveClipTitle } from "@daw/core/lib/project-view";
 import type { UIAction, TimelineData, UIState, TrackColor } from "./types";
+import { buildTrackLayouts, type TrackLayout } from "../../lib/track-layout";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const DEFAULT_TRACK_HEIGHT_PX = 28;
-const CLIP_VERTICAL_PADDING = 3;
+const CLIP_VERTICAL_PADDING = 1;
 const CLIP_BORDER_RADIUS = 3;
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-function computeTrackHeight({
-  trackCount,
-  fitToHeight,
-  canvasHeight,
-}: {
-  trackCount: number;
-  fitToHeight: boolean;
-  canvasHeight: Px.Px;
-}): Px.Px {
-  if (!fitToHeight) return Px.Px(DEFAULT_TRACK_HEIGHT_PX);
+/** Compute uniform track height for navigator (fit-to-height). */
+function computeFitTrackHeight(trackCount: number, canvasHeight: Px.Px): Px.Px {
   return Px.Px(Number(canvasHeight) / Math.max(1, trackCount));
 }
 
@@ -43,12 +35,49 @@ type ClipLayout = {
   y: Px.Px;
   width: Px.Px;
   height: Px.Px;
+  compact: boolean;
+  titleBarHeight: Px.Px;
+  contentHeight: Px.Px;
   isSelected: boolean;
   trackColor: TrackColor;
 };
 
-/** Shared logic to build a ClipLayout from a clip and its track info. */
+/** Build a ClipLayout using per-track layout. */
 function clipToLayout(
+  clip: Clip,
+  data: TimelineData,
+  state: UIState,
+  projection: BuildSceneArgs<TimelineData, UIState, TimelineEnv>["projection"],
+  trackLayout: TrackLayout,
+  trackColor: TrackColor,
+  verticalPadding: number,
+): ClipLayout {
+  const clipEnd = Span.end(QN.Numeric, clip.span);
+  const left = projection.contentToScreenX(clip.span.start);
+  const right = projection.contentToScreenX(clipEnd);
+  const width = Px.max(Px.Px(1), Px.subtract(right, left));
+  const top = Px.add(trackLayout.y, Px.Px(verticalPadding));
+  const height = trackLayout.compact
+    ? trackLayout.titleBarHeight
+    : Px.max(Px.Px(1), Px.subtract(trackLayout.height, Px.Px(verticalPadding * 2)));
+
+  return {
+    clip,
+    title: resolveClipTitle(clip, data.view),
+    x: left,
+    y: top,
+    width,
+    height,
+    compact: trackLayout.compact,
+    titleBarHeight: trackLayout.titleBarHeight,
+    contentHeight: trackLayout.contentHeight,
+    isSelected: state.selectedClipId === clip.id,
+    trackColor,
+  };
+}
+
+/** Build a ClipLayout using uniform track height (for navigator). */
+function clipToUniformLayout(
   clip: Clip,
   data: TimelineData,
   state: UIState,
@@ -72,32 +101,32 @@ function clipToLayout(
     y: top,
     width,
     height,
+    compact: false,
+    titleBarHeight: trackHeight,
+    contentHeight: Px.Px(0),
     isSelected: state.selectedClipId === clip.id,
     trackColor,
   };
 }
 
-/** Viewport-filtered clip layouts using BucketIndex (main surface). */
+/** Viewport-filtered clip layouts using BucketIndex and per-track layouts (main surface). */
 function computeClipLayouts({
   data,
   state,
   projection,
-  trackHeight,
   verticalPadding = CLIP_VERTICAL_PADDING,
 }: Pick<BuildSceneArgs<TimelineData, UIState, TimelineEnv>, "data" | "state" | "projection"> & {
-  trackHeight: Px.Px;
   verticalPadding?: number;
 }): ClipLayout[] {
   const { view } = data;
-  const t0 = projection.view.start;
-  const t1 = QN.add(projection.view.start, projection.view.size);
-  const visibleClips = BI.queryTracks(view.clipIndex, view.trackOrder, t0, t1);
+  const trackLayouts = buildTrackLayouts(view.trackOrder, view.trackById);
+  const visibleClips = BI.queryTracks(view.clipIndex, view.trackOrder, projection.view);
 
   const layouts: ClipLayout[] = [];
   for (const [trackId, clipIds] of visibleClips) {
     const track = view.trackById.get(trackId);
-    const trackRow = view.trackIndex.get(trackId);
-    if (!track || trackRow == null) continue;
+    const trackLayout = trackLayouts.get(trackId);
+    if (!track || !trackLayout) continue;
 
     for (const clipId of clipIds) {
       const clip = view.clipById.get(clipId);
@@ -108,9 +137,8 @@ function computeClipLayouts({
           data,
           state,
           projection,
-          trackHeight,
-          trackRow,
-          track.color as TrackColor,
+          trackLayout,
+          track.color,
           verticalPadding,
         ),
       );
@@ -119,7 +147,7 @@ function computeClipLayouts({
   return layouts;
 }
 
-/** All clip layouts for navigator surface (no spatial filtering). */
+/** All clip layouts for navigator surface (no spatial filtering, uniform height). */
 function computeAllClipLayouts({
   data,
   state,
@@ -138,14 +166,14 @@ function computeAllClipLayouts({
     const trackRow = view.trackIndex.get(clip.trackId);
     if (!track || trackRow == null) continue;
     layouts.push(
-      clipToLayout(
+      clipToUniformLayout(
         clip,
         data,
         state,
         projection,
         trackHeight,
         trackRow,
-        track.color as TrackColor,
+        track.color,
         verticalPadding,
       ),
     );
@@ -157,19 +185,16 @@ function computeAllClipLayouts({
 // Scene Builder
 // =============================================================================
 
-/** Map a tick tier to a grid line opacity (0–1). */
-function gridOpacity(tier: number, finestTier: number): number {
-  if (tier >= Tier.BAR) return 0.6; // bars
-  if (tier === Tier.BEAT) return 0.35; // beats
-  if (tier === Tier.NOTE_8) return 0.2; // eighths
-  if (tier === Tier.NOTE_16) return 0.15; // sixteenths
-  if (tier === finestTier) return 0.08; // finest (32nds or 64ths)
-  return 0.1; // intermediate
+/** Map a tick tier to a grid line color. */
+function gridLineColor(tier: number, finestTier: number, theme: TimelineTheme): string {
+  if (tier >= Tier.BAR) return theme.gridLinePrimary;
+  if (tier >= Tier.BEAT && finestTier < Tier.BEAT) return theme.gridLinePrimary;
+  return theme.gridLineSecondary;
 }
 
 /**
  * Build canvas nodes for the main (projection) surface.
- * Grid lines for every ruler tick, with opacity varying by tier.
+ * Grid lines for every ruler tick, colored by tier.
  * Clips are rendered as DOM for interactivity.
  */
 function buildMainCanvasNodes({
@@ -189,16 +214,41 @@ function buildMainCanvasNodes({
     timeSignature: data.project.timeSignature,
   });
 
+  // Alternating backgrounds — interval depends on zoom level
+  const bar = Number(computeBarSize(data.project.timeSignature));
+  const beat = Number(computeBeatSize(data.project.timeSignature));
+  const viewStart = Number(projection.view.start);
+  const viewSize = Number(projection.view.size);
+  const viewEnd = viewStart + viewSize;
+  const visibleBars = viewSize / bar;
+
+  // Pick alternation interval based on how many bars are visible
+  const step = visibleBars >= 48 ? bar * 16 : visibleBars >= 12 ? bar * 4 : visibleBars >= 3 ? bar : beat;
+
+  const first = Math.floor(viewStart / step);
+  const last = Math.ceil(viewEnd / step);
+
+  for (let i = first; i < last; i++) {
+    if (i % 2 === 0) continue; // even slots = transparent
+    const left = Number(projection.contentToScreenX(QN.QN(i * step)));
+    const right = Number(projection.contentToScreenX(QN.QN((i + 1) * step)));
+    nodes.push({
+      kind: "rect",
+      rect: rect(left, Px.Px(0), Px.Px(right - left), env.canvasHeight),
+      fill: env.theme.barBackground,
+    });
+  }
+
+  // Grid lines
   for (const tick of result.ticks) {
     const screenX = Number(projection.contentToScreenX(tick.position));
     if (screenX <= 1 || screenX >= projection.containerWidth - 1) continue;
 
     const x = Px.Px(screenX + 0.5);
-    const alpha = gridOpacity(tick.tier, result.finestTier);
     nodes.push({
       kind: "line",
       points: [point(x, Px.Px(0)), point(x, env.canvasHeight)],
-      stroke: stroke(`rgba(128,128,128,${alpha})`, 1),
+      stroke: stroke(gridLineColor(tick.tier, result.finestTier, env.theme), 1),
     });
   }
 
@@ -226,7 +276,7 @@ function buildNavigatorCanvasNodes({
   const trackCount = data.view.trackOrder.length;
   const showSeparators = trackCount <= 4;
   if (showSeparators) {
-    const borderStroke = stroke(env.theme.gridLine, 1);
+    const borderStroke = stroke(env.theme.gridLinePrimary, 1);
     for (let i = 1; i < trackCount; i++) {
       const y = Px.Px(Number(Px.multiply(trackHeight, i)) + 0.5); // +0.5 for crisp 1px line
       nodes.push({
@@ -244,7 +294,7 @@ function buildNavigatorCanvasNodes({
     nodes.push({
       kind: "rect",
       rect: rect(layout.x, layout.y, layout.width, clipHeight),
-      fill: env.theme.resolveColor(layout.trackColor),
+      fill: env.theme.resolveColor(layout.trackColor, "primary"),
     });
   }
 
@@ -290,12 +340,12 @@ function buildDomNodes({
           fill,
           stroke: stroke(border, 1),
         },
-        // Clip title (positioned inside the clip, relative to group)
+        // Clip title in title bar area
         {
           kind: "text",
           position: point(
             Px.Px(8), // padding-left
-            Px.Px(Number(layout.height) / 2), // vertically centered (baseline: middle handles offset)
+            Px.Px(Number(layout.titleBarHeight) / 2), // vertically centered in title bar
           ),
           text: layout.title,
           style: {
@@ -320,21 +370,16 @@ function buildDomNodes({
  * Scene graph based DAW skeleton renderer.
  *
  * Renders differently based on surface:
- * - **main**: Full fidelity with canvas grid + DOM interactive clips
+ * - **main**: Full fidelity with canvas grid + DOM interactive clips, per-track heights
  * - **navigator**: Low fidelity canvas-only (track lanes + simple clip shapes, not interactive)
  */
 export const TimelineSceneRenderer: SceneRenderer<TimelineData, UIState, UIAction, TimelineEnv> = {
   kind: "daw-skeleton",
 
   buildScene: ({ data, projection, state, env }): Scene<UIAction> => {
-    const trackHeight = computeTrackHeight({
-      trackCount: data.view.trackOrder.length,
-      fitToHeight: env.fitToHeight,
-      canvasHeight: env.canvasHeight,
-    });
-
-    // Navigator: all clips (no spatial filtering), canvas-only
+    // Navigator: all clips (no spatial filtering), canvas-only, uniform fit-to-height
     if (env.surface === "navigator") {
+      const trackHeight = computeFitTrackHeight(data.view.trackOrder.length, env.canvasHeight);
       const clipLayouts = computeAllClipLayouts({
         data,
         state,
@@ -354,12 +399,11 @@ export const TimelineSceneRenderer: SceneRenderer<TimelineData, UIState, UIActio
       };
     }
 
-    // Main (projection): viewport-filtered clips with interactive DOM
+    // Main (projection): viewport-filtered clips with interactive DOM, per-track heights
     const clipLayouts = computeClipLayouts({
       data,
       state,
       projection,
-      trackHeight,
     });
     return {
       canvas: buildMainCanvasNodes({ data, projection, env }),

@@ -43,7 +43,6 @@ export function NavigatorCanvas(handle: Handle) {
 
       const env: TimelineEnv = {
         surface: "navigator",
-        fitToHeight: true,
         canvasHeight: Px.Px(cssH),
         theme: readTimelineTheme(),
       };

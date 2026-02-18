@@ -12,16 +12,14 @@ import * as Range from "./range";
 import { Default as NumericDefault } from "./numeric";
 import type { Clip } from "@core/domain/clip";
 
-
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 type ClipSpan = {
   trackId: string;
-  bucketRange: Range.Range<number>
-  span: Span.Span<QN.QN>
+  bucketRange: Range.Range<number>;
+  span: Span.Span<QN.QN>;
 };
 
 export type BucketIndex = {
@@ -50,10 +48,7 @@ function bucketForEnd(end: number, bucketSize: number): number {
 }
 
 /** Compute the inclusive [b0, b1] bucket range for a half-open span [start, end). */
-function bucketRange(
-  view: Span.Span<QN.QN>,
-  bucketSize: number,
-): Range.Range<number> {
+function bucketRange(view: Span.Span<QN.QN>, bucketSize: number): Range.Range<number> {
   const b0 = bucketFor(view.start, bucketSize);
   const b1 = bucketForEnd(Span.end(QN.Numeric, view), bucketSize);
   return Range.make(NumericDefault, b0, b1);
@@ -90,7 +85,7 @@ function insertIntoBuckets(
 function removeFromBuckets(
   trackMap: Map<number, Set<string>>,
   clipId: string,
-  buckets: Range.Range<number>
+  buckets: Range.Range<number>,
 ): void {
   for (let b = buckets.start; b <= buckets.end; b++) {
     const bucket = trackMap.get(b);
@@ -116,16 +111,10 @@ export function make(bucketSize: number): BucketIndex {
 }
 
 /** Build an index from an array of clips. */
-export function fromClips(
-  clips: ReadonlyArray<Clip>,
-  bucketSize: number,
-): BucketIndex {
+export function fromClips(clips: ReadonlyArray<Clip>, bucketSize: number): BucketIndex {
   const index = make(bucketSize);
   for (const clip of clips) {
-    addClip(
-      index,
-      clip,
-    );
+    addClip(index, clip);
   }
   return index;
 }
@@ -135,10 +124,7 @@ export function fromClips(
 // ---------------------------------------------------------------------------
 
 /** Add a clip to the index. */
-export function addClip(
-  index: BucketIndex,
-  clip: Clip,
-): void {
+export function addClip(index: BucketIndex, clip: Clip): void {
   const br = bucketRange(clip.span, index.bucketSize);
 
   const trackMap = getOrCreateTrackMap(index, clip.trackId);
@@ -235,7 +221,7 @@ export function queryTrack(index: BucketIndex, trackId: string, view: Span.Span<
   const trackMap = index.byTrack.get(trackId);
   if (!trackMap) return [];
 
-  const queryBucketRange = bucketRange(view, index.bucketSize)
+  const queryBucketRange = bucketRange(view, index.bucketSize);
 
   // Collect candidates from buckets
   const candidates = new Set<string>();
@@ -252,7 +238,10 @@ export function queryTrack(index: BucketIndex, trackId: string, view: Span.Span<
   const result: string[] = [];
   for (const clipId of candidates) {
     const clip = index.spanByClip.get(clipId)!;
-    if (QN.lt(clip.span.start, Span.end(QN.Numeric, view)) && QN.gt(Span.end(QN.Numeric, clip.span), view.start)) {
+    if (
+      QN.lt(clip.span.start, Span.end(QN.Numeric, view)) &&
+      QN.gt(Span.end(QN.Numeric, clip.span), view.start)
+    ) {
       result.push(clipId);
     }
   }
@@ -267,7 +256,7 @@ export function queryTrack(index: BucketIndex, trackId: string, view: Span.Span<
 export function queryTracks(
   index: BucketIndex,
   trackIds: ReadonlyArray<string>,
-  view: Span.Span<QN.QN>
+  view: Span.Span<QN.QN>,
 ): Map<string, string[]> {
   const result = new Map<string, string[]>();
   for (const trackId of trackIds) {
@@ -284,10 +273,7 @@ export function queryTracks(
 // ---------------------------------------------------------------------------
 
 /** Apply a clip.created event to the index. */
-export function onClipCreated(
-  index: BucketIndex,
-  clip: Clip,
-): void {
+export function onClipCreated(index: BucketIndex, clip: Clip): void {
   addClip(index, clip);
 }
 
@@ -307,11 +293,7 @@ export function onClipMoved(
 }
 
 /** Apply a clip.resized event to the index. */
-export function onClipResized(
-  index: BucketIndex,
-  clipId: string,
-  newSpan: Span.Span<QN.QN>,
-): void {
+export function onClipResized(index: BucketIndex, clipId: string, newSpan: Span.Span<QN.QN>): void {
   resizeClip(index, clipId, newSpan);
 }
 

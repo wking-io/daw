@@ -15,9 +15,13 @@ import { TimelineSceneRenderer } from "./scene";
 import type { TimelineData, UIState, TrackColor } from "./types";
 
 const MOCK_THEME: TimelineTheme = {
-  gridLine: "oklch(37.67% 0.0074 66.2)",
+  tick: "oklch(37.67% 0.0074 66.2)",
+  gridLinePrimary: "oklch(37.67% 0.0074 66.2)",
+  gridLineSecondary: "oklch(30% 0.005 66.2)",
   gridLabel: "oklch(55% 0.01 66.2)",
-  resolveColor: (name: string) => `resolved-${name}`,
+  barBackground: "oklch(90% 0.01 66.2)",
+  resolveColor: (color: TrackColor, _name: string) => `resolved-${color}`,
+  resolveClipColor: (name: string) => `resolved-clip-${name}`,
 };
 
 // =============================================================================
@@ -53,15 +57,13 @@ function createMockProjection(options: {
 function createMockEnv(
   options: {
     canvasHeight?: number;
-    fitToHeight?: boolean;
     surface?: "main" | "navigator";
   } = {},
 ): TimelineEnv {
-  const { canvasHeight = 200, fitToHeight = true, surface = "main" } = options;
+  const { canvasHeight = 200, surface = "main" } = options;
 
   return {
     surface,
-    fitToHeight,
     canvasHeight: Px.Px(canvasHeight),
     theme: MOCK_THEME,
   };
@@ -70,7 +72,12 @@ function createMockEnv(
 const PROJECT_ID = "test-project" as any;
 let patternCounter = 0;
 
-function createTrack(id: string, name: string, color: TrackColor = "iris"): Track {
+function createTrack(
+  id: string,
+  name: string,
+  color: TrackColor = "iris",
+  opts: { compact?: boolean; heightMultiplier?: number } = {},
+): Track {
   return {
     id: id as any,
     projectId: PROJECT_ID,
@@ -81,6 +88,8 @@ function createTrack(id: string, name: string, color: TrackColor = "iris"): Trac
     pan: 0,
     mute: false,
     solo: false,
+    compact: opts.compact ?? false,
+    heightMultiplier: opts.heightMultiplier ?? 4,
     sortOrder: 0,
     deviceIds: [],
   };
@@ -195,7 +204,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         expect(gridLines.length).toBeGreaterThan(0);
       });
 
-      it("calculates track height with fitToHeight for dom clip positioning", () => {
+      it("positions clips at per-track heights", () => {
         const data = createTimelineData(
           [
             createTrack("t1", "Track 1"),
@@ -211,7 +220,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ canvasHeight: 200, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 500 });
 
         const scene = TimelineSceneRenderer.buildScene({
           data,
@@ -220,21 +229,20 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           env,
         });
 
-        // With 4 tracks and height 200, each track is 50px
-        // Clips should be positioned at y = 3, 53, 103, 153 (with 3px padding)
+        // Each track is 110px (22 + 4*22)
+        // Clips with 1px vertical padding at: y = 1, 111, 221, 331
         const clipGroups = scene.dom.filter((n) => n.kind === "group");
         expect(clipGroups.length).toBe(4);
 
-        // Group clip property contains the position
         const yPositions = clipGroups.map((g) => {
           if (g.kind === "group" && g.clip) return g.clip.y;
           return null;
         });
 
-        expect(yPositions).toContain(3); // track 0: 0 + 3
-        expect(yPositions).toContain(53); // track 1: 50 + 3
-        expect(yPositions).toContain(103); // track 2: 100 + 3
-        expect(yPositions).toContain(153); // track 3: 150 + 3
+        expect(yPositions).toContain(1); // track 0: 0 + 1
+        expect(yPositions).toContain(111); // track 1: 110 + 1
+        expect(yPositions).toContain(221); // track 2: 220 + 1
+        expect(yPositions).toContain(331); // track 3: 330 + 1
 
         // Children should be at 0,0 relative to group
         for (const g of clipGroups) {
@@ -248,13 +256,16 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         }
       });
 
-      it("uses default track height when fitToHeight is false for dom clip positioning", () => {
+      it("positions compact tracks at 22px height", () => {
         const data = createTimelineData(
-          [createTrack("t1", "Track 1"), createTrack("t2", "Track 2")],
-          [createClip("c1", "t1", 0, 50, "Clip 1"), createClip("c2", "t2", 0, 50, "Clip 2")],
+          [createTrack("t1", "Track 1", "iris", { compact: true }), createTrack("t2", "Track 2")],
+          [
+            createClip("c1", "t1", 0, 50, "Compact Clip"),
+            createClip("c2", "t2", 0, 50, "Normal Clip"),
+          ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ canvasHeight: 200, fitToHeight: false });
+        const env = createMockEnv({ canvasHeight: 200 });
 
         const scene = TimelineSceneRenderer.buildScene({
           data,
@@ -263,19 +274,68 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           env,
         });
 
-        // Default track height is 28px
-        // Clips should be at y = 3, 31 (with 3px padding)
         const clipGroups = scene.dom.filter((n) => n.kind === "group");
         expect(clipGroups.length).toBe(2);
 
-        // Group clip property contains the position
         const yPositions = clipGroups.map((g) => {
           if (g.kind === "group" && g.clip) return g.clip.y;
           return null;
         });
 
-        expect(yPositions).toContain(3); // track 0: 0 + 3
-        expect(yPositions).toContain(31); // track 1: 28 + 3
+        // Compact track: 24px (22 + 1*2 padding), clip at y=1 with height 22
+        expect(yPositions).toContain(1); // track 0 (compact): 0 + 1
+        expect(yPositions).toContain(25); // track 1: 24 + 1
+
+        // Verify compact track clip height
+        const compactClip = clipGroups[0];
+        if (compactClip?.kind === "group" && compactClip.clip) {
+          expect(compactClip.clip.height).toBe(22); // TITLE_BAR_HEIGHT (no padding subtracted)
+        }
+
+        // Verify normal track clip height
+        const normalClip = clipGroups[1];
+        if (normalClip?.kind === "group" && normalClip.clip) {
+          expect(normalClip.clip.height).toBe(108); // 110 - 1*2 = 108
+        }
+      });
+
+      it("handles mixed compact/non-compact tracks with varying multipliers", () => {
+        const data = createTimelineData(
+          [
+            createTrack("t1", "Track 1", "iris", { compact: false, heightMultiplier: 2 }),
+            createTrack("t2", "Track 2", "iris", { compact: true }),
+            createTrack("t3", "Track 3", "iris", { compact: false, heightMultiplier: 6 }),
+          ],
+          [
+            createClip("c1", "t1", 0, 50, "Small"),
+            createClip("c2", "t2", 0, 50, "Compact"),
+            createClip("c3", "t3", 0, 50, "Large"),
+          ],
+        );
+        const projection = createMockProjection({ scale: 1 });
+        const env = createMockEnv({ canvasHeight: 500 });
+
+        const scene = TimelineSceneRenderer.buildScene({
+          data,
+          projection,
+          state: createUiState(),
+          env,
+        });
+
+        const clipGroups = scene.dom.filter((n) => n.kind === "group");
+        expect(clipGroups.length).toBe(3);
+
+        const yPositions = clipGroups.map((g) => {
+          if (g.kind === "group" && g.clip) return g.clip.y;
+          return null;
+        });
+
+        // Track 1: 22 + 2*22 = 66px, clip at y=1
+        // Track 2: compact = 24px (22 + 1*2), clip at y=66+1=67
+        // Track 3: 22 + 6*22 = 154px, clip at y=66+24+1=91
+        expect(yPositions).toContain(1); // track 0: 0 + 1
+        expect(yPositions).toContain(67); // track 1: 66 + 1
+        expect(yPositions).toContain(91); // track 2: 90 + 1
       });
     });
 
@@ -306,7 +366,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           [createClip("c1", "t1", 0, 100, "Clip 1")],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ canvasHeight: 100, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 200 });
 
         const scene = TimelineSceneRenderer.buildScene({
           data,
@@ -338,7 +398,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ canvasHeight: 200, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 300 });
 
         const scene = TimelineSceneRenderer.buildScene({
           data,
@@ -347,21 +407,21 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           env,
         });
 
-        // Track height = 200 / 2 = 100px
-        // Clip padding = 3px vertical
+        // Track height = 110px (22 + 4*22)
+        // Clip padding = 1px vertical
         const clipGroups = scene.dom.filter((n) => n.kind === "group");
         expect(clipGroups.length).toBe(2);
 
-        // First clip (track 0): y = 0 + 3 = 3 (position in group.clip)
+        // First clip (track 0): y = 0 + 1 = 1
         const clip1 = clipGroups[0];
         if (clip1?.kind === "group" && clip1.clip) {
-          expect(clip1.clip.y).toBe(3); // Track 0 top + padding
+          expect(clip1.clip.y).toBe(1);
         }
 
-        // Second clip (track 1): y = 100 + 3 = 103 (position in group.clip)
+        // Second clip (track 1): y = 110 + 1 = 111
         const clip2 = clipGroups[1];
         if (clip2?.kind === "group" && clip2.clip) {
-          expect(clip2.clip.y).toBe(103); // Track 1 top + padding
+          expect(clip2.clip.y).toBe(111);
         }
       });
 
@@ -447,7 +507,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           ],
         );
         const projection = createMockProjection({ scale: 1 });
-        const env = createMockEnv({ canvasHeight: 200, fitToHeight: true });
+        const env = createMockEnv({ canvasHeight: 300 });
 
         const scene = TimelineSceneRenderer.buildScene({
           data,
@@ -480,7 +540,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         }
       });
 
-      it("includes clip title as text node", () => {
+      it("includes clip title as text node centered in title bar", () => {
         const data = createTimelineData(
           [createTrack("t1", "Track 1")],
           [createClip("c1", "t1", 0, 100, "My Awesome Clip")],
@@ -504,6 +564,8 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
             expect(textNode.style.font).toBe("12px system-ui, sans-serif");
             expect(textNode.style.color).toBe("var(--color-iris-primary-foreground)");
             expect(textNode.style.baseline).toBe("middle");
+            // Text should be centered in title bar (22/2 = 11)
+            expect(textNode.position.y).toBe(11);
           }
         }
       });
@@ -620,7 +682,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           viewSize: 200,
           scale: 1,
         });
-        const env = createMockEnv({ canvasHeight: 100 });
+        const env = createMockEnv({ canvasHeight: 300 });
 
         const scene = TimelineSceneRenderer.buildScene({
           data,
@@ -635,8 +697,8 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         // DOM should have: hit area + 2 clip groups
         expect(scene.dom.length).toBe(3);
 
-        // Verify structure
-        expect(scene.canvas[0]?.kind).toBe("line"); // grid line
+        // Verify canvas contains grid lines (bar backgrounds may come first)
+        expect(scene.canvas.some((n) => n.kind === "line")).toBe(true);
         expect(scene.dom[0]?.kind).toBe("rect"); // hit area
         expect(scene.dom[1]?.kind).toBe("group"); // clip 1
         expect(scene.dom[2]?.kind).toBe("group"); // clip 2
@@ -675,7 +737,6 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({});
         const env = createMockEnv({
           canvasHeight: 300,
-          fitToHeight: true,
           surface: "navigator",
         });
 
@@ -703,7 +764,6 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({ scale: 1 });
         const env = createMockEnv({
           canvasHeight: 100,
-          fitToHeight: true,
           surface: "navigator",
         });
 
@@ -759,7 +819,6 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({});
         const env = createMockEnv({
           canvasHeight: 300,
-          fitToHeight: true,
           surface: "navigator",
         });
 
@@ -811,7 +870,6 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({});
         const env = createMockEnv({
           canvasHeight: 500,
-          fitToHeight: true,
           surface: "navigator",
         });
 
@@ -840,7 +898,6 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({});
         const env = createMockEnv({
           canvasHeight: 400,
-          fitToHeight: true,
           surface: "navigator",
         });
 
@@ -889,7 +946,6 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         const projection = createMockProjection({ scale: 1 });
         const env = createMockEnv({
           canvasHeight: 200,
-          fitToHeight: true,
           surface: "navigator",
         });
 
@@ -910,6 +966,39 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
 
         expect(strawberryRects.length).toBe(1);
         expect(emeraldRects.length).toBe(1);
+      });
+
+      it("navigator uses uniform fit-to-height regardless of track settings", () => {
+        // Even though tracks have different compact/multiplier settings,
+        // navigator should use uniform fit-to-height
+        const data = createTimelineData(
+          [
+            createTrack("t1", "Track 1", "iris", { compact: true }),
+            createTrack("t2", "Track 2", "iris", { compact: false, heightMultiplier: 8 }),
+          ],
+          [createClip("c1", "t1", 0, 50, "Compact"), createClip("c2", "t2", 0, 50, "Tall")],
+        );
+        const projection = createMockProjection({ scale: 1 });
+        const env = createMockEnv({
+          canvasHeight: 200,
+          surface: "navigator",
+        });
+
+        const scene = TimelineSceneRenderer.buildScene({
+          data,
+          projection,
+          state: createUiState(),
+          env,
+        });
+
+        // Both clips should be positioned with uniform 100px track height (200/2)
+        const rects = scene.canvas.filter((n) => n.kind === "rect");
+        expect(rects.length).toBe(2);
+
+        // Check heights are equal (both should be canvasHeight/trackCount = 100)
+        if (rects[0]?.kind === "rect" && rects[1]?.kind === "rect") {
+          expect(rects[0].rect.height).toBe(rects[1].rect.height);
+        }
       });
     });
   });

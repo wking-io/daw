@@ -1,16 +1,24 @@
 import type { Handle, RemixNode } from "@remix-run/component";
 
 import { ProjectionRoot } from "./projection-root";
+import type { TimelineData } from "../renderers/timeline/types";
+import { buildTrackLayouts, TRACK_LIST_VERTICAL_PADDING } from "../lib/track-layout";
 
-const DEFAULT_HEIGHT = 240;
+/** Compute total height of all tracks from the data. */
+function computeTotalTrackHeight(data: TimelineData): number {
+  const layouts = buildTrackLayouts(data.view.trackOrder, data.view.trackById);
+  let total = 0;
+  for (const layout of layouts.values()) {
+    total = Math.max(total, Number(layout.y) + Number(layout.height));
+  }
+  return total + TRACK_LIST_VERTICAL_PADDING;
+}
 
 export function ProjectionContent(handle: Handle) {
   const projection = handle.context.get(ProjectionRoot);
 
-  handle.on(projection, { change: () => handle.update() });
-
-  return (props: { children?: RemixNode; height?: number; class?: string }) => {
-    const h = props.height ?? DEFAULT_HEIGHT;
+  return (props: { children?: RemixNode; data: TimelineData; class?: string }) => {
+    const h = computeTotalTrackHeight(props.data);
 
     return (
       <div
@@ -19,7 +27,7 @@ export function ProjectionContent(handle: Handle) {
         }}
       >
         <div
-          class="pointer-events-none sticky top-0 left-0"
+          class="pointer-events-none sticky left-0"
           style={{
             width: projection.containerWidth ? `${projection.containerWidth}px` : "100%",
             height: `${h}px`,

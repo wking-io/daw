@@ -57,13 +57,11 @@ export function Root(handle: Handle<{ theme: Theme }>) {
   });
 
   return () => (
-    <div class="flex-1">
-      <RegistryProvider>
-        <ControlPanel.Root>
-          <App />
-        </ControlPanel.Root>
-      </RegistryProvider>
-    </div>
+    <RegistryProvider>
+      <ControlPanel.Root>
+        <App />
+      </ControlPanel.Root>
+    </RegistryProvider>
   );
 }
 
@@ -224,43 +222,42 @@ function MainApp(handle: Handle) {
           </ControlBar.Root>
 
           {openTabs.map((tab) => (
-            <Tabs.Panel setup={{ value: tab.id }}>
-              <div class="mt-4">
-                <TimelineRoot>
+            <Tabs.Panel setup={{ value: tab.id }} class="flex-1">
+              <TimelineRoot class="h-[50dvh] flex flex-col">
+                <div
+                  class={cn(
+                    "user-select-none relative bg-background shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                  )}
+                >
+                  <NavigatorRoot class="relative h-full w-full overflow-hidden">
+                    <NavigatorTrack>
+                      <NavigatorCanvas data={dawData} state={dawUIState} />
+                      <ZoomWindow />
+                    </NavigatorTrack>
+                  </NavigatorRoot>
+                </div>
+
+                <ProjectionRoot class="flex flex-col">
+                  <RulerCanvas timeSignature={dawData.project.timeSignature} class="shrink-0" />
                   <div
                     class={cn(
-                      "user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
-                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                      "sticky left-0 user-select-none relative bg-background overflow-y-auto no-scrollbar",
+                      "after:absolute after:inset-0 after:shadow-recess after:shadow-foreground/10 dark:after:shadow-background/40 after:pointer-events-none after:z-10",
+                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40 before:z-20",
                     )}
                   >
-                    <NavigatorRoot class="relative h-full w-full overflow-hidden">
-                      <NavigatorTrack>
-                        <NavigatorCanvas data={dawData} state={dawUIState} />
-                        <ZoomWindow />
-                      </NavigatorTrack>
-                    </NavigatorRoot>
+                    <ProjectionContent data={dawData}>
+                      <ProjectionCanvas data={dawData} state={dawUIState} />
+                      <ProjectionTrackList
+                        data={dawData}
+                        state={dawUIState}
+                        dispatch={handleUIAction}
+                      />
+                    </ProjectionContent>
                   </div>
-
-                  <ProjectionRoot>
-                    <RulerCanvas timeSignature={dawData.project.timeSignature} />
-                    <div
-                      class={cn(
-                        "sticky left-0 user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
-                        "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
-                      )}
-                    >
-                      <ProjectionContent>
-                        <ProjectionCanvas data={dawData} state={dawUIState} fitToHeight={true} />
-                        <ProjectionTrackList
-                          data={dawData}
-                          state={dawUIState}
-                          dispatch={handleUIAction}
-                        />
-                      </ProjectionContent>
-                    </div>
-                  </ProjectionRoot>
-                </TimelineRoot>
-              </div>
+                </ProjectionRoot>
+              </TimelineRoot>
             </Tabs.Panel>
           ))}
 
