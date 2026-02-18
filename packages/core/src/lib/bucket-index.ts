@@ -10,7 +10,7 @@ import * as QN from "./qn";
 import * as Span from "./span";
 import * as Range from "./range";
 import { Default as NumericDefault } from "./numeric";
-import type { Clip } from "@core/domain/clip";
+import type { Clip } from "../domain/clip";
 
 // ---------------------------------------------------------------------------
 // Types

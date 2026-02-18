@@ -3,12 +3,6 @@ import { cn } from "@daw/utils";
 import * as Px from "@daw/core/lib/px";
 import type { UIAction, TrackColor } from "../renderers/timeline/types";
 
-const clipClasses = {
-  base: "",
-  bg: "bg-primary-5 dark:bg-primary-6 via-primary-5/0 dark:via-primary-6/0 from-primary-2/10 via-40% to-primary-2/20",
-  selected: "bg-primary-9 dark:bg-primary-3",
-};
-
 export interface ClipSetup {
   color: TrackColor;
 }

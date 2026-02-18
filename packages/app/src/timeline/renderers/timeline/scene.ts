@@ -7,7 +7,7 @@ import * as Span from "@daw/core/lib/span";
 import type { InteractiveNode, Scene, SceneNode } from "../../scene";
 import { point, rect, stroke } from "../../scene";
 import type { SceneRenderer, BuildSceneArgs } from "../types";
-import type { TimelineEnv } from "../core";
+import type { TimelineEnv, TimelineTheme } from "../core";
 import { resolveClipTitle } from "@daw/core/lib/project-view";
 import type { UIAction, TimelineData, UIState, TrackColor } from "./types";
 import { buildTrackLayouts, type TrackLayout } from "../../lib/track-layout";
@@ -239,7 +239,7 @@ function buildMainCanvasNodes({
     });
   }
 
-  // Grid lines
+  // Vertical grid lines
   for (const tick of result.ticks) {
     const screenX = Number(projection.contentToScreenX(tick.position));
     if (screenX <= 1 || screenX >= projection.containerWidth - 1) continue;
@@ -249,6 +249,20 @@ function buildMainCanvasNodes({
       kind: "line",
       points: [point(x, Px.Px(0)), point(x, env.canvasHeight)],
       stroke: stroke(gridLineColor(tick.tier, result.finestTier, env.theme), 1),
+    });
+  }
+
+  // Horizontal track separator lines
+  const trackLayouts = buildTrackLayouts(data.view.trackOrder, data.view.trackById);
+  const trackSeparatorStroke = stroke(env.theme.gridLinePrimary, 2);
+  for (const trackId of data.view.trackOrder) {
+    const layout = trackLayouts.get(trackId);
+    if (!layout) continue;
+    const y = Px.Px(Number(Px.add(layout.y, layout.height)));
+    nodes.push({
+      kind: "line",
+      points: [point(Px.Px(0), y), point(projection.containerWidth, y)],
+      stroke: trackSeparatorStroke,
     });
   }
 
