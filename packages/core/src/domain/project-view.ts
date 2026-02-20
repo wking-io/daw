@@ -2,16 +2,17 @@
 //
 // ProjectView is built once from a Project via `fromProject`, then kept in sync
 // incrementally via `applyEvent`. Rendering code uses entity maps for O(1) lookups
-// and BucketIndex for spatial clip queries, avoiding per-frame O(n) scans.
+// and SpatialIndex for spatial clip queries, avoiding per-frame O(n) scans.
 
-import type { AudioFile } from "../domain/audio-file";
-import type { AutomationLane } from "../domain/automation";
-import type { Clip } from "../domain/clip";
-import type { MidiPattern } from "../domain/midi";
-import type { Project } from "../domain/project";
-import type { Track } from "../domain/track";
+import type { AudioFile } from "./audio-file";
+import type { AutomationLane } from "./automation";
+import type { Clip } from "./clip";
+import type { MidiPattern } from "./midi";
+import type { Project } from "./project";
+import type { Track } from "./track";
 import type { EditorEvent } from "../events/editor";
-import * as BI from "./bucket-index";
+import * as QN from "../lib/qn";
+import * as SI from "../lib/spatial-index";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,7 +26,7 @@ export type ProjectView = {
   automationLaneById: Map<string, AutomationLane>;
   trackOrder: string[];
   trackIndex: Map<string, number>;
-  clipIndex: BI.BucketIndex;
+  clipIndex: SI.SpatialIndex<QN.QN>;
 };
 
 // ---------------------------------------------------------------------------
@@ -67,7 +68,10 @@ export function fromProject(project: Project, bucketSize = DEFAULT_BUCKET_SIZE):
     automationLaneById.set(lane.id, lane);
   }
 
-  const clipIndex = BI.fromClips(project.clips, bucketSize);
+  const clipIndex = SI.make(QN.Numeric, bucketSize);
+  for (const clip of project.clips) {
+    SI.add(clipIndex, clip.trackId, clip.id, clip.span);
+  }
 
   return {
     clipById,
@@ -203,7 +207,7 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
     // ----- Clip -----
     case "clip.created":
       view.clipById.set(event.clip.id, event.clip);
-      BI.onClipCreated(view.clipIndex, event.clip);
+      SI.add(view.clipIndex, event.clip.trackId, event.clip.id, event.clip.span);
       if (event.pattern) {
         view.patternById.set(event.pattern.id, event.pattern);
       }
@@ -211,7 +215,7 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
 
     case "clip.deleted":
       view.clipById.delete(event.clipId);
-      BI.onClipDeleted(view.clipIndex, event.clipId);
+      SI.remove(view.clipIndex, event.clipId);
       break;
 
     case "clip.moved": {
@@ -222,7 +226,7 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
           span: { ...clip.span, start: event.start },
           ...(event.trackId !== undefined && { trackId: event.trackId }),
         });
-        BI.onClipMoved(view.clipIndex, event.clipId, event.start, event.trackId);
+        SI.move(view.clipIndex, event.clipId, event.start, event.trackId);
       }
       break;
     }
@@ -231,7 +235,7 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
       const clip = view.clipById.get(event.clipId);
       if (clip) {
         view.clipById.set(event.clipId, { ...clip, span: event.span });
-        BI.onClipResized(view.clipIndex, event.clipId, event.span);
+        SI.resize(view.clipIndex, event.clipId, event.span);
       }
       break;
     }

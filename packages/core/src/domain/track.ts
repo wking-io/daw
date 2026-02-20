@@ -5,10 +5,27 @@ export const TrackType = Schema.Literal("audio", "midi", "bus");
 export type TrackType = Schema.Schema.Type<typeof TrackType>;
 
 export const TrackColor = Schema.Literal(
-  "plum", "oatmeal", "strawberry", "ruby", "tangerine", "ochre",
-  "honey", "lemon", "pear", "pistachio", "jade", "emerald",
-  "aqua", "ocean", "sky", "cobalt", "denim", "iris",
-  "grape", "lilac", "fuchsia", "blush", "primary",
+  "plum",
+  "strawberry",
+  "ruby",
+  "tangerine",
+  "ochre",
+  "honey",
+  "lemon",
+  "pear",
+  "pistachio",
+  "jade",
+  "emerald",
+  "aqua",
+  "ocean",
+  "sky",
+  "cobalt",
+  "denim",
+  "iris",
+  "grape",
+  "lilac",
+  "fuchsia",
+  "blush",
 );
 export type TrackColor = Schema.Schema.Type<typeof TrackColor>;
 

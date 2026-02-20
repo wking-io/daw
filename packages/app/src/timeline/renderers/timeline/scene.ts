@@ -1,14 +1,14 @@
 import type { Clip } from "@daw/core/domain/clip";
-import * as BI from "@daw/core/lib/bucket-index";
+import * as SI from "@daw/core/lib/spatial-index";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
-import { barSize as computeBarSize, beatSize as computeBeatSize, computeRulerTicks, Tier } from "@daw/core/lib/ruler";
+import { computeBarSize, computeBeatSize, computeRulerTicks, Tier } from "@daw/core/lib/ruler";
 import * as Span from "@daw/core/lib/span";
 import type { InteractiveNode, Scene, SceneNode } from "../../scene";
 import { point, rect, stroke } from "../../scene";
 import type { SceneRenderer, BuildSceneArgs } from "../types";
 import type { TimelineEnv, TimelineTheme } from "../core";
-import { resolveClipTitle } from "@daw/core/lib/project-view";
+import { resolveClipTitle } from "@daw/core/domain/project-view";
 import type { UIAction, TimelineData, UIState, TrackColor } from "./types";
 import { buildTrackLayouts, type TrackLayout } from "../../lib/track-layout";
 
@@ -109,7 +109,7 @@ function clipToUniformLayout(
   };
 }
 
-/** Viewport-filtered clip layouts using BucketIndex and per-track layouts (main surface). */
+/** Viewport-filtered clip layouts using SpatialIndex and per-track layouts (main surface). */
 function computeClipLayouts({
   data,
   state,
@@ -120,7 +120,7 @@ function computeClipLayouts({
 }): ClipLayout[] {
   const { view } = data;
   const trackLayouts = buildTrackLayouts(view.trackOrder, view.trackById);
-  const visibleClips = BI.queryTracks(view.clipIndex, view.trackOrder, projection.view);
+  const visibleClips = SI.queryGroups(view.clipIndex, view.trackOrder, projection.view);
 
   const layouts: ClipLayout[] = [];
   for (const [trackId, clipIds] of visibleClips) {
@@ -132,15 +132,7 @@ function computeClipLayouts({
       const clip = view.clipById.get(clipId);
       if (!clip) continue;
       layouts.push(
-        clipToLayout(
-          clip,
-          data,
-          state,
-          projection,
-          trackLayout,
-          track.color,
-          verticalPadding,
-        ),
+        clipToLayout(clip, data, state, projection, trackLayout, track.color, verticalPadding),
       );
     }
   }
@@ -223,7 +215,8 @@ function buildMainCanvasNodes({
   const visibleBars = viewSize / bar;
 
   // Pick alternation interval based on how many bars are visible
-  const step = visibleBars >= 48 ? bar * 16 : visibleBars >= 12 ? bar * 4 : visibleBars >= 3 ? bar : beat;
+  const step =
+    visibleBars >= 48 ? bar * 16 : visibleBars >= 12 ? bar * 4 : visibleBars >= 3 ? bar : beat;
 
   const first = Math.floor(viewStart / step);
   const last = Math.ceil(viewEnd / step);

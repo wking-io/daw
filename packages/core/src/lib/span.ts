@@ -1,5 +1,6 @@
 import { Schema as S } from "effect";
 import type { Numeric } from "./numeric";
+import { Option } from "effect";
 
 export type Span<A extends number> = {
   start: A;
@@ -40,6 +41,33 @@ export const withSize = <A extends number>(s: Span<A>, size: A): Span<A> => ({
   ...s,
   size,
 });
+
+export const overlaps = <A extends number>(N: Numeric<A>, a: Span<A>, b: Span<A>): boolean => {
+  if (N.eq(a.size, N.zero) || N.eq(b.size, N.zero)) return false;
+  return N.lt(a.start, end(N, b)) && N.lt(b.start, end(N, a));
+};
+
+export const intersection = <A extends number>(
+  N: Numeric<A>,
+  a: Span<A>,
+  b: Span<A>,
+): Option.Option<Span<A>> => {
+  const iStart = N.max(a.start, b.start);
+  const iEnd = N.min(end(N, a), end(N, b));
+  return N.lt(iStart, iEnd)
+    ? Option.some({ start: iStart, size: N.subtract(iEnd, iStart) })
+    : Option.none();
+};
+
+export const subtract = <A extends number>(N: Numeric<A>, a: Span<A>, b: Span<A>): Span<A>[] => {
+  if (!overlaps(N, a, b)) return [a];
+  const results: Span<A>[] = [];
+  const aEnd = end(N, a);
+  const bEnd = end(N, b);
+  if (N.lt(a.start, b.start)) results.push({ start: a.start, size: N.subtract(b.start, a.start) });
+  if (N.lt(bEnd, aEnd)) results.push({ start: bEnd, size: N.subtract(aEnd, bEnd) });
+  return results;
+};
 
 export const Schema = <A, I, R>(inner: S.Schema<A, I, R>) =>
   S.Struct({

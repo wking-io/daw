@@ -63,11 +63,11 @@ export type RulerInput = Readonly<{
 // Helpers
 // =============================================================================
 
-export function barSize(ts: TimeSignature): QN.QN {
+export function computeBarSize(ts: TimeSignature): QN.QN {
   return QN.QN(ts.numerator * (4 / ts.denominator));
 }
 
-export function beatSize(ts: TimeSignature): QN.QN {
+export function computeBeatSize(ts: TimeSignature): QN.QN {
   return QN.QN(4 / ts.denominator);
 }
 
@@ -135,8 +135,8 @@ export function computeGridInterval(input: { scale: number; timeSignature: TimeS
   interval: QN.QN;
   tier: TickTier;
 } {
-  const beat = beatSize(input.timeSignature);
-  const bar = barSize(input.timeSignature);
+  const beat = computeBeatSize(input.timeSignature);
+  const bar = computeBarSize(input.timeSignature);
   const step = findFinestInterval(beat, bar, input.scale, MIN_SPACING, MAX_SUBDIVISIONS);
   const tier = intervalToTier(step, beat, bar);
   return { interval: QN.QN(step), tier };
@@ -148,8 +148,8 @@ export function computeGridInterval(input: { scale: number; timeSignature: TimeS
 
 export function computeRulerTicks(input: RulerInput): RulerResult {
   const { viewStart, viewSize, scale, timeSignature } = input;
-  const beat = beatSize(timeSignature);
-  const bar = barSize(timeSignature);
+  const beat = computeBeatSize(timeSignature);
+  const bar = computeBarSize(timeSignature);
 
   // Finest visible interval and its tier (for grid lines)
   const step = findFinestInterval(beat, bar, scale, MIN_SPACING, MAX_SUBDIVISIONS);

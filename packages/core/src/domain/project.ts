@@ -494,7 +494,7 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         projectId: project.id,
         type: command.type,
         name: command.name,
-        color: command.color ?? "primary",
+        color: command.color ?? "sky",
         volumeDb: 0,
         pan: 0,
         mute: false,

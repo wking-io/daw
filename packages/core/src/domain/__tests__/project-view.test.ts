@@ -7,14 +7,14 @@ import type {
   MidiPattern,
   Project,
   Track,
-} from "../../domain/project";
-import { evolve } from "../../domain/project";
+} from "../project";
+import { evolve } from "../project";
 import type { EditorEvent } from "../../events/editor";
-import * as QN from "../qn";
-import * as Span from "../span";
-import * as QNMod from "../qn";
+import * as QN from "../../lib/qn";
+import * as Span from "../../lib/span";
+import * as QNMod from "../../lib/qn";
 import * as PV from "../project-view";
-import * as BI from "../bucket-index";
+import * as SI from "../../lib/spatial-index";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -163,7 +163,7 @@ describe("lib/project-view", () => {
 
       const view = PV.fromProject(project);
 
-      const hits = BI.queryTrack(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 12));
+      const hits = SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 12));
       expect(hits.sort()).toEqual(["c1", "c2"]);
     });
   });
@@ -380,7 +380,7 @@ describe("lib/project-view", () => {
 
         expect(view.clipById.has("c1")).toBe(true);
         expect(view.patternById.has("pat-c1")).toBe(true);
-        expect(BI.queryTrack(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 4))).toEqual(["c1"]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 4))).toEqual(["c1"]);
       });
 
       it("clip.created without pattern (audio clip)", () => {
@@ -405,7 +405,7 @@ describe("lib/project-view", () => {
         PV.applyEvent(view, { t: "clip.deleted", clipId: "c1" } as unknown as EditorEvent);
 
         expect(view.clipById.has("c1")).toBe(false);
-        expect(BI.queryTrack(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 4))).toEqual([]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 4))).toEqual([]);
       });
 
       it("clip.moved updates position and index", () => {
@@ -427,8 +427,8 @@ describe("lib/project-view", () => {
         const clip = view.clipById.get("c1")!;
         expect(Number(clip.span.start)).toBe(8);
         expect(String(clip.trackId)).toBe("t2");
-        expect(BI.queryTrack(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 12))).toEqual([]);
-        expect(BI.queryTrack(view.clipIndex, "t2", Span.make(QN.Numeric, 8, 4))).toEqual(["c1"]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 12))).toEqual([]);
+        expect(SI.query(view.clipIndex, "t2", Span.make(QN.Numeric, 8, 4))).toEqual(["c1"]);
       });
 
       it("clip.resized updates span and index", () => {
@@ -447,7 +447,7 @@ describe("lib/project-view", () => {
         } as unknown as EditorEvent);
 
         expect(Number(view.clipById.get("c1")!.span.size)).toBe(12);
-        expect(BI.queryTrack(view.clipIndex, "t1", Span.make(QN.Numeric, 8, 4))).toEqual(["c1"]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 8, 4))).toEqual(["c1"]);
       });
 
       it("clip.loopChanged updates loop settings", () => {

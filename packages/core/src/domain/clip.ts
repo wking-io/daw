@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { AudioFileId, ClipId, PatternId, ProjectId, TrackId } from "../ids";
+import { AudioFileId, ClipId, PatternId, ProjectId, TrackId, generate } from "../ids";
+import type { EditorEvent } from "../events/editor";
 import * as QN from "../lib/qn";
 import * as Span from "../lib/span";
 
@@ -38,3 +39,27 @@ export const Clip = Schema.Struct({
   payload: ClipPayload,
 });
 export type Clip = Schema.Schema.Type<typeof Clip>;
+
+/**
+ * Resolve the overlap between a single existing `clip` and a `placed` span.
+ * Returns events to apply: delete, resize, or resize + create (split).
+ */
+export function resolveOverlap(clip: Clip, placed: Span.Span<QN.QN>): EditorEvent[] {
+  const remainders = Span.subtract(QN.Numeric, clip.span, placed);
+
+  if (remainders.length === 0) {
+    return [{ t: "clip.deleted", clipId: clip.id }];
+  }
+
+  if (remainders.length === 1) {
+    return [{ t: "clip.resized", clipId: clip.id, span: remainders[0]! }];
+  }
+
+  return [
+    { t: "clip.resized", clipId: clip.id, span: remainders[0]! },
+    {
+      t: "clip.created",
+      clip: { ...clip, id: generate("ClipId"), span: remainders[1]! },
+    },
+  ];
+}

@@ -4,13 +4,14 @@ import type { MidiPattern } from "@daw/core/domain/project";
 import type { Track } from "@daw/core/domain/track";
 import * as QN from "@daw/core/lib/qn";
 import * as Px from "@daw/core/lib/px";
-import * as PV from "@daw/core/lib/project-view";
+import * as PV from "@daw/core/domain/project-view";
 import * as Span from "@daw/core/lib/span";
 import * as TimeSignature from "@daw/core/lib/time-signature";
 import { ProjectVersion } from "@daw/core/versions";
 import { Option } from "effect";
 import type { TimelineEnv, TimelineTheme } from "../core";
 import { ProjectionContext } from "../../lib/projection-context";
+import type { LinesNode } from "../../scene/types";
 import { TimelineSceneRenderer } from "./scene";
 import type { TimelineData, UIState, TrackColor } from "./types";
 
@@ -177,7 +178,9 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
 
         const gridSegments = scene.canvas
-          .filter((n): n is { kind: "lines"; segments: readonly unknown[]; stroke: unknown } => n.kind === "lines")
+          .filter(
+            (n): n is LinesNode => n.kind === "lines",
+          )
           .reduce((sum, n) => sum + n.segments.length, 0);
 
         // Beat-level ticks, minus edges filtered out
@@ -201,7 +204,9 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
 
         const gridSegments = scene.canvas
-          .filter((n): n is { kind: "lines"; segments: readonly unknown[]; stroke: unknown } => n.kind === "lines")
+          .filter(
+            (n): n is LinesNode => n.kind === "lines",
+          )
           .reduce((sum, n) => sum + n.segments.length, 0);
 
         // Should have grid lines

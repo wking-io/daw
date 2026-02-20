@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { QN } from "../qn";
 import * as TimeSignature from "../time-signature";
-import { computeRulerTicks, computeGridInterval, barSize, beatSize, Tier } from "../ruler";
+import {
+  computeRulerTicks,
+  computeGridInterval,
+  computeBarSize,
+  computeBeatSize,
+  Tier,
+} from "../ruler";
 import type { RulerInput } from "../ruler";
 
 function input(overrides: Partial<RulerInput> = {}): RulerInput {
@@ -17,37 +23,37 @@ function input(overrides: Partial<RulerInput> = {}): RulerInput {
 describe("lib/ruler", () => {
   describe("barSize", () => {
     it("4/4 → 4", () => {
-      expect(barSize(TimeSignature.common)).toBe(QN(4));
+      expect(computeBarSize(TimeSignature.common)).toBe(QN(4));
     });
 
     it("3/4 → 3", () => {
-      expect(barSize(TimeSignature.waltz)).toBe(QN(3));
+      expect(computeBarSize(TimeSignature.waltz)).toBe(QN(3));
     });
 
     it("6/8 → 3", () => {
-      expect(barSize(TimeSignature.compound)).toBe(QN(3));
+      expect(computeBarSize(TimeSignature.compound)).toBe(QN(3));
     });
 
     it("2/2 → 4", () => {
-      expect(barSize(TimeSignature.cut)).toBe(QN(4));
+      expect(computeBarSize(TimeSignature.cut)).toBe(QN(4));
     });
   });
 
   describe("beatSize", () => {
     it("4/4 → 1", () => {
-      expect(beatSize(TimeSignature.common)).toBe(QN(1));
+      expect(computeBeatSize(TimeSignature.common)).toBe(QN(1));
     });
 
     it("3/4 → 1", () => {
-      expect(beatSize(TimeSignature.waltz)).toBe(QN(1));
+      expect(computeBeatSize(TimeSignature.waltz)).toBe(QN(1));
     });
 
     it("6/8 → 0.5", () => {
-      expect(beatSize(TimeSignature.compound)).toBe(QN(0.5));
+      expect(computeBeatSize(TimeSignature.compound)).toBe(QN(0.5));
     });
 
     it("2/2 → 2", () => {
-      expect(beatSize(TimeSignature.cut)).toBe(QN(2));
+      expect(computeBeatSize(TimeSignature.cut)).toBe(QN(2));
     });
   });
 
