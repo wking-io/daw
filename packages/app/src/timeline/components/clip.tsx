@@ -3,10 +3,6 @@ import { cn } from "@daw/utils";
 import * as Px from "@daw/core/lib/px";
 import type { UIAction, TrackColor } from "../renderers/timeline/types";
 
-export interface ClipSetup {
-  color: TrackColor;
-}
-
 export interface ClipProps extends Props<"div"> {
   id: string;
   title: string;
@@ -14,17 +10,17 @@ export interface ClipProps extends Props<"div"> {
   y: Px.Px;
   width: Px.Px;
   height: Px.Px;
+  color: TrackColor;
   compact: boolean;
   titleBarHeight: Px.Px;
   contentHeight: Px.Px;
   isSelected: boolean;
   dispatch: (action: UIAction) => void;
+  onTitleBarPointerDown?: (clipId: string, e: PointerEvent) => void;
   children?: RemixNode;
 }
 
-export function Clip(_handle: Handle, setup: ClipSetup) {
-  const themeClass = `theme-${setup.color}`;
-
+export function Clip(_handle: Handle) {
   return (props: ClipProps) => {
     const {
       id,
@@ -33,23 +29,32 @@ export function Clip(_handle: Handle, setup: ClipSetup) {
       y,
       width,
       height,
+      color,
       compact,
       titleBarHeight,
       contentHeight,
       isSelected,
       dispatch,
+      onTitleBarPointerDown,
       children,
       ...rest
     } = props;
+    const themeClass = `theme-${color}`;
 
     const onPointerDown = (e: PointerEvent) => {
       e.stopPropagation();
       dispatch({ type: "select-clip", clipId: id });
     };
 
+    const handleTitleBarDown = (e: PointerEvent) => {
+      e.stopPropagation();
+      dispatch({ type: "select-clip", clipId: id });
+      onTitleBarPointerDown?.(id, e);
+    };
+
     return (
       <div
-        class={cn("absolute rounded-sm group/clip select-none", themeClass)}
+        class={cn("absolute rounded-sm group/clip select-none data-selected:z-10", themeClass)}
         style={{
           left: `${x}px`,
           top: `${y}px`,
@@ -57,26 +62,29 @@ export function Clip(_handle: Handle, setup: ClipSetup) {
           height: `${height}px`,
         }}
         aria-selected={isSelected}
+        {...(isSelected ? { "data-selected": "" } : {})}
         {...rest}
       >
         <div
           class={cn(
-            "bg-primary-5 dark:bg-primary-6 size-full rounded-sm cursor-grab flex flex-col overflow-hidden",
+            "bg-primary-5 dark:bg-primary-6 size-full rounded-sm flex flex-col overflow-hidden relative",
+            // "after:pointer-events-none after:rounded-sm after:absolute after:inset-0 after:shadow-highlight after:shadow-primary-0/30 dark:after:shadow-primary-0/20 data-selected:after:shadow-none",
             isSelected && "ring-1 ring-primary-12 dark:ring-primary-3",
           )}
           {...(isSelected ? { "data-selected": "" } : {})}
           on={{ pointerdown: onPointerDown }}
         >
           <div
-            class="flex items-center px-1.5 text-xxs shrink-0 text-primary-10 dark:text-primary-0 text-shadow-2xs dark:text-shadow-xs text-shadow-primary-0/30 dark:text-shadow-primary-12/15"
+            class="flex items-center px-1.5 text-xxs shrink-0 text-primary-10 dark:text-primary-0 text-shadow-2xs dark:text-shadow-xs text-shadow-primary-0/30 dark:text-shadow-primary-12/15 cursor-grab"
             style={{ height: `${titleBarHeight}px` }}
+            on={{ pointerdown: handleTitleBarDown }}
           >
             <span class="truncate">{title}</span>
           </div>
           {!compact && (
             <div
               class={cn(
-                "flex-1 min-h-0 overflow-hidden rounded-sm relative",
+                "flex-1 min-h-0 overflow-hidden rounded-sm relative z-10",
                 "shadow-recess dark:shadow-background/40",
                 "after:pointer-events-none after:absolute after:inset-[0.5px] after:rounded-[3.5px] after:shadow-highlight",
                 "shadow-primary-8/40 after:shadow-primary-0/30 dark:after:shadow-primary-0/20 dark:data-selected:after:shadow-primary-0/60",

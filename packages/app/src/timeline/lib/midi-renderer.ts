@@ -4,9 +4,11 @@ export function drawMidiNotes(
   ctx: CanvasRenderingContext2D,
   notes: readonly MidiNote[],
   clipSizeQN: number,
-  canvasW: number,
+  clipWidth: number,
   canvasH: number,
   color: string,
+  visibleLeft: number,
+  visibleWidth: number,
 ): void {
   if (notes.length === 0) return;
 
@@ -43,13 +45,19 @@ export function drawMidiNotes(
   ctx.fillStyle = color;
 
   const noteH = Math.max(1, canvasH / pitchRange);
+  const visibleRight = visibleLeft + visibleWidth;
 
   for (const note of notes) {
     const start = note.span.start as number;
     const size = note.span.size as number;
 
-    const x = (start / clipSizeQN) * canvasW;
-    const w = Math.max(1, (size / clipSizeQN) * canvasW);
+    const clipX = (start / clipSizeQN) * clipWidth;
+    const w = Math.max(1, (size / clipSizeQN) * clipWidth);
+
+    // Skip notes entirely outside the visible window
+    if (clipX + w < visibleLeft || clipX > visibleRight) continue;
+
+    const x = clipX - visibleLeft;
     const y = ((pitchMax - note.pitch) / pitchRange) * canvasH;
 
     ctx.fillRect(x, y, w, noteH);

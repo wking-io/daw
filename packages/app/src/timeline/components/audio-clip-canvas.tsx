@@ -5,15 +5,33 @@ import { getPeakCache, drawWaveform } from "../lib/waveform";
 export function AudioClipCanvas(handle: Handle) {
   let canvasEl: HTMLCanvasElement;
   const cache = getPeakCache();
-  let prev = { audioFileId: "", offsetSec: NaN, durationSec: NaN, isSelected: false, cssW: 0, cssH: 0 };
+  let prev = {
+    audioFileId: "",
+    offsetSec: NaN,
+    durationSec: NaN,
+    isSelected: false,
+    color: "",
+    visibleLeft: NaN,
+    visibleWidth: NaN,
+    cssH: 0,
+  };
 
-  handle.on(cache, { load: () => { prev.audioFileId = ""; handle.update(); } });
+  handle.on(cache, {
+    load: () => {
+      prev.audioFileId = "";
+      handle.update();
+    },
+  });
 
   return (props: {
     audioFileId: string;
     offsetSec: number;
     durationSec: number;
     isSelected: boolean;
+    color?: string;
+    visibleLeft: number;
+    visibleWidth: number;
+    clipWidth: number;
   }) => {
     const dpr = window.devicePixelRatio || 1;
     const startSec = props.offsetSec;
@@ -25,31 +43,58 @@ export function AudioClipCanvas(handle: Handle) {
     handle.queueTask(() => {
       if (!canvasEl) return;
 
-      const cssW = canvasEl.parentElement?.clientWidth ?? 0;
+      const cssW = props.visibleWidth;
       const cssH = canvasEl.parentElement?.clientHeight ?? 0;
       if (cssW === 0 || cssH === 0) return;
 
-      // Skip redraw if only CSS position changed (scroll)
+      // Skip redraw if nothing changed
       if (
         prev.audioFileId === props.audioFileId &&
         prev.offsetSec === props.offsetSec &&
         prev.durationSec === props.durationSec &&
         prev.isSelected === props.isSelected &&
-        prev.cssW === cssW &&
+        prev.color === (props.color ?? "") &&
+        prev.visibleLeft === props.visibleLeft &&
+        prev.visibleWidth === props.visibleWidth &&
         prev.cssH === cssH
-      ) return;
-      prev = { audioFileId: props.audioFileId, offsetSec: props.offsetSec, durationSec: props.durationSec, isSelected: props.isSelected, cssW, cssH };
+      )
+        return;
+      prev = {
+        audioFileId: props.audioFileId,
+        offsetSec: props.offsetSec,
+        durationSec: props.durationSec,
+        isSelected: props.isSelected,
+        color: props.color ?? "",
+        visibleLeft: props.visibleLeft,
+        visibleWidth: props.visibleWidth,
+        cssH,
+      };
 
+      const resized = canvasEl.width !== Math.round(cssW * dpr) || canvasEl.height !== Math.round(cssH * dpr);
       const ctx = prepareCanvas({ canvas: canvasEl, cssW, cssH, dpr });
       if (!ctx) return;
+
+      // Clear inline height set by prepareCanvas so h-full class controls display size
+      canvasEl.style.height = "";
 
       const bins = cache.getPeaks(props.audioFileId, startSec, endSec);
       if (bins) {
         const style = getComputedStyle(canvasEl);
-        const color = style.getPropertyValue(
-          `--color-clip-fill${props.isSelected ? "-selected" : ""}`,
-        );
-        drawWaveform(ctx, bins, cssW, cssH, color);
+        const colorVar = `--color-clip-fill${props.isSelected ? "-selected" : ""}`;
+        const color = style.getPropertyValue(colorVar);
+
+        console.debug("[audio-canvas] " + JSON.stringify({
+          canvas: { cssW, cssH, backingW: canvasEl.width, backingH: canvasEl.height, resized },
+          clipWidth: props.clipWidth,
+          visibleLeft: props.visibleLeft,
+          visibleWidth: props.visibleWidth,
+          colorVar,
+          color: color.trim(),
+          parentW: canvasEl.parentElement?.clientWidth ?? null,
+          peakBins: bins.length,
+        }));
+
+        drawWaveform(ctx, bins, props.clipWidth, cssH, color, props.visibleLeft, props.visibleWidth);
       }
     });
 
@@ -58,7 +103,8 @@ export function AudioClipCanvas(handle: Handle) {
         connect={(node: HTMLCanvasElement) => {
           canvasEl = node;
         }}
-        class="block size-full clip-vars"
+        class="block h-full clip-vars"
+        style={{ width: `${props.visibleWidth}px` }}
       />
     );
   };

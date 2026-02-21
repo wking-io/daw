@@ -254,7 +254,11 @@ function buildMainCanvasNodes({
   // Horizontal track separator lines
   const trackLayouts = buildTrackLayouts(data.view.trackOrder, data.view.trackById);
   const trackSeparatorStroke = stroke(env.theme.gridLinePrimary, 2);
-  for (const trackId of data.view.trackOrder) {
+  const lastTrackIndex = data.view.trackOrder.length - 1;
+  for (let i = 0; i < data.view.trackOrder.length; i++) {
+    if (i === lastTrackIndex) continue; // skip trailing separator after last track
+    const trackId = data.view.trackOrder[i];
+    if (!trackId) continue;
     const layout = trackLayouts.get(trackId);
     if (!layout) continue;
     const y = Px.Px(Number(Px.add(layout.y, layout.height)));

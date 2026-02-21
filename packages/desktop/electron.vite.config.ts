@@ -56,12 +56,6 @@ export default defineConfig(({ mode }) => {
     renderer: {
       root: ".",
       plugins: [vitePluginRemix(), tailwindcss()],
-      server: {
-        fs: {
-          // Allow serving files from the base-ui package
-          allow: ["../.."],
-        },
-      },
       define: {
         __DAW_STATE_PORT__: JSON.stringify(env.DAW_STATE_PORT ?? ""),
         __DAW_STATE_TOKEN__: JSON.stringify(env.DAW_STATE_TOKEN ?? ""),

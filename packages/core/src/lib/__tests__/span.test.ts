@@ -373,4 +373,41 @@ describe("lib/span", () => {
       });
     });
   });
+
+  describe("toRange", () => {
+    const N = Numeric.Default;
+
+    it("converts start and size to start and end", () => {
+      expect(Span.toRange(N, { start: 2, size: 8 })).toEqual({ start: 2, end: 10 });
+    });
+
+    it("handles zero size", () => {
+      expect(Span.toRange(N, { start: 5, size: 0 })).toEqual({ start: 5, end: 5 });
+    });
+
+    it("handles negative start", () => {
+      expect(Span.toRange(N, { start: -3, size: 7 })).toEqual({ start: -3, end: 4 });
+    });
+  });
+
+  describe("fromRange", () => {
+    const N = Numeric.Default;
+
+    it("converts start and end to start and size", () => {
+      expect(Span.fromRange(N, { start: 2, end: 10 })).toEqual({ start: 2, size: 8 });
+    });
+
+    it("handles zero-width range", () => {
+      expect(Span.fromRange(N, { start: 5, end: 5 })).toEqual({ start: 5, size: 0 });
+    });
+
+    it("handles negative bounds", () => {
+      expect(Span.fromRange(N, { start: -10, end: -2 })).toEqual({ start: -10, size: 8 });
+    });
+
+    it("roundtrips with toRange", () => {
+      const span = { start: 3, size: 12 };
+      expect(Span.fromRange(N, Span.toRange(N, span))).toEqual(span);
+    });
+  });
 });

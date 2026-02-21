@@ -25,5 +25,5 @@
       "@app/*": ["../app/src/*"]
     }
   },
-  "include": ["src", "scripts", "../base-ui/packages/remix/src"]
+  "include": ["src", "scripts"]
 }

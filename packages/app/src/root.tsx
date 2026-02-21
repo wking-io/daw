@@ -25,7 +25,11 @@ import {
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
 import { demoProject } from "./timeline/demo/daw-data";
-import * as ProjectView from "@daw/core/lib/project-view";
+import * as ProjectView from "@daw/core/domain/project-view";
+import * as Clip from "@daw/core/domain/clip";
+import * as SI from "@daw/core/lib/spatial-index";
+import * as Span from "@daw/core/lib/span";
+import * as QN from "@daw/core/lib/qn";
 import type { UIAction, UIState, TimelineData } from "./timeline/renderers/timeline/types";
 
 type Theme = "light" | "dark";
@@ -114,6 +118,35 @@ function MainApp(handle: Handle) {
         selectedClipId = action.clipId;
         handle.update();
         break;
+      case "commit-clip-move": {
+        const clip = demoView.clipById.get(action.clipId);
+        const targetTrack = demoView.trackById.get(action.newTrackId);
+        if (!clip || !targetTrack) break;
+
+        // Resolve overlaps on the target track
+        const delta = QN.subtract(action.newStart, clip.span.start);
+        const movedSpan = Span.move(QN.Numeric, clip.span, delta);
+        const overlappingIds = SI.query(demoView.clipIndex, action.newTrackId, movedSpan);
+        for (const id of overlappingIds) {
+          if (id === action.clipId) continue;
+          const existing = demoView.clipById.get(id);
+          if (!existing) continue;
+          for (const event of Clip.resolveOverlap(existing, movedSpan)) {
+            ProjectView.applyEvent(demoView, event);
+          }
+        }
+
+        // Apply the move (use branded IDs from the view entities)
+        ProjectView.applyEvent(demoView, {
+          t: "clip.moved",
+          clipId: clip.id,
+          start: action.newStart,
+          ...(targetTrack.id !== clip.trackId && { trackId: targetTrack.id }),
+        });
+
+        handle.update();
+        break;
+      }
     }
   };
 
@@ -242,19 +275,21 @@ function MainApp(handle: Handle) {
                   <RulerCanvas timeSignature={dawData.project.timeSignature} class="shrink-0" />
                   <div
                     class={cn(
-                      "sticky left-0 user-select-none relative bg-background overflow-y-auto no-scrollbar",
+                      "sticky left-0 user-select-none relative bg-background overflow-hidden min-h-0",
                       "after:absolute after:inset-0 after:shadow-recess after:shadow-foreground/10 dark:after:shadow-background/40 after:pointer-events-none after:z-10",
                       "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40 before:z-20",
                     )}
                   >
-                    <ProjectionContent data={dawData}>
-                      <ProjectionCanvas data={dawData} state={dawUIState} />
-                      <ProjectionTrackList
-                        data={dawData}
-                        state={dawUIState}
-                        dispatch={handleUIAction}
-                      />
-                    </ProjectionContent>
+                    <div data-vertical-scroll class="overflow-y-auto no-scrollbar h-full">
+                      <ProjectionContent data={dawData}>
+                        <ProjectionCanvas data={dawData} state={dawUIState} />
+                        <ProjectionTrackList
+                          data={dawData}
+                          state={dawUIState}
+                          dispatch={handleUIAction}
+                        />
+                      </ProjectionContent>
+                    </div>
                   </div>
                 </ProjectionRoot>
               </TimelineRoot>

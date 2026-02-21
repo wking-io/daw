@@ -1,6 +1,7 @@
 import { Schema as S } from "effect";
 import type { Numeric } from "./numeric";
 import { Option } from "effect";
+import type { Range } from "./range";
 
 export type Span<A extends number> = {
   start: A;
@@ -74,3 +75,13 @@ export const Schema = <A, I, R>(inner: S.Schema<A, I, R>) =>
     start: inner,
     size: inner,
   });
+
+export const toRange = <A extends number>(N: Numeric<A>, span: Span<A>): Range<A> => ({
+  start: span.start,
+  end: N.add(span.start, span.size),
+});
+
+export const fromRange = <A extends number>(N: Numeric<A>, range: Range<A>): Span<A> => ({
+  start: range.start,
+  size: N.subtract(range.end, range.start),
+});

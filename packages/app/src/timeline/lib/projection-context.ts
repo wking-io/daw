@@ -56,6 +56,14 @@ export class ProjectionContext extends TypedEventTarget<{ change: Event }> {
     return getPointerPosition(e, this.#container);
   }
 
+  getContainerRect(): DOMRect | null {
+    return this.#container?.getBoundingClientRect() ?? null;
+  }
+
+  get container(): HTMLElement | null {
+    return this.#container;
+  }
+
   // ---- differing behavior is delegated
   get scale() {
     return this.#rules.scale(this);
