@@ -16,12 +16,12 @@ export type ProjectionRules = {
 export class ProjectionContext extends TypedEventTarget<{ change: Event }> {
   #containerWidth: Px.Px = Px.zero;
   #container: HTMLElement | null = null;
-  #timeline: Timeline.Timeline<QN.QN>;
+  #getTimeline: () => Timeline.Timeline<QN.QN>;
   #rules: ProjectionRules;
 
-  constructor(timeline: Timeline.Timeline<QN.QN>, rules: ProjectionRules) {
+  constructor(getTimeline: () => Timeline.Timeline<QN.QN>, rules: ProjectionRules) {
     super();
-    this.#timeline = timeline;
+    this.#getTimeline = getTimeline;
     this.#rules = rules;
   }
 
@@ -30,10 +30,10 @@ export class ProjectionContext extends TypedEventTarget<{ change: Event }> {
     return this.#containerWidth;
   }
   get timeline() {
-    return this.#timeline;
+    return this.#getTimeline();
   }
   get view() {
-    return this.#timeline.view;
+    return this.#getTimeline().view;
   }
 
   setContainerWidth(width: Px.Px) {
@@ -42,9 +42,8 @@ export class ProjectionContext extends TypedEventTarget<{ change: Event }> {
     this.dispatchEvent(new Event("change"));
   }
 
-  setTimeline(timeline: Timeline.Timeline<QN.QN>) {
-    if (this.#timeline === timeline) return;
-    this.#timeline = timeline;
+  /** Signal listeners that derived values may have changed. */
+  notifyChange() {
     this.dispatchEvent(new Event("change"));
   }
 
@@ -70,7 +69,7 @@ export class ProjectionContext extends TypedEventTarget<{ change: Event }> {
   }
 
   get contentWidth() {
-    return Scroll.width(QN.Numeric, this.#timeline.size, this.scale);
+    return Scroll.width(QN.Numeric, this.#getTimeline().size, this.scale);
   }
 
   contentToScreenX(x: QN.QN): Px.Px {

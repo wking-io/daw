@@ -27,12 +27,12 @@ class NavigatorContext extends ProjectionContext {
 
 export function NavigatorRoot(handle: Handle<NavigatorContext>) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
-  const navigatorCtx = new NavigatorContext(rootCtx.timeline, navigatorRules);
+  const navigatorCtx = new NavigatorContext(() => rootCtx.timeline, navigatorRules);
 
   handle.context.set(navigatorCtx);
 
   return (props: { children?: RemixNode; height?: number; class?: string }) => {
-    navigatorCtx.setTimeline(rootCtx.timeline);
+    navigatorCtx.notifyChange();
     const h = props.height ?? DEFAULT_HEIGHT;
 
     return (

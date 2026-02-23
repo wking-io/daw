@@ -48,7 +48,7 @@ function createMockProjection(options: {
     origin: (ctx: ProjectionContext) => ctx.view.start,
   };
 
-  const ctx = new ProjectionContext(timeline, rules);
+  const ctx = new ProjectionContext(() => timeline, rules);
   // Stub dispatchEvent — Bun's test runner rejects `new Event()` for native EventTarget
   ctx.dispatchEvent = () => true;
   ctx.setContainerWidth(Px.Px(width));
@@ -178,9 +178,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
 
         const gridSegments = scene.canvas
-          .filter(
-            (n): n is LinesNode => n.kind === "lines",
-          )
+          .filter((n): n is LinesNode => n.kind === "lines")
           .reduce((sum, n) => sum + n.segments.length, 0);
 
         // Beat-level ticks, minus edges filtered out
@@ -204,9 +202,7 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
 
         const gridSegments = scene.canvas
-          .filter(
-            (n): n is LinesNode => n.kind === "lines",
-          )
+          .filter((n): n is LinesNode => n.kind === "lines")
           .reduce((sum, n) => sum + n.segments.length, 0);
 
         // Should have grid lines

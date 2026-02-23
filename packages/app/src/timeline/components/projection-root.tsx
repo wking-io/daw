@@ -21,7 +21,7 @@ const timelineRules: ProjectionRules = {
 export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
 
-  const projectionCtx: ProjectionContext = new ProjectionContext(rootCtx.timeline, timelineRules);
+  const projectionCtx: ProjectionContext = new ProjectionContext(() => rootCtx.timeline, timelineRules);
   handle.context.set(projectionCtx);
 
   // TODO: Make this more robust
@@ -108,7 +108,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   }
 
   return ({ class: classes, children, ...props }: Props<"div">) => {
-    projectionCtx.setTimeline(rootCtx.timeline);
+    projectionCtx.notifyChange();
 
     // State → DOM: sync scroll position after render
     handle.queueTask(() => {

@@ -13,19 +13,19 @@ import * as Range from "./range";
 // Types
 // ---------------------------------------------------------------------------
 
-type Entry<A extends number> = {
-  group: string;
+type Entry<A extends number, G> = {
+  group: G;
   bucketRange: Range.Range<number>;
   span: Span.Span<A>;
 };
 
-export type SpatialIndex<A extends number> = {
+export type SpatialIndex<A extends number, I = string, G = string> = {
   readonly N: Numeric<A>;
   readonly bucketSize: number;
   /** group → bucketKey → set of item IDs */
-  readonly byGroup: Map<string, Map<number, Set<string>>>;
+  readonly byGroup: Map<G, Map<number, Set<I>>>;
   /** itemId → entry metadata (used for efficient removal/update) */
-  readonly entries: Map<string, Entry<A>>;
+  readonly entries: Map<I, Entry<A, G>>;
   /** Monotonically increasing version; bumped on every mutation */
   version: number;
 };
@@ -56,10 +56,10 @@ function bucketRange<A extends number>(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function getOrCreateGroupMap<A extends number>(
-  index: SpatialIndex<A>,
-  group: string,
-): Map<number, Set<string>> {
+function getOrCreateGroupMap<A extends number, I, G>(
+  index: SpatialIndex<A, I, G>,
+  group: G,
+): Map<number, Set<I>> {
   let groupMap = index.byGroup.get(group);
   if (!groupMap) {
     groupMap = new Map();
@@ -68,9 +68,9 @@ function getOrCreateGroupMap<A extends number>(
   return groupMap;
 }
 
-function insertIntoBuckets(
-  groupMap: Map<number, Set<string>>,
-  id: string,
+function insertIntoBuckets<I>(
+  groupMap: Map<number, Set<I>>,
+  id: I,
   range: Range.Range<number>,
 ): void {
   for (let b = range.start; b <= range.end; b++) {
@@ -83,9 +83,9 @@ function insertIntoBuckets(
   }
 }
 
-function removeFromBuckets(
-  groupMap: Map<number, Set<string>>,
-  id: string,
+function removeFromBuckets<I>(
+  groupMap: Map<number, Set<I>>,
+  id: I,
   range: Range.Range<number>,
 ): void {
   for (let b = range.start; b <= range.end; b++) {
@@ -101,7 +101,10 @@ function removeFromBuckets(
 // Constructor
 // ---------------------------------------------------------------------------
 
-export function make<A extends number>(N: Numeric<A>, bucketSize: number): SpatialIndex<A> {
+export function make<A extends number, I = string, G = string>(
+  N: Numeric<A>,
+  bucketSize: number,
+): SpatialIndex<A, I, G> {
   return {
     N,
     bucketSize,
@@ -115,10 +118,10 @@ export function make<A extends number>(N: Numeric<A>, bucketSize: number): Spati
 // Mutations
 // ---------------------------------------------------------------------------
 
-export function add<A extends number>(
-  index: SpatialIndex<A>,
-  group: string,
-  id: string,
+export function add<A extends number, I, G>(
+  index: SpatialIndex<A, I, G>,
+  group: G,
+  id: I,
   span: Span.Span<A>,
 ): void {
   const br = bucketRange(index.N, span, index.bucketSize);
@@ -128,7 +131,7 @@ export function add<A extends number>(
   index.version++;
 }
 
-export function remove<A extends number>(index: SpatialIndex<A>, id: string): void {
+export function remove<A extends number, I, G>(index: SpatialIndex<A, I, G>, id: I): void {
   const entry = index.entries.get(id);
   if (!entry) return;
 
@@ -141,11 +144,11 @@ export function remove<A extends number>(index: SpatialIndex<A>, id: string): vo
   index.version++;
 }
 
-export function move<A extends number>(
-  index: SpatialIndex<A>,
-  id: string,
+export function move<A extends number, I, G>(
+  index: SpatialIndex<A, I, G>,
+  id: I,
   newStart: A,
-  newGroup?: string,
+  newGroup?: G,
 ): void {
   const old = index.entries.get(id);
   if (!old) return;
@@ -173,9 +176,9 @@ export function move<A extends number>(
   index.version++;
 }
 
-export function resize<A extends number>(
-  index: SpatialIndex<A>,
-  id: string,
+export function resize<A extends number, I, G>(
+  index: SpatialIndex<A, I, G>,
+  id: I,
   span: Span.Span<A>,
 ): void {
   const old = index.entries.get(id);
@@ -202,18 +205,18 @@ export function resize<A extends number>(
 // Queries
 // ---------------------------------------------------------------------------
 
-export function query<A extends number>(
-  index: SpatialIndex<A>,
-  group: string,
+export function query<A extends number, I, G>(
+  index: SpatialIndex<A, I, G>,
+  group: G,
   view: Span.Span<A>,
-): string[] {
+): I[] {
   const groupMap = index.byGroup.get(group);
   if (!groupMap) return [];
 
   const N = index.N;
   const queryBR = bucketRange(N, view, index.bucketSize);
 
-  const candidates = new Set<string>();
+  const candidates = new Set<I>();
   for (let b = queryBR.start; b <= queryBR.end; b++) {
     const bucket = groupMap.get(b);
     if (bucket) {
@@ -223,13 +226,10 @@ export function query<A extends number>(
     }
   }
 
-  const result: string[] = [];
+  const result: I[] = [];
   for (const id of candidates) {
     const entry = index.entries.get(id)!;
-    if (
-      N.lt(entry.span.start, Span.end(N, view)) &&
-      N.gt(Span.end(N, entry.span), view.start)
-    ) {
+    if (N.lt(entry.span.start, Span.end(N, view)) && N.gt(Span.end(N, entry.span), view.start)) {
       result.push(id);
     }
   }
@@ -237,12 +237,12 @@ export function query<A extends number>(
   return result;
 }
 
-export function queryGroups<A extends number>(
-  index: SpatialIndex<A>,
-  groups: ReadonlyArray<string>,
+export function queryGroups<A extends number, I, G>(
+  index: SpatialIndex<A, I, G>,
+  groups: ReadonlyArray<G>,
   view: Span.Span<A>,
-): Map<string, string[]> {
-  const result = new Map<string, string[]>();
+): Map<G, I[]> {
+  const result = new Map<G, I[]>();
   for (const group of groups) {
     const items = query(index, group, view);
     if (items.length > 0) {

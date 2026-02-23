@@ -6,13 +6,14 @@
 
 import type { AudioFile } from "./audio-file";
 import type { AutomationLane } from "./automation";
-import type { Clip } from "./clip";
+import type { Clip, ClipPayload } from "./clip";
 import type { MidiPattern } from "./midi";
 import type { Project } from "./project";
 import type { Track } from "./track";
 import type { EditorEvent } from "../events/editor";
 import * as QN from "../lib/qn";
 import * as SI from "../lib/spatial-index";
+import * as Ids from "../ids";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,7 +27,7 @@ export type ProjectView = {
   automationLaneById: Map<string, AutomationLane>;
   trackOrder: string[];
   trackIndex: Map<string, number>;
-  clipIndex: SI.SpatialIndex<QN.QN>;
+  clipIndex: SI.SpatialIndex<QN.QN, Ids.ClipId, Ids.TrackId>;
 };
 
 // ---------------------------------------------------------------------------
@@ -68,7 +69,7 @@ export function fromProject(project: Project, bucketSize = DEFAULT_BUCKET_SIZE):
     automationLaneById.set(lane.id, lane);
   }
 
-  const clipIndex = SI.make(QN.Numeric, bucketSize);
+  const clipIndex = SI.make<QN.QN, Ids.ClipId, Ids.TrackId>(QN.Numeric, bucketSize);
   for (const clip of project.clips) {
     SI.add(clipIndex, clip.trackId, clip.id, clip.span);
   }
@@ -406,8 +407,7 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
 // ---------------------------------------------------------------------------
 
 /** Resolve a clip's display title via O(1) map lookups. */
-export function resolveClipTitle(clip: Clip, view: ProjectView): string {
-  const { payload } = clip;
+export function resolveClipTitle(payload: ClipPayload, view: ProjectView): string {
   if (payload.kind === "midi") {
     return view.patternById.get(payload.patternId)?.name ?? "Untitled";
   }

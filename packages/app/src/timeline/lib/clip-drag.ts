@@ -1,20 +1,17 @@
-// clip-drag.ts — Clip drag state machine.
+// clip-drag.ts — Pure clip drag state machine.
 //
-// Manages the pending → dragging → idle lifecycle for clip drag operations.
-// Keeps state as plain mutable variables (no UIState pollution).
-// The controller is instantiated once in ProjectionTrackList's setup closure.
+// Models the pending → dragging → idle lifecycle as a pure transition function.
+// All state transitions are deterministic; side effects are expressed as data
+// (DragEffect[]) to be interpreted by the driver layer.
 
+import { Option } from "effect";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Span from "@daw/core/lib/span";
-import * as Timeline from "@daw/core/lib/timeline";
 import { computeGridInterval } from "@daw/core/lib/ruler";
 import type { TimeSignature } from "@daw/core/lib/time-signature";
-import type { ProjectionContext } from "./projection-context";
 import type { TrackLayout } from "./track-layout";
 import type { TrackColor } from "../renderers/timeline/types";
-import type { TimelineRootContext } from "../components/timeline-root";
-import { computeEdgeDeltas, isOutOfBounds } from "./edge-scroll";
 
 const DEAD_ZONE_PX = 3;
 
@@ -24,10 +21,9 @@ const DEAD_ZONE_PX = 3;
 
 export function snapToGrid(positionQN: QN.QN, scale: number, timeSignature: TimeSignature): QN.QN {
   const { interval } = computeGridInterval({ scale, timeSignature });
-  const raw = positionQN as number;
-  const step = interval as number;
-  const snapped = Math.round(raw / step) * step;
-  return QN.max(QN.zero, QN.QN(snapped));
+  const raw = QN.divide(positionQN, interval);
+  const snapped = QN.multiply(interval, Math.round(raw));
+  return QN.max(QN.zero, snapped);
 }
 
 // ---------------------------------------------------------------------------
@@ -35,37 +31,78 @@ export function snapToGrid(positionQN: QN.QN, scale: number, timeSignature: Time
 // ---------------------------------------------------------------------------
 
 export function hitTestTrack(
-  pointerY: number,
+  pointerY: Px.Px,
   trackLayouts: Map<string, TrackLayout>,
   trackOrder: readonly string[],
-): string | null {
+): Option.Option<string> {
   for (const trackId of trackOrder) {
     const layout = trackLayouts.get(trackId);
     if (!layout) continue;
-    const top = layout.y as number;
-    const bottom = top + (layout.height as number);
-    if (pointerY >= top && pointerY < bottom) {
-      return trackId;
+    const bottom = Px.add(layout.y, layout.height);
+    if (Px.gte(pointerY, layout.y) && Px.lt(pointerY, bottom)) {
+      return Option.some(trackId);
     }
   }
-  return null;
+  return Option.none();
 }
 
 // ---------------------------------------------------------------------------
 // Compatibility check
 // ---------------------------------------------------------------------------
 
+const COMPATIBLE_DROPS: ReadonlySet<string> = new Set(["midi:midi", "audio:audio"]);
+
 export function isCompatibleDrop(
   clipPayloadKind: "midi" | "audio",
   targetTrackType: "midi" | "audio" | "bus",
 ): boolean {
-  if (clipPayloadKind === "midi" && targetTrackType === "midi") return true;
-  if (clipPayloadKind === "audio" && targetTrackType === "audio") return true;
-  return false;
+  return COMPATIBLE_DROPS.has(`${clipPayloadKind}:${targetTrackType}`);
 }
 
 // ---------------------------------------------------------------------------
-// Ghost state (read by renderer)
+// Drag state (discriminated union)
+// ---------------------------------------------------------------------------
+
+type Idle = { phase: "idle" };
+
+type Pending = {
+  phase: "pending";
+  clipId: string;
+  originTrackId: string;
+  originSpan: Span.Span<QN.QN>;
+  payloadKind: "midi" | "audio";
+  color: TrackColor;
+  width: Px.Px;
+  height: Px.Px;
+  grabOffsetQN: QN.QN;
+  grabOffsetY: Px.Px;
+  startClientX: number;
+  startClientY: number;
+};
+
+type Dragging = {
+  phase: "dragging";
+  clipId: string;
+  originTrackId: string;
+  originSpan: Span.Span<QN.QN>;
+  payloadKind: "midi" | "audio";
+  color: TrackColor;
+  width: Px.Px;
+  height: Px.Px;
+  grabOffsetQN: QN.QN;
+  grabOffsetY: Px.Px;
+  ghostStartQN: QN.QN;
+  ghostTrackId: string;
+  isValid: boolean;
+  isOOB: boolean;
+};
+
+export type DragState = Idle | Pending | Dragging;
+
+export const idle: DragState = { phase: "idle" };
+
+// ---------------------------------------------------------------------------
+// Ghost (derived view)
 // ---------------------------------------------------------------------------
 
 export type GhostState = {
@@ -78,327 +115,304 @@ export type GhostState = {
   isValid: boolean;
 };
 
+export function deriveGhost(
+  state: DragState,
+  trackById: Map<string, { color: TrackColor }>,
+): Option.Option<GhostState> {
+  if (state.phase !== "dragging") return Option.none();
+
+  const startQN = state.isOOB ? state.originSpan.start : state.ghostStartQN;
+  const trackId = state.isOOB ? state.originTrackId : state.ghostTrackId;
+
+  // No ghost when the clip hasn't moved from its original position
+  if (QN.eq(startQN, state.originSpan.start) && trackId === state.originTrackId) {
+    return Option.none();
+  }
+
+  const targetTrack = trackById.get(trackId);
+  return Option.some({
+    clipId: state.clipId,
+    startQN,
+    trackId,
+    width: state.width,
+    height: state.height,
+    color: targetTrack?.color ?? state.color,
+    isValid: state.isOOB ? false : state.isValid,
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Drag controller
+// Drag events (inputs to the state machine)
 // ---------------------------------------------------------------------------
 
-type Idle = { phase: "idle" };
-type Pending = {
-  phase: "pending";
-  clipId: string;
-  originTrackId: string;
-  originStartQN: QN.QN;
-  clipSizeQN: QN.QN;
-  payloadKind: "midi" | "audio";
-  color: TrackColor;
-  clipWidth: Px.Px;
-  clipHeight: Px.Px;
-  grabOffsetQN: QN.QN;
-  grabOffsetY: number;
-  startClientX: number;
-  startClientY: number;
-};
-type Dragging = {
-  phase: "dragging";
-  clipId: string;
-  originTrackId: string;
-  originStartQN: QN.QN;
-  clipSizeQN: QN.QN;
-  payloadKind: "midi" | "audio";
-  color: TrackColor;
-  clipWidth: Px.Px;
-  clipHeight: Px.Px;
-  grabOffsetQN: QN.QN;
-  grabOffsetY: number;
-  ghostStartQN: QN.QN;
-  ghostTrackId: string;
-  isValid: boolean;
-  isOOB: boolean;
-};
-
-type DragState = Idle | Pending | Dragging;
-
-export type CommitCallback = (clipId: string, newStart: QN.QN, newTrackId: string) => void;
-export type UpdateCallback = () => void;
-
-export class ClipDragController {
-  state: DragState = { phase: "idle" };
-
-  // External dependencies (set once during setup)
-  projection!: ProjectionContext;
-  rootCtx!: TimelineRootContext;
-  timeSignature!: TimeSignature;
-  onCommit!: CommitCallback;
-  onUpdate!: UpdateCallback;
-
-  // Mutable refs to latest data (updated each render)
-  trackLayouts: Map<string, TrackLayout> = new Map();
-  trackOrder: readonly string[] = [];
-  trackById: Map<string, { type: "midi" | "audio" | "bus"; color: TrackColor }> = new Map();
-
-  // Edge scroll
-  #edgeScrollRaf = 0;
-  #lastPointerClientX = 0;
-  #lastPointerClientY = 0;
-  #verticalContainer: HTMLElement | null = null;
-
-  // Global cursor override
-  #cursorStyle: HTMLStyleElement | null = null;
-
-  get ghost(): GhostState | null {
-    if (this.state.phase !== "dragging") return null;
-    const s = this.state;
-
-    const startQN = s.isOOB ? s.originStartQN : s.ghostStartQN;
-    const trackId = s.isOOB ? s.originTrackId : s.ghostTrackId;
-
-    // No ghost when the clip hasn't moved from its original position
-    if (QN.eq(startQN, s.originStartQN) && trackId === s.originTrackId) return null;
-
-    const targetTrack = this.trackById.get(trackId);
-    return {
-      clipId: s.clipId,
-      startQN,
-      trackId,
-      width: s.clipWidth,
-      height: s.clipHeight,
-      color: targetTrack?.color ?? s.color,
-      isValid: s.isOOB ? false : s.isValid,
-    };
-  }
-
-  get isDragging(): boolean {
-    return this.state.phase !== "idle";
-  }
-
-  get dragSourceClipId(): string | null {
-    return this.state.phase !== "idle" ? this.state.clipId : null;
-  }
-
-  setVerticalContainer(el: HTMLElement | null) {
-    this.#verticalContainer = el;
-  }
-
-  // ------- Start pending -------
-  startPending(
-    clipId: string,
-    e: PointerEvent,
-    clip: {
+export type DragInput =
+  | {
+      type: "start-pending";
+      clipId: string;
       originTrackId: string;
-      origin: Span.Span<QN.QN>;
+      originSpan: Span.Span<QN.QN>;
       payloadKind: "midi" | "audio";
       color: TrackColor;
-      clipWidth: Px.Px;
-      clipHeight: Px.Px;
-    },
-  ) {
-    const containerRect = this.projection.getContainerRect();
-    if (!containerRect) return;
+      width: Px.Px;
+      height: Px.Px;
+      grabOffsetQN: QN.QN;
+      grabOffsetY: Px.Px;
+      startClientX: number;
+      startClientY: number;
+    }
+  | { type: "pointer-move"; clientX: number; clientY: number }
+  | { type: "pointer-up" }
+  | { type: "escape" }
+  | { type: "edge-scroll-tick"; dx: number; dy: number };
 
-    // Compute grab offset: where within the clip the pointer landed (in QN)
-    // Use viewport-relative position only — the projection origin already accounts for scroll.
-    const pointerScreenX = Px.Px(e.clientX - containerRect.left);
-    const pointerQN = this.projection.screenToContentX(pointerScreenX);
-    const grabOffsetQN = QN.subtract(pointerQN, clip.origin.start);
+// ---------------------------------------------------------------------------
+// Drag effects (outputs / side-effect descriptors)
+// ---------------------------------------------------------------------------
 
-    // Vertical grab offset: distance from pointer to clip's track layout top
-    const trackLayout = this.trackLayouts.get(clip.originTrackId);
-    const vertScrollTop = this.#verticalContainer?.scrollTop ?? 0;
-    const trackListRect = this.#verticalContainer?.getBoundingClientRect();
-    const pointerTrackY = trackListRect ? e.clientY - trackListRect.top + vertScrollTop : 0;
-    const grabOffsetY = trackLayout ? pointerTrackY - (trackLayout.y as number) : 0;
+export type DragEffect =
+  | { type: "set-cursor"; cursor: string }
+  | { type: "clear-cursor" }
+  | { type: "start-edge-scroll" }
+  | { type: "stop-edge-scroll" }
+  | { type: "pan-timeline"; deltaQN: QN.QN }
+  | { type: "scroll-vertical"; dy: number }
+  | { type: "commit"; clipId: string; start: QN.QN; trackId: string }
+  | { type: "request-update" };
 
-    this.state = {
+// ---------------------------------------------------------------------------
+// Transition context (read-only external data the transition needs)
+// ---------------------------------------------------------------------------
+
+export type TransitionContext = {
+  containerRect: DOMRect;
+  verticalRect: DOMRect;
+  verticalScrollTop: number;
+  scale: number;
+  screenToContentX: (x: Px.Px) => QN.QN;
+  timeSignature: TimeSignature;
+  trackLayouts: Map<string, TrackLayout>;
+  trackOrder: readonly string[];
+  trackById: Map<string, { type: "midi" | "audio" | "bus"; color: TrackColor }>;
+};
+
+// ---------------------------------------------------------------------------
+// Transition function
+// ---------------------------------------------------------------------------
+
+export type TransitionResult = {
+  state: DragState;
+  effects: DragEffect[];
+};
+
+export function transition(
+  state: DragState,
+  input: DragInput,
+  ctx: TransitionContext,
+): TransitionResult {
+  switch (input.type) {
+    case "start-pending":
+      return handleStartPending(input);
+
+    case "pointer-move":
+      return handlePointerMove(state, input, ctx);
+
+    case "pointer-up":
+      return handlePointerUp(state);
+
+    case "escape":
+      return handleEscape(state);
+
+    case "edge-scroll-tick":
+      return handleEdgeScrollTick(state, input, ctx);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Handlers
+// ---------------------------------------------------------------------------
+
+function handleStartPending(input: DragInput & { type: "start-pending" }): TransitionResult {
+  return {
+    state: {
       phase: "pending",
-      clipId,
-      originTrackId: clip.originTrackId,
-      originStartQN: clip.origin.start,
-      clipSizeQN: clip.origin.size,
-      payloadKind: clip.payloadKind,
-      color: clip.color,
-      clipWidth: clip.clipWidth,
-      clipHeight: clip.clipHeight,
-      grabOffsetQN,
-      grabOffsetY,
-      startClientX: e.clientX,
-      startClientY: e.clientY,
-    };
-  }
+      clipId: input.clipId,
+      originTrackId: input.originTrackId,
+      originSpan: input.originSpan,
+      payloadKind: input.payloadKind,
+      color: input.color,
+      width: input.width,
+      height: input.height,
+      grabOffsetQN: input.grabOffsetQN,
+      grabOffsetY: input.grabOffsetY,
+      startClientX: input.startClientX,
+      startClientY: input.startClientY,
+    },
+    effects: [],
+  };
+}
 
-  // ------- Pointer move -------
-  onPointerMove(e: PointerEvent) {
-    this.#lastPointerClientX = e.clientX;
-    this.#lastPointerClientY = e.clientY;
-
-    if (this.state.phase === "pending") {
-      const dx = e.clientX - this.state.startClientX;
-      const dy = e.clientY - this.state.startClientY;
-      if (Math.sqrt(dx * dx + dy * dy) < DEAD_ZONE_PX) return;
-      this.#transitionToDragging();
-      this.#forceCursor("grabbing");
+function handlePointerMove(
+  state: DragState,
+  input: { clientX: number; clientY: number },
+  ctx: TransitionContext,
+): TransitionResult {
+  if (state.phase === "pending") {
+    const dx = input.clientX - state.startClientX;
+    const dy = input.clientY - state.startClientY;
+    if (Math.sqrt(dx * dx + dy * dy) < DEAD_ZONE_PX) {
+      return { state, effects: [] };
     }
-
-    if (this.state.phase === "dragging") {
-      this.#updateGhost(e.clientX, e.clientY);
-      this.onUpdate();
-    }
-  }
-
-  // ------- Pointer up -------
-  onPointerUp(_e: PointerEvent) {
-    if (this.state.phase === "dragging") {
-      const s = this.state;
-      if (s.isValid && !s.isOOB) {
-        this.onCommit(s.clipId, s.ghostStartQN, s.ghostTrackId);
-      }
-    }
-    this.#cancel();
-  }
-
-  // ------- Escape -------
-  onKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape" && this.state.phase !== "idle") {
-      this.#cancel();
-    }
-  }
-
-  // ------- Private -------
-  #transitionToDragging() {
-    if (this.state.phase !== "pending") return;
-    const s = this.state;
-    this.state = {
+    // Transition to dragging
+    const dragging: Dragging = {
       phase: "dragging",
-      clipId: s.clipId,
-      originTrackId: s.originTrackId,
-      originStartQN: s.originStartQN,
-      clipSizeQN: s.clipSizeQN,
-      payloadKind: s.payloadKind,
-      color: s.color,
-      clipWidth: s.clipWidth,
-      clipHeight: s.clipHeight,
-      grabOffsetQN: s.grabOffsetQN,
-      grabOffsetY: s.grabOffsetY,
-      ghostStartQN: s.originStartQN,
-      ghostTrackId: s.originTrackId,
+      clipId: state.clipId,
+      originTrackId: state.originTrackId,
+      originSpan: state.originSpan,
+      payloadKind: state.payloadKind,
+      color: state.color,
+      width: state.width,
+      height: state.height,
+      grabOffsetQN: state.grabOffsetQN,
+      grabOffsetY: state.grabOffsetY,
+      ghostStartQN: state.originSpan.start,
+      ghostTrackId: state.originTrackId,
       isValid: true,
       isOOB: false,
     };
-    this.#startEdgeScroll();
+    const ghostResult = updateGhost(dragging, input.clientX, input.clientY, ctx);
+    return {
+      state: ghostResult.state,
+      effects: [
+        { type: "set-cursor", cursor: "grabbing" },
+        { type: "start-edge-scroll" },
+        { type: "request-update" },
+      ],
+    };
   }
 
-  #updateGhost(clientX: number, clientY: number) {
-    if (this.state.phase !== "dragging") return;
-    const s = this.state;
+  if (state.phase === "dragging") {
+    const ghostResult = updateGhost(state, input.clientX, input.clientY, ctx);
+    return {
+      state: ghostResult.state,
+      effects: [...ghostResult.effects, { type: "request-update" }],
+    };
+  }
 
-    const containerRect = this.projection.getContainerRect();
-    const verticalRect = this.#verticalContainer?.getBoundingClientRect();
-    if (!containerRect || !verticalRect) return;
+  return { state, effects: [] };
+}
 
-    // Check out-of-bounds (pointer left the timeline viewport entirely)
-    const oob = isOutOfBounds(clientX, clientY, verticalRect);
-    if (oob) {
-      this.state = { ...s, isOOB: true };
-      this.#forceCursor("not-allowed");
-      return;
-    }
+function handlePointerUp(state: DragState): TransitionResult {
+  if (state.phase === "dragging" && state.isValid && !state.isOOB) {
+    return {
+      state: idle,
+      effects: [
+        {
+          type: "commit",
+          clipId: state.clipId,
+          start: state.ghostStartQN,
+          trackId: state.ghostTrackId,
+        },
+        { type: "stop-edge-scroll" },
+        { type: "clear-cursor" },
+        { type: "request-update" },
+      ],
+    };
+  }
+  return cancel(state);
+}
 
-    // Compute snapped QN position (viewport-relative — origin accounts for scroll)
-    const pointerScreenX = Px.Px(clientX - containerRect.left);
-    const pointerQN = this.projection.screenToContentX(pointerScreenX);
-    const rawStartQN = QN.subtract(pointerQN, s.grabOffsetQN);
-    const snappedStartQN = snapToGrid(rawStartQN, this.projection.scale, this.timeSignature);
+function handleEscape(state: DragState): TransitionResult {
+  if (state.phase !== "idle") return cancel(state);
+  return { state, effects: [] };
+}
 
-    // Hit-test track
-    const vertScrollTop = this.#verticalContainer?.scrollTop ?? 0;
-    const pointerTrackY = clientY - verticalRect.top + vertScrollTop;
-    const targetTrackId = hitTestTrack(pointerTrackY, this.trackLayouts, this.trackOrder);
-    const ghostTrackId = targetTrackId ?? s.ghostTrackId;
+function handleEdgeScrollTick(
+  state: DragState,
+  input: { dx: number; dy: number },
+  ctx: TransitionContext,
+): TransitionResult {
+  if (state.phase !== "dragging") return { state, effects: [] };
 
-    // Check compatibility
-    const targetTrack = this.trackById.get(ghostTrackId);
-    const isValid = targetTrack ? isCompatibleDrop(s.payloadKind, targetTrack.type) : false;
+  const effects: DragEffect[] = [];
+  let needsGhostUpdate = false;
 
-    this.state = {
-      ...s,
+  if (Math.abs(input.dx) > 0.01) {
+    const deltaQN = QN.QN(input.dx / ctx.scale);
+    effects.push({ type: "pan-timeline", deltaQN });
+    needsGhostUpdate = true;
+  }
+
+  if (Math.abs(input.dy) > 0.01) {
+    effects.push({ type: "scroll-vertical", dy: input.dy });
+    needsGhostUpdate = true;
+  }
+
+  if (!needsGhostUpdate) return { state, effects };
+
+  // Ghost update must be deferred — the pan/scroll effects change the context
+  // that updateGhost reads. The driver applies effects first, then feeds a
+  // follow-up pointer-move with the last pointer position.
+  effects.push({ type: "request-update" });
+  return { state, effects };
+}
+
+// ---------------------------------------------------------------------------
+// Ghost computation (pure)
+// ---------------------------------------------------------------------------
+
+function updateGhost(
+  state: Dragging,
+  clientX: number,
+  clientY: number,
+  ctx: TransitionContext,
+): { state: DragState; effects: DragEffect[] } {
+  // Check out-of-bounds
+  if (isOutOfBounds(clientX, clientY, ctx.verticalRect)) {
+    return {
+      state: { ...state, isOOB: true },
+      effects: [{ type: "set-cursor", cursor: "not-allowed" }],
+    };
+  }
+
+  // Compute snapped QN position
+  const pointerScreenX = Px.Px(clientX - ctx.containerRect.left);
+  const pointerQN = ctx.screenToContentX(pointerScreenX);
+  const rawStartQN = QN.subtract(pointerQN, state.grabOffsetQN);
+  const snappedStartQN = snapToGrid(rawStartQN, ctx.scale, ctx.timeSignature);
+
+  // Hit-test track
+  const pointerTrackY = Px.Px(clientY - ctx.verticalRect.top + ctx.verticalScrollTop);
+  const targetTrackId = hitTestTrack(pointerTrackY, ctx.trackLayouts, ctx.trackOrder);
+  const ghostTrackId = Option.getOrElse(targetTrackId, () => state.ghostTrackId);
+
+  // Check compatibility
+  const targetTrack = ctx.trackById.get(ghostTrackId);
+  const valid = targetTrack ? isCompatibleDrop(state.payloadKind, targetTrack.type) : false;
+
+  return {
+    state: {
+      ...state,
       ghostStartQN: snappedStartQN,
       ghostTrackId,
-      isValid,
+      isValid: valid,
       isOOB: false,
-    };
+    },
+    effects: [{ type: "set-cursor", cursor: valid ? "grabbing" : "not-allowed" }],
+  };
+}
 
-    this.#forceCursor(isValid ? "grabbing" : "not-allowed");
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function cancel(state: DragState): TransitionResult {
+  const effects: DragEffect[] = [{ type: "clear-cursor" }, { type: "request-update" }];
+  if (state.phase === "dragging") {
+    effects.unshift({ type: "stop-edge-scroll" });
   }
+  return { state: idle, effects };
+}
 
-  // ------- Edge scroll -------
-  #startEdgeScroll() {
-    const tick = () => {
-      if (this.state.phase !== "dragging") return;
-
-      const containerRect = this.projection.getContainerRect();
-      const verticalRect = this.#verticalContainer?.getBoundingClientRect();
-      if (!containerRect || !verticalRect) {
-        this.#edgeScrollRaf = requestAnimationFrame(tick);
-        return;
-      }
-
-      const { dx, dy } = computeEdgeDeltas(
-        this.#lastPointerClientX,
-        this.#lastPointerClientY,
-        containerRect,
-        verticalRect,
-      );
-
-      let needsUpdate = false;
-
-      if (Math.abs(dx) > 0.01) {
-        // Convert px delta to QN and pan the timeline
-        const deltaQN = QN.QN(dx / this.projection.scale);
-        const nextTimeline = Timeline.panBy(QN.Numeric, this.rootCtx.timeline, deltaQN);
-        this.rootCtx.setTimeline(nextTimeline);
-        // Sync projection immediately so #updateGhost uses the new origin
-        this.projection.setTimeline(nextTimeline);
-        needsUpdate = true;
-      }
-
-      if (Math.abs(dy) > 0.01 && this.#verticalContainer) {
-        this.#verticalContainer.scrollTop += dy;
-        needsUpdate = true;
-      }
-
-      // Recompute ghost after scroll shift
-      if (needsUpdate) {
-        this.#updateGhost(this.#lastPointerClientX, this.#lastPointerClientY);
-        this.onUpdate();
-      }
-
-      this.#edgeScrollRaf = requestAnimationFrame(tick);
-    };
-
-    this.#edgeScrollRaf = requestAnimationFrame(tick);
-  }
-
-  #stopEdgeScroll() {
-    cancelAnimationFrame(this.#edgeScrollRaf);
-    this.#edgeScrollRaf = 0;
-  }
-
-  #forceCursor(cursor: string) {
-    if (!this.#cursorStyle) {
-      this.#cursorStyle = document.createElement("style");
-      document.head.appendChild(this.#cursorStyle);
-    }
-    this.#cursorStyle.textContent = `* { cursor: ${cursor} !important; }`;
-  }
-
-  #clearCursor() {
-    this.#cursorStyle?.remove();
-    this.#cursorStyle = null;
-  }
-
-  #cancel() {
-    this.#stopEdgeScroll();
-    this.state = { phase: "idle" };
-    this.#clearCursor();
-    this.onUpdate();
-  }
+function isOutOfBounds(clientX: number, clientY: number, rect: DOMRect): boolean {
+  return clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom;
 }
