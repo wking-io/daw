@@ -1,4 +1,4 @@
-import { clamp } from "@daw/core/lib/math";
+import * as N from "@daw/core/lib/numeric";
 
 export function getPointerPosition(
   e: PointerEvent,
@@ -8,7 +8,7 @@ export function getPointerPosition(
   // Use getBoundingClientRect() for viewport-relative coordinates
   // (ResizeObserver's contentRect.left/top are element-relative, always ~0)
   const rect = element.getBoundingClientRect();
-  const x = clamp(e.clientX - rect.left, 0, rect.width);
-  const y = clamp(e.clientY - rect.top, 0, rect.height);
+  const x = N.clamp(e.clientX - rect.left, 0, rect.width);
+  const y = N.clamp(e.clientY - rect.top, 0, rect.height);
   return { x, y };
 }

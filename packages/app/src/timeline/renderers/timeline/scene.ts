@@ -1,5 +1,6 @@
 import type { Clip } from "@daw/core/domain/clip";
 import * as SI from "@daw/core/lib/spatial-index";
+import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import { computeBarSize, computeBeatSize, computeRulerTicks, Tier } from "@daw/core/lib/ruler";
@@ -52,18 +53,18 @@ function clipToLayout(
   trackColor: TrackColor,
   verticalPadding: number,
 ): ClipLayout {
-  const clipEnd = Span.end(QN.Numeric, clip.span);
+  const clipEnd = Span.end(clip.span);
   const left = projection.contentToScreenX(clip.span.start);
   const right = projection.contentToScreenX(clipEnd);
-  const width = Px.max(Px.Px(1), Px.subtract(right, left));
-  const top = Px.add(trackLayout.y, Px.Px(verticalPadding));
+  const width = N.max(Px.Px(1), N.subtract(right, left));
+  const top = N.add(trackLayout.y, Px.Px(verticalPadding));
   const height = trackLayout.compact
     ? trackLayout.titleBarHeight
-    : Px.max(Px.Px(1), Px.subtract(trackLayout.height, Px.Px(verticalPadding * 2)));
+    : N.max(Px.Px(1), N.subtract(trackLayout.height, Px.Px(verticalPadding * 2)));
 
   return {
     clip,
-    title: resolveClipTitle(clip, data.view),
+    title: resolveClipTitle(clip.payload, data.view),
     x: left,
     y: top,
     width,
@@ -87,16 +88,16 @@ function clipToUniformLayout(
   trackColor: TrackColor,
   verticalPadding: number,
 ): ClipLayout {
-  const clipEnd = Span.end(QN.Numeric, clip.span);
+  const clipEnd = Span.end(clip.span);
   const left = projection.contentToScreenX(clip.span.start);
   const right = projection.contentToScreenX(clipEnd);
-  const width = Px.max(Px.Px(1), Px.subtract(right, left));
-  const top = Px.add(Px.multiply(trackHeight, trackRow), Px.Px(verticalPadding));
-  const height = Px.max(Px.Px(1), Px.subtract(trackHeight, Px.Px(verticalPadding * 2)));
+  const width = N.max(Px.Px(1), N.subtract(right, left));
+  const top = N.add(N.multiply(trackHeight, trackRow), Px.Px(verticalPadding));
+  const height = N.max(Px.Px(1), N.subtract(trackHeight, Px.Px(verticalPadding * 2)));
 
   return {
     clip,
-    title: resolveClipTitle(clip, data.view),
+    title: resolveClipTitle(clip.payload, data.view),
     x: left,
     y: top,
     width,
@@ -261,7 +262,7 @@ function buildMainCanvasNodes({
     if (!trackId) continue;
     const layout = trackLayouts.get(trackId);
     if (!layout) continue;
-    const y = Px.Px(Number(Px.add(layout.y, layout.height)));
+    const y = Px.Px(Number(N.add(layout.y, layout.height)));
     nodes.push({
       kind: "line",
       points: [point(Px.Px(0), y), point(projection.containerWidth, y)],
@@ -295,7 +296,7 @@ function buildNavigatorCanvasNodes({
   if (showSeparators) {
     const borderStroke = stroke(env.theme.gridLinePrimary, 1);
     for (let i = 1; i < trackCount; i++) {
-      const y = Px.Px(Number(Px.multiply(trackHeight, i)) + 0.5); // +0.5 for crisp 1px line
+      const y = N.add(N.multiply(trackHeight, i), Px.Px(0.5));
       nodes.push({
         kind: "line",
         points: [point(Px.Px(0), y), point(projection.containerWidth, y)],
@@ -307,7 +308,7 @@ function buildNavigatorCanvasNodes({
   // Simple clip rectangles using track colors
   // Height is 1px less if showing separators to avoid overlap
   for (const layout of clipLayouts) {
-    const clipHeight = showSeparators ? Px.subtract(layout.height, Px.Px(1)) : layout.height;
+    const clipHeight = showSeparators ? N.subtract(layout.height, Px.Px(1)) : layout.height;
     nodes.push({
       kind: "rect",
       rect: rect(layout.x, layout.y, layout.width, clipHeight),
@@ -361,8 +362,8 @@ function buildDomNodes({
         {
           kind: "text",
           position: point(
-            Px.Px(8), // padding-left
-            Px.Px(Number(layout.titleBarHeight) / 2), // vertically centered in title bar
+            Px.Px(8),
+            N.divide(layout.titleBarHeight, 2),
           ),
           text: layout.title,
           style: {

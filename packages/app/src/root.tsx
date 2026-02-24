@@ -29,7 +29,7 @@ import * as ProjectView from "@daw/core/domain/project-view";
 import * as Clip from "@daw/core/domain/clip";
 import * as SI from "@daw/core/lib/spatial-index";
 import * as Span from "@daw/core/lib/span";
-import * as QN from "@daw/core/lib/qn";
+import * as N from "@daw/core/lib/numeric";
 import type { UIAction, UIState, TimelineData } from "./timeline/renderers/timeline/types";
 
 type Theme = "light" | "dark";
@@ -124,8 +124,8 @@ function MainApp(handle: Handle) {
         if (!clip || !targetTrack) break;
 
         // Resolve overlaps on the target track
-        const delta = QN.subtract(action.newStart, clip.span.start);
-        const movedSpan = Span.move(QN.Numeric, clip.span, delta);
+        const delta = N.subtract(action.newStart, clip.span.start);
+        const movedSpan = Span.move(clip.span, delta);
         const overlappingIds = SI.query(demoView.clipIndex, action.newTrackId, movedSpan);
         for (const id of overlappingIds) {
           if (id === action.clipId) continue;
@@ -142,6 +142,30 @@ function MainApp(handle: Handle) {
           clipId: clip.id,
           start: action.newStart,
           ...(targetTrack.id !== clip.trackId && { trackId: targetTrack.id }),
+        });
+
+        handle.update();
+        break;
+      }
+      case "commit-clip-resize": {
+        const clip = demoView.clipById.get(action.clipId);
+        if (!clip) break;
+
+        // Resolve overlaps on the same track
+        const overlappingIds = SI.query(demoView.clipIndex, clip.trackId, action.span);
+        for (const id of overlappingIds) {
+          if (id === action.clipId) continue;
+          const existing = demoView.clipById.get(id);
+          if (!existing) continue;
+          for (const event of Clip.resolveOverlap(existing, action.span)) {
+            ProjectView.applyEvent(demoView, event);
+          }
+        }
+
+        ProjectView.applyEvent(demoView, {
+          t: "clip.resized",
+          clipId: clip.id,
+          span: action.span,
         });
 
         handle.update();

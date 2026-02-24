@@ -14,6 +14,7 @@ import {
   TrackId,
 } from "../../ids";
 import * as QN from "../../lib/qn";
+import * as Sec from "../../lib/sec";
 import { ProjectVersion } from "../../versions";
 import {
   type AudioFile,
@@ -66,7 +67,8 @@ const createClip = (id: string, trackId: string): Clip => ({
   span: { start: QN.QN(0), size: QN.QN(4) },
   loop: { enabled: false, length: QN.QN(4) },
   sortOrder: 0,
-  payload: { kind: "midi", patternId: PatternId.make("pattern-1") },
+  offset: QN.zero,
+  payload: { kind: "midi", patternId: PatternId.make("pattern-1"), length: QN.QN(4) },
 });
 
 const createMidiPattern = (id: string, notes: readonly MidiNote[] = []): MidiPattern => ({
@@ -97,7 +99,7 @@ const createAutomationLane = (
 
 const createAutomationPoint = (id: string): AutomationPoint => ({
   id: AutomationPointId.make(id),
-  timeQN: QN.QN(0),
+  time: QN.QN(0),
   value: 0.5,
   curve: "linear",
 });
@@ -108,7 +110,7 @@ const createAudioFile = (id: string): AudioFile => ({
   name: "audio.wav",
   originalPath: "/path/to/audio.wav",
   storedPath: "/stored/audio.wav",
-  durationSec: 10,
+  duration: Sec.Sec(10),
   sampleRate: 44100,
   channels: 2,
 });
@@ -709,7 +711,7 @@ describe("Project.evolve", () => {
       const lane = first(result.automationLanes);
       const point = first(lane.points);
 
-      expect(point.timeQN).toBe(QN.QN(4));
+      expect(point.time).toBe(QN.QN(4));
       expect(point.value).toBe(0.8);
     });
 
@@ -731,7 +733,7 @@ describe("Project.evolve", () => {
       const lane = first(result.automationLanes);
       const point = first(lane.points);
 
-      expect(point.timeQN).toBe(QN.QN(4));
+      expect(point.time).toBe(QN.QN(4));
       expect(point.value).toBe(0.5);
     });
 
@@ -1147,7 +1149,7 @@ describe("Project.decide", () => {
       const command: EditorCommandPayload = {
         t: "clip.move",
         clipId: ClipId.make("clip-1"),
-        startQN: QN.QN(8),
+        start: QN.QN(8),
       };
 
       const events = decide(project, command);
@@ -1395,7 +1397,7 @@ describe("Project.decide", () => {
         t: "automation.addPoint",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: Ids.generate("AutomationPointId"),
-        timeQN: QN.QN(4),
+        time: QN.QN(4),
         value: 0.8,
         curve: "expo",
       };
@@ -1406,7 +1408,7 @@ describe("Project.decide", () => {
       const event0 = first(events);
       expect(event0.t).toBe("automation.pointAdded");
       if (event0.t === "automation.pointAdded") {
-        expect(event0.point.timeQN).toBe(QN.QN(4));
+        expect(event0.point.time).toBe(QN.QN(4));
         expect(event0.point.value).toBe(0.8);
         expect(event0.point.curve).toBe("expo");
       }
@@ -1446,7 +1448,7 @@ describe("Project.decide", () => {
         t: "automation.movePoint",
         laneId: AutomationLaneId.make("lane-1"),
         pointId: AutomationPointId.make("point-1"),
-        timeQN: QN.QN(4),
+        time: QN.QN(4),
         value: 0.8,
       };
 

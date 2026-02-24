@@ -109,10 +109,11 @@ function createClip(
       id: id as any,
       projectId: PROJECT_ID,
       trackId: trackId as any,
-      span: Span.make(QN.Numeric, start, end - start),
+      span: Span.make(QN.QN(start), QN.QN(end - start)),
       loop: { enabled: false, length: QN.QN(end - start) },
       sortOrder: 0,
-      payload: { kind: "midi", patternId },
+      offset: QN.zero,
+      payload: { kind: "midi", patternId, length: QN.QN(end - start) },
     },
     pattern: {
       id: patternId,
@@ -235,7 +236,8 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
 
         // Each track is 110px (22 + 4*22)
-        // Clips with 1px vertical padding at: y = 1, 111, 221, 331
+        // Track list starts at y=1 (TRACK_LIST_VERTICAL_PADDING)
+        // Clips have 1px vertical padding (CLIP_VERTICAL_PADDING)
         const clipGroups = scene.dom.filter((n) => n.kind === "group");
         expect(clipGroups.length).toBe(4);
 
@@ -244,10 +246,10 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           return null;
         });
 
-        expect(yPositions).toContain(1); // track 0: 0 + 1
-        expect(yPositions).toContain(111); // track 1: 110 + 1
-        expect(yPositions).toContain(221); // track 2: 220 + 1
-        expect(yPositions).toContain(331); // track 3: 330 + 1
+        expect(yPositions).toContain(2); // track 0: 1 + 1
+        expect(yPositions).toContain(112); // track 1: 111 + 1
+        expect(yPositions).toContain(222); // track 2: 221 + 1
+        expect(yPositions).toContain(332); // track 3: 331 + 1
 
         // Children should be at 0,0 relative to group
         for (const g of clipGroups) {
@@ -287,9 +289,10 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           return null;
         });
 
-        // Compact track: 24px (22 + 1*2 padding), clip at y=1 with height 22
-        expect(yPositions).toContain(1); // track 0 (compact): 0 + 1
-        expect(yPositions).toContain(25); // track 1: 24 + 1
+        // Track list starts at y=1 (TRACK_LIST_VERTICAL_PADDING)
+        // Compact track: 24px (22 + 1*2 padding), clip at y=2 with height 22
+        expect(yPositions).toContain(2); // track 0 (compact): 1 + 1
+        expect(yPositions).toContain(26); // track 1: 25 + 1
 
         // Verify compact track clip height
         const compactClip = clipGroups[0];
@@ -335,12 +338,13 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
           return null;
         });
 
-        // Track 1: 22 + 2*22 = 66px, clip at y=1
-        // Track 2: compact = 24px (22 + 1*2), clip at y=66+1=67
-        // Track 3: 22 + 6*22 = 154px, clip at y=66+24+1=91
-        expect(yPositions).toContain(1); // track 0: 0 + 1
-        expect(yPositions).toContain(67); // track 1: 66 + 1
-        expect(yPositions).toContain(91); // track 2: 90 + 1
+        // Track list starts at y=1 (TRACK_LIST_VERTICAL_PADDING)
+        // Track 0: 22 + 2*22 = 66px, clip at y=1+1=2
+        // Track 1: compact = 24px (22 + 1*2), clip at y=1+66+1=68
+        // Track 2: 22 + 6*22 = 154px, clip at y=1+66+24+1=92
+        expect(yPositions).toContain(2); // track 0: 1 + 1
+        expect(yPositions).toContain(68); // track 1: 67 + 1
+        expect(yPositions).toContain(92); // track 2: 91 + 1
       });
     });
 
@@ -413,20 +417,21 @@ describe("timeline/renderers/daw-skeleton/scene", () => {
         });
 
         // Track height = 110px (22 + 4*22)
+        // Track list starts at y=1 (TRACK_LIST_VERTICAL_PADDING)
         // Clip padding = 1px vertical
         const clipGroups = scene.dom.filter((n) => n.kind === "group");
         expect(clipGroups.length).toBe(2);
 
-        // First clip (track 0): y = 0 + 1 = 1
+        // First clip (track 0): y = 1 + 1 = 2
         const clip1 = clipGroups[0];
         if (clip1?.kind === "group" && clip1.clip) {
-          expect(clip1.clip.y).toBe(1);
+          expect(clip1.clip.y).toBe(2);
         }
 
-        // Second clip (track 1): y = 110 + 1 = 111
+        // Second clip (track 1): y = 111 + 1 = 112
         const clip2 = clipGroups[1];
         if (clip2?.kind === "group" && clip2.clip) {
-          expect(clip2.clip.y).toBe(111);
+          expect(clip2.clip.y).toBe(112);
         }
       });
 

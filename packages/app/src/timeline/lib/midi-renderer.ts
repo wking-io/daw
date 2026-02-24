@@ -1,14 +1,15 @@
 import type { MidiNote } from "@daw/core/domain/midi";
+import type { ClipProjection } from "@daw/core/lib/clip-projection";
+import * as Projection from "@daw/core/lib/projection";
 
 export function drawMidiNotes(
   ctx: CanvasRenderingContext2D,
   notes: readonly MidiNote[],
-  clipSizeQN: number,
-  clipWidth: number,
+  clipSize: number,
   canvasH: number,
   color: string,
-  visibleLeft: number,
-  visibleWidth: number,
+  projection: ClipProjection,
+  offset = 0,
 ): void {
   if (notes.length === 0) return;
 
@@ -45,19 +46,19 @@ export function drawMidiNotes(
   ctx.fillStyle = color;
 
   const noteH = Math.max(1, canvasH / pitchRange);
-  const visibleRight = visibleLeft + visibleWidth;
+  const scale = Projection.scaleFor(clipSize, projection.clipWidth);
 
   for (const note of notes) {
-    const start = note.span.start as number;
+    const start = (note.span.start as number) - offset;
     const size = note.span.size as number;
 
-    const clipX = (start / clipSizeQN) * clipWidth;
-    const w = Math.max(1, (size / clipSizeQN) * clipWidth);
+    const clipX = start * scale;
+    const w = Math.max(1, size * scale);
 
     // Skip notes entirely outside the visible window
-    if (clipX + w < visibleLeft || clipX > visibleRight) continue;
+    if (clipX + w < projection.visibleLeft || clipX > projection.visibleRight) continue;
 
-    const x = clipX - visibleLeft;
+    const x = clipX - projection.visibleLeft;
     const y = ((pitchMax - note.pitch) / pitchRange) * canvasH;
 
     ctx.fillRect(x, y, w, noteH);

@@ -1,13 +1,13 @@
+import type { ClipProjection } from "@daw/core/lib/clip-projection";
+import * as Projection from "@daw/core/lib/projection";
 import { PEAKS_PER_BIN } from "./bin";
 
 export function drawWaveform(
   ctx: CanvasRenderingContext2D,
   bins: Uint8Array[],
-  clipWidth: number,
   canvasH: number,
   color: string,
-  visibleLeft: number,
-  visibleWidth: number,
+  projection: ClipProjection,
 ): void {
   if (bins.length === 0) return;
 
@@ -19,31 +19,31 @@ export function drawWaveform(
   const centerY = canvasH / 2;
   ctx.fillStyle = color;
 
-  if (totalPeaks <= clipWidth) {
+  const scale = Projection.scaleFor(totalPeaks, projection.clipWidth);
+
+  if (totalPeaks <= projection.clipWidth) {
     // Fewer peaks than clip pixels: spread across clip width
-    const pxPerPeak = clipWidth / totalPeaks;
     let peakIdx = 0;
-    const visibleRight = visibleLeft + visibleWidth;
     for (const bin of bins) {
       for (let i = 0; i < bin.length; i++) {
-        const clipX = peakIdx * pxPerPeak;
-        const clipXEnd = clipX + Math.max(1, pxPerPeak);
+        const clipX = peakIdx * scale;
+        const clipXEnd = clipX + Math.max(1, scale);
         peakIdx++;
 
         // Skip peaks entirely outside the visible window
-        if (clipXEnd < visibleLeft || clipX > visibleRight) continue;
+        if (clipXEnd < projection.visibleLeft || clipX > projection.visibleRight) continue;
 
         const magnitude = (bin[i]! / 255) * centerY;
-        const x = clipX - visibleLeft;
-        ctx.fillRect(x, centerY - magnitude, Math.max(1, pxPerPeak), magnitude * 2);
+        const x = clipX - projection.visibleLeft;
+        ctx.fillRect(x, centerY - magnitude, Math.max(1, scale), magnitude * 2);
       }
     }
   } else {
     // More peaks than clip pixels: downsample (take max per pixel column)
     // Only iterate over the visible pixel columns
-    const peaksPerPixel = totalPeaks / clipWidth;
-    const startPx = Math.max(0, Math.floor(visibleLeft));
-    const endPx = Math.min(Math.ceil(clipWidth), Math.ceil(visibleLeft + visibleWidth));
+    const peaksPerPixel = 1 / scale;
+    const startPx = Math.max(0, Math.floor(projection.visibleLeft));
+    const endPx = Math.min(Math.ceil(projection.clipWidth), Math.ceil(projection.visibleRight));
 
     for (let clipPx = startPx; clipPx < endPx; clipPx++) {
       const peakStart = Math.floor(clipPx * peaksPerPixel);
@@ -61,7 +61,7 @@ export function drawWaveform(
       }
 
       const magnitude = (max / 255) * centerY;
-      const x = clipPx - visibleLeft;
+      const x = clipPx - projection.visibleLeft;
       ctx.fillRect(x, centerY - magnitude, 1, magnitude * 2);
     }
   }

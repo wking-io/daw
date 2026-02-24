@@ -1,5 +1,6 @@
 import type { Handle, Props } from "@remix-run/component";
 import * as Projection from "@daw/core/lib/projection";
+import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Scroll from "@daw/core/lib/scroll";
@@ -13,7 +14,7 @@ import { zoomFactorFromDelta } from "../utils/interaction-math";
 const timelineRules: ProjectionRules = {
   scale: (ctx) => {
     if (ctx.containerWidth === 0) return 1;
-    return Projection.scaleFor(QN.Numeric, ctx.timeline.view.size, ctx.containerWidth);
+    return Projection.scaleFor(ctx.timeline.view.size, ctx.containerWidth);
   },
   origin: (ctx) => ctx.timeline.view.start,
 };
@@ -21,7 +22,10 @@ const timelineRules: ProjectionRules = {
 export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
 
-  const projectionCtx: ProjectionContext = new ProjectionContext(() => rootCtx.timeline, timelineRules);
+  const projectionCtx: ProjectionContext = new ProjectionContext(
+    () => rootCtx.timeline,
+    timelineRules,
+  );
   handle.context.set(projectionCtx);
 
   // TODO: Make this more robust
@@ -60,7 +64,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
       }, 120);
 
       const factor = zoomFactorFromDelta(e.deltaY, rootCtx.timeline.view.size);
-      const nextTimeline = Timeline.zoomAt(QN.Numeric, rootCtx.timeline, factor, zoomAnchor);
+      const nextTimeline = Timeline.zoomAt(rootCtx.timeline, factor, zoomAnchor);
       rootCtx.setTimeline(nextTimeline);
     } else if (e.shiftKey) {
       // Shift+wheel → horizontal scroll only
@@ -92,16 +96,14 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
       return;
     }
 
-    const nextStart = Scroll.fromScroll(
-      QN.Numeric,
+    const nextStart = Scroll.fromScroll<QN.QN, Px.Px>(
       Px.Px(e.currentTarget.scrollLeft),
       projectionCtx.scale,
     );
 
     const nextTimeline = Timeline.panBy(
-      QN.Numeric,
       rootCtx.timeline,
-      QN.subtract(nextStart, rootCtx.timeline.view.start),
+      N.subtract(nextStart, rootCtx.timeline.view.start),
     );
 
     rootCtx.setTimeline(nextTimeline);
@@ -114,8 +116,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
     handle.queueTask(() => {
       if (!containerNode || rootCtx.isInteracting) return;
 
-      const nextScrollLeft = Scroll.toScroll(
-        QN.Numeric,
+      const nextScrollLeft = Scroll.toScroll<QN.QN, Px.Px>(
         rootCtx.timeline.view.start,
         projectionCtx.scale,
       );

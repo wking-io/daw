@@ -12,16 +12,14 @@ const DEFAULT_HEIGHT = 22;
 const navigatorRules: ProjectionRules = {
   scale: (ctx) => {
     if (ctx.containerWidth === 0) return 1;
-    return Projection.scaleFor(QN.Numeric, ctx.timeline.size, ctx.containerWidth);
+    return Projection.scaleFor(ctx.timeline.size, ctx.containerWidth);
   },
-  origin: () => QN.Numeric.zero,
+  origin: () => QN.zero,
 };
 
 class NavigatorContext extends ProjectionContext {
   get zoomWindow(): Span.Span<Px.Px> {
-    return Span.map(this.view, (v) =>
-      Projection.toScreen(QN.Numeric, QN.Numeric.zero, v, this.scale),
-    );
+    return Span.map(this.view, (v) => Projection.to(QN.zero, v, this.scale));
   }
 }
 

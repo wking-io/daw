@@ -12,7 +12,8 @@ describe("Clip schema", () => {
     span: { start: 0 as QN, size: 4 as QN },
     loop: { enabled: false, length: 4 as QN },
     sortOrder: 0,
-    payload: { kind: "midi" as const, patternId: "pattern-1" as PatternId },
+    payload: { kind: "midi" as const, patternId: "pattern-1" as PatternId, length: 4 as QN },
+    offset: 0 as QN,
   };
 
   it("decodes valid midi clip", () => {
@@ -30,7 +31,8 @@ describe("Clip schema", () => {
       payload: {
         kind: "audio" as const,
         audioFileId: "audio-1" as AudioFileId,
-        offsetSec: 0,
+        offset: 0,
+        length: 4 as QN,
       },
     };
     const decoded = Schema.decodeUnknownSync(Clip)(audioClip);

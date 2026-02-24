@@ -21,7 +21,7 @@ export const AutomationAddPoint = Schema.Struct({
   t: Schema.Literal("automation.addPoint"),
   pointId: AutomationPointId,
   laneId: AutomationLaneId,
-  timeQN: QN.Schema,
+  time: QN.Schema,
   value: Schema.Number,
   curve: Schema.optional(AutomationCurve),
 });
@@ -38,7 +38,7 @@ export const AutomationMovePoint = Schema.Struct({
   t: Schema.Literal("automation.movePoint"),
   laneId: AutomationLaneId,
   pointId: AutomationPointId,
-  timeQN: Schema.optional(QN.Schema),
+  time: Schema.optional(QN.Schema),
   value: Schema.optional(Schema.Number),
 });
 export type AutomationMovePoint = Schema.Schema.Type<typeof AutomationMovePoint>;

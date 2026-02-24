@@ -69,14 +69,14 @@ export class ProjectionContext extends TypedEventTarget<{ change: Event }> {
   }
 
   get contentWidth() {
-    return Scroll.width(QN.Numeric, this.#getTimeline().size, this.scale);
+    return Scroll.width(this.#getTimeline().size, this.scale);
   }
 
   contentToScreenX(x: QN.QN): Px.Px {
-    return Projection.toScreen(QN.Numeric, this.#rules.origin(this), x, this.scale);
+    return Projection.to(this.#rules.origin(this), x, this.scale);
   }
 
   screenToContentX(x: Px.Px): QN.QN {
-    return Projection.fromScreen(QN.Numeric, this.#rules.origin(this), x, this.scale);
+    return Projection.from(this.#rules.origin(this), x, this.scale);
   }
 }

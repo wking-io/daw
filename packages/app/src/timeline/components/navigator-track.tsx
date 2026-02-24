@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from "@remix-run/component";
 import { cn } from "@daw/utils";
 
+import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Span from "@daw/core/lib/span";
@@ -28,10 +29,9 @@ export function NavigatorTrack(handle: Handle) {
     e.preventDefault();
     const factor = zoomFactorFromDelta(-e.deltaY, rootCtx.timeline.view.size);
     const nextTimeline = Timeline.zoomAt(
-      QN.Numeric,
       rootCtx.timeline,
       factor,
-      Span.center(QN.Numeric, rootCtx.timeline.view),
+      Span.center(rootCtx.timeline.view),
     );
     rootCtx.setTimeline(nextTimeline);
   }
@@ -44,14 +44,14 @@ export function NavigatorTrack(handle: Handle) {
     el.setPointerCapture(e.pointerId);
     const pointer = navCtx.getPointerPosition(e);
 
-    const offset = QN.divide(rootCtx.timeline.view.size, 2);
-    const delta = deltaFrom(QN.Numeric, {
+    const offset = N.divide(rootCtx.timeline.view.size, 2);
+    const delta = deltaFrom({
       x: Px.Px(pointer.x),
       scale: navCtx.scale,
       offset,
       from: rootCtx.timeline.view.start,
     });
-    const nextTimeline = Timeline.panBy(QN.Numeric, rootCtx.timeline, delta);
+    const nextTimeline = Timeline.panBy(rootCtx.timeline, delta);
     rootCtx.setTimeline(nextTimeline);
     rootCtx.setIsInteracting(true);
     interaction = {
@@ -73,13 +73,13 @@ export function NavigatorTrack(handle: Handle) {
 
     el.setPointerCapture(e.pointerId);
     const pointer = navCtx.getPointerPosition(e);
-    const delta = deltaFrom(QN.Numeric, {
+    const delta = deltaFrom({
       scale: navCtx.scale,
       x: Px.Px(pointer.x),
       offset: interaction.offset,
       from: rootCtx.timeline.view.start,
     });
-    const nextTimeline = Timeline.panBy(QN.Numeric, rootCtx.timeline, delta);
+    const nextTimeline = Timeline.panBy(rootCtx.timeline, delta);
     rootCtx.setTimeline(nextTimeline);
   }
 

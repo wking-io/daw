@@ -1,6 +1,8 @@
 import { decodeAudio } from "./decode";
 import { binPeaks, synthesizeBins, BIN_DURATION_SEC } from "./bin";
 import { PeakStore } from "./store";
+import * as Sec from "@daw/core/lib/sec";
+import * as N from "@daw/core/lib/numeric";
 
 export class PeakCache extends EventTarget {
   private store = new PeakStore();
@@ -8,12 +10,12 @@ export class PeakCache extends EventTarget {
   private pending = new Set<string>();
 
   /** Get peaks for a time range. Returns null if not yet loaded (triggers async load). */
-  getPeaks(audioFileId: string, startSec: number, endSec: number): Uint8Array[] | null {
+  getPeaks(audioFileId: string, start: Sec.Sec, end: Sec.Sec): Uint8Array[] | null {
     const bins = this.memory.get(audioFileId);
     if (!bins) return null;
 
-    const startBin = Math.floor(startSec / BIN_DURATION_SEC);
-    const endBin = Math.min(Math.ceil(endSec / BIN_DURATION_SEC), bins.length);
+    const startBin = N.floor(N.divide(start, BIN_DURATION_SEC));
+    const endBin = Math.min(N.ceil(N.divide(end, BIN_DURATION_SEC)), bins.length);
 
     return bins.slice(startBin, endBin);
   }
@@ -42,9 +44,10 @@ export class PeakCache extends EventTarget {
   }
 
   /** Generate synthetic peaks for an audio file (used when source is unavailable). */
-  prepareSynthetic(audioFileId: string, durationSec: number): void {
-    if (this.memory.has(audioFileId)) return;
-    this.memory.set(audioFileId, synthesizeBins(audioFileId, durationSec));
+  prepareSynthetic(audioFileId: string, duration: Sec.Sec): void {
+    const existing = this.memory.get(audioFileId);
+    if (existing && existing.length >= N.ceil(N.divide(duration, BIN_DURATION_SEC))) return;
+    this.memory.set(audioFileId, synthesizeBins(audioFileId, duration));
   }
 
   /** Release cached bins for an audio file (call when clip is culled). */

@@ -1,6 +1,9 @@
-export const PEAKS_PER_SECOND = 800;
-export const BIN_DURATION_SEC = 2;
-export const PEAKS_PER_BIN = PEAKS_PER_SECOND * BIN_DURATION_SEC; // 1600
+import * as Sec from "@daw/core/lib/sec";
+import * as N from "@daw/core/lib/numeric";
+
+export const PEAKS_PER_SECOND = Sec.Sec(800);
+export const BIN_DURATION_SEC = Sec.Sec(2);
+export const PEAKS_PER_BIN = N.multiply(PEAKS_PER_SECOND, BIN_DURATION_SEC); // 1600
 
 export function binPeaks(pcm: Float32Array, sampleRate: number): Uint8Array[] {
   const samplesPerPeak = sampleRate / PEAKS_PER_SECOND;
@@ -38,7 +41,7 @@ export function binPeaks(pcm: Float32Array, sampleRate: number): Uint8Array[] {
  * Generate synthetic peak bins for demo/placeholder waveforms.
  * Uses a simple seeded PRNG so the same audioFileId always produces the same shape.
  */
-export function synthesizeBins(audioFileId: string, durationSec: number): Uint8Array[] {
+export function synthesizeBins(audioFileId: string, duration: Sec.Sec): Uint8Array[] {
   // Simple hash from string to seed
   let seed = 0;
   for (let i = 0; i < audioFileId.length; i++) {
@@ -53,7 +56,7 @@ export function synthesizeBins(audioFileId: string, durationSec: number): Uint8A
     return (seed >>> 0) / 4294967296;
   };
 
-  const totalPeaks = Math.ceil(durationSec * PEAKS_PER_SECOND);
+  const totalPeaks = N.ceil(N.multiply(duration, PEAKS_PER_SECOND));
   const binCount = Math.ceil(totalPeaks / PEAKS_PER_BIN);
   const bins: Uint8Array[] = [];
 

@@ -11,6 +11,7 @@ import type { MidiPattern } from "./midi";
 import type { Project } from "./project";
 import type { Track } from "./track";
 import type { EditorEvent } from "../events/editor";
+import * as N from "../lib/numeric";
 import * as QN from "../lib/qn";
 import * as SI from "../lib/spatial-index";
 import * as Ids from "../ids";
@@ -69,7 +70,7 @@ export function fromProject(project: Project, bucketSize = DEFAULT_BUCKET_SIZE):
     automationLaneById.set(lane.id, lane);
   }
 
-  const clipIndex = SI.make<QN.QN, Ids.ClipId, Ids.TrackId>(QN.Numeric, bucketSize);
+  const clipIndex = SI.make<QN.QN, Ids.ClipId, Ids.TrackId>(bucketSize);
   for (const clip of project.clips) {
     SI.add(clipIndex, clip.trackId, clip.id, clip.span);
   }
@@ -235,7 +236,9 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
     case "clip.resized": {
       const clip = view.clipById.get(event.clipId);
       if (clip) {
-        view.clipById.set(event.clipId, { ...clip, span: event.span });
+        const startDelta = N.subtract(event.span.start, clip.span.start);
+        const offsetQN = N.add(clip.offset, startDelta);
+        view.clipById.set(event.clipId, { ...clip, span: event.span, offset: offsetQN });
         SI.resize(view.clipIndex, event.clipId, event.span);
       }
       break;
@@ -360,7 +363,7 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
             p.id === event.pointId
               ? {
                   ...p,
-                  ...(event.time !== undefined && { timeQN: event.time }),
+                  ...(event.time !== undefined && { time: event.time }),
                   ...(event.value !== undefined && { value: event.value }),
                 }
               : p,

@@ -1,18 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { Option } from "effect";
-import type {
-  AudioFile,
-  AutomationLane,
-  Clip,
-  MidiPattern,
-  Project,
-  Track,
-} from "../project";
+import type { AudioFile, AutomationLane, Clip, MidiPattern, Project, Track } from "../project";
 import { evolve } from "../project";
 import type { EditorEvent } from "../../events/editor";
+import type { ClipId } from "../../ids";
 import * as QN from "../../lib/qn";
+import * as Sec from "../../lib/sec";
 import * as Span from "../../lib/span";
-import * as QNMod from "../../lib/qn";
 import * as PV from "../project-view";
 import * as SI from "../../lib/spatial-index";
 
@@ -21,7 +15,6 @@ import * as SI from "../../lib/spatial-index";
 // ---------------------------------------------------------------------------
 
 const projectId = "proj-1" as any;
-const qnSpan = (start: number, size: number) => Span.make(QNMod.Numeric, start, size);
 
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
@@ -70,10 +63,11 @@ function makeClip(
     id: id as any,
     projectId,
     trackId: trackId as any,
-    span: qnSpan(start, size),
+    span: Span.make(QN.QN(start), QN.QN(size)),
     loop: { enabled: false, length: QN.QN(size) },
     sortOrder: 0,
-    payload: { kind: "midi" as const, patternId: patternId as any },
+    offset: QN.zero,
+    payload: { kind: "midi" as const, patternId: patternId as any, length: QN.QN(size) },
   };
 }
 
@@ -88,10 +82,11 @@ function makeAudioClip(
     id: id as any,
     projectId,
     trackId: trackId as any,
-    span: qnSpan(start, size),
+    span: Span.make(QN.QN(start), QN.QN(size)),
     loop: { enabled: false, length: QN.QN(size) },
     sortOrder: 0,
-    payload: { kind: "audio" as const, audioFileId: audioFileId as any, offsetSec: 0 },
+    offset: QN.zero,
+    payload: { kind: "audio" as const, audioFileId: audioFileId as any, offset: Sec.zero, length: QN.QN(size) },
   };
 }
 
@@ -106,7 +101,7 @@ function makeAudioFile(id: string, name: string): AudioFile {
     name,
     originalPath: `/audio/${name}`,
     storedPath: `/audio/${name}`,
-    durationSec: 10,
+    duration: Sec.Sec(10),
     sampleRate: 44100,
     channels: 2,
   };
@@ -163,8 +158,8 @@ describe("lib/project-view", () => {
 
       const view = PV.fromProject(project);
 
-      const hits = SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 12));
-      expect(hits.sort()).toEqual(["c1", "c2"]);
+      const hits = SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(12)));
+      expect(hits.sort()).toEqual(["c1", "c2"] as ClipId[]);
     });
   });
 
@@ -177,7 +172,7 @@ describe("lib/project-view", () => {
       });
       const view = PV.fromProject(project);
 
-      expect(PV.resolveClipTitle(view.clipById.get("c1")!, view)).toBe("My Pattern");
+      expect(PV.resolveClipTitle(view.clipById.get("c1")!.payload, view)).toBe("My Pattern");
     });
 
     it("resolves audio clip title via audioFileById", () => {
@@ -188,14 +183,14 @@ describe("lib/project-view", () => {
       });
       const view = PV.fromProject(project);
 
-      expect(PV.resolveClipTitle(view.clipById.get("c1")!, view)).toBe("vocals.wav");
+      expect(PV.resolveClipTitle(view.clipById.get("c1")!.payload, view)).toBe("vocals.wav");
     });
 
     it("returns Untitled for missing pattern", () => {
       const clip = makeClip("c1", "t1", 0, 4, "missing");
       const view = PV.fromProject(makeProject());
 
-      expect(PV.resolveClipTitle(clip, view)).toBe("Untitled");
+      expect(PV.resolveClipTitle(clip.payload, view)).toBe("Untitled");
     });
   });
 
@@ -380,7 +375,7 @@ describe("lib/project-view", () => {
 
         expect(view.clipById.has("c1")).toBe(true);
         expect(view.patternById.has("pat-c1")).toBe(true);
-        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 4))).toEqual(["c1"]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(4)))).toEqual(["c1"] as ClipId[]);
       });
 
       it("clip.created without pattern (audio clip)", () => {
@@ -405,7 +400,7 @@ describe("lib/project-view", () => {
         PV.applyEvent(view, { t: "clip.deleted", clipId: "c1" } as unknown as EditorEvent);
 
         expect(view.clipById.has("c1")).toBe(false);
-        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 4))).toEqual([]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(4)))).toEqual([]);
       });
 
       it("clip.moved updates position and index", () => {
@@ -427,8 +422,8 @@ describe("lib/project-view", () => {
         const clip = view.clipById.get("c1")!;
         expect(Number(clip.span.start)).toBe(8);
         expect(String(clip.trackId)).toBe("t2");
-        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 0, 12))).toEqual([]);
-        expect(SI.query(view.clipIndex, "t2", Span.make(QN.Numeric, 8, 4))).toEqual(["c1"]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(12)))).toEqual([]);
+        expect(SI.query(view.clipIndex, "t2", Span.make(QN.QN(8), QN.QN(4)))).toEqual(["c1"] as ClipId[]);
       });
 
       it("clip.resized updates span and index", () => {
@@ -443,11 +438,11 @@ describe("lib/project-view", () => {
         PV.applyEvent(view, {
           t: "clip.resized",
           clipId: "c1",
-          span: qnSpan(0, 12),
+          span: Span.make(QN.QN(0), QN.QN(12)),
         } as unknown as EditorEvent);
 
         expect(Number(view.clipById.get("c1")!.span.size)).toBe(12);
-        expect(SI.query(view.clipIndex, "t1", Span.make(QN.Numeric, 8, 4))).toEqual(["c1"]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(8), QN.QN(4)))).toEqual(["c1"] as ClipId[]);
       });
 
       it("clip.loopChanged updates loop settings", () => {
@@ -497,7 +492,7 @@ describe("lib/project-view", () => {
           }),
         );
 
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: qnSpan(0, 1) };
+        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
         PV.applyEvent(view, {
           t: "midi.noteAdded",
           patternId: "p1",
@@ -509,7 +504,7 @@ describe("lib/project-view", () => {
       });
 
       it("midi.noteDeleted removes note from pattern", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: qnSpan(0, 1) };
+        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -526,7 +521,7 @@ describe("lib/project-view", () => {
       });
 
       it("midi.noteMoved updates note span", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: qnSpan(0, 1) };
+        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -537,7 +532,7 @@ describe("lib/project-view", () => {
           t: "midi.noteMoved",
           patternId: "p1",
           noteId: "n1",
-          span: qnSpan(4, 2),
+          span: Span.make(QN.QN(4), QN.QN(2)),
         } as unknown as EditorEvent);
 
         const updated = view.patternById.get("p1")?.notes[0]!;
@@ -546,7 +541,7 @@ describe("lib/project-view", () => {
       });
 
       it("midi.noteVelocityChanged updates velocity", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: qnSpan(0, 1) };
+        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -564,7 +559,7 @@ describe("lib/project-view", () => {
       });
 
       it("midi.notePitchChanged updates pitch", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: qnSpan(0, 1) };
+        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -615,7 +610,7 @@ describe("lib/project-view", () => {
           }),
         );
 
-        const point = { id: "pt1" as any, timeQN: QN.QN(4), value: 0.5, curve: "linear" as const };
+        const point = { id: "pt1" as any, time: QN.QN(4), value: 0.5, curve: "linear" as const };
         PV.applyEvent(view, {
           t: "automation.pointAdded",
           laneId: "lane1",
@@ -626,7 +621,7 @@ describe("lib/project-view", () => {
       });
 
       it("automation.pointDeleted removes point", () => {
-        const point = { id: "pt1" as any, timeQN: QN.QN(4), value: 0.5, curve: "linear" as const };
+        const point = { id: "pt1" as any, time: QN.QN(4), value: 0.5, curve: "linear" as const };
         const view = PV.fromProject(
           makeProject({
             automationLanes: [{ ...makeLane("lane1", "t1"), points: [point] }],
@@ -643,7 +638,7 @@ describe("lib/project-view", () => {
       });
 
       it("automation.pointMoved updates point", () => {
-        const point = { id: "pt1" as any, timeQN: QN.QN(4), value: 0.5, curve: "linear" as const };
+        const point = { id: "pt1" as any, time: QN.QN(4), value: 0.5, curve: "linear" as const };
         const view = PV.fromProject(
           makeProject({
             automationLanes: [{ ...makeLane("lane1", "t1"), points: [point] }],
@@ -659,12 +654,12 @@ describe("lib/project-view", () => {
         } as unknown as EditorEvent);
 
         const updated = view.automationLaneById.get("lane1")?.points[0]!;
-        expect(Number(updated.timeQN)).toBe(8);
+        expect(Number(updated.time)).toBe(8);
         expect(updated.value).toBe(0.75);
       });
 
       it("automation.pointCurveChanged updates curve", () => {
-        const point = { id: "pt1" as any, timeQN: QN.QN(4), value: 0.5, curve: "linear" as const };
+        const point = { id: "pt1" as any, time: QN.QN(4), value: 0.5, curve: "linear" as const };
         const view = PV.fromProject(
           makeProject({
             automationLanes: [{ ...makeLane("lane1", "t1"), points: [point] }],

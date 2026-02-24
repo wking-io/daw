@@ -4,8 +4,7 @@
 // positioned by Span<A>. Fixed-size buckets provide O(buckets) mutations
 // and O(buckets in window + results) queries.
 
-import type { Numeric } from "./numeric";
-import { Default as NumericDefault } from "./numeric";
+import * as N from "./numeric";
 import * as Span from "./span";
 import * as Range from "./range";
 
@@ -20,7 +19,6 @@ type Entry<A extends number, G> = {
 };
 
 export type SpatialIndex<A extends number, I = string, G = string> = {
-  readonly N: Numeric<A>;
   readonly bucketSize: number;
   /** group → bucketKey → set of item IDs */
   readonly byGroup: Map<G, Map<number, Set<I>>>;
@@ -43,13 +41,12 @@ function bucketForEnd(end: number, bucketSize: number): number {
 }
 
 function bucketRange<A extends number>(
-  N: Numeric<A>,
   span: Span.Span<A>,
   bucketSize: number,
 ): Range.Range<number> {
   const b0 = bucketFor(span.start, bucketSize);
-  const b1 = bucketForEnd(Span.end(N, span), bucketSize);
-  return Range.make(NumericDefault, b0, b1);
+  const b1 = bucketForEnd(Span.end(span), bucketSize);
+  return Range.make(b0, b1);
 }
 
 // ---------------------------------------------------------------------------
@@ -102,11 +99,9 @@ function removeFromBuckets<I>(
 // ---------------------------------------------------------------------------
 
 export function make<A extends number, I = string, G = string>(
-  N: Numeric<A>,
   bucketSize: number,
 ): SpatialIndex<A, I, G> {
   return {
-    N,
     bucketSize,
     byGroup: new Map(),
     entries: new Map(),
@@ -124,7 +119,7 @@ export function add<A extends number, I, G>(
   id: I,
   span: Span.Span<A>,
 ): void {
-  const br = bucketRange(index.N, span, index.bucketSize);
+  const br = bucketRange(span, index.bucketSize);
   const groupMap = getOrCreateGroupMap(index, group);
   insertIntoBuckets(groupMap, id, br);
   index.entries.set(id, { group, bucketRange: br, span });
@@ -153,13 +148,12 @@ export function move<A extends number, I, G>(
   const old = index.entries.get(id);
   if (!old) return;
 
-  const N = index.N;
-  const newSpan = Span.move(N, old.span, N.subtract(newStart, old.span.start));
+  const newSpan = Span.move(old.span, N.subtract(newStart, old.span.start));
   const group = newGroup ?? old.group;
-  const newRange = bucketRange(N, newSpan, index.bucketSize);
+  const newRange = bucketRange(newSpan, index.bucketSize);
 
   const groupChanged = group !== old.group;
-  const bucketsChanged = !Range.eq(NumericDefault, old.bucketRange, newRange);
+  const bucketsChanged = !Range.eq(old.bucketRange, newRange);
 
   if (groupChanged || bucketsChanged) {
     const oldGroupMap = index.byGroup.get(old.group);
@@ -184,8 +178,8 @@ export function resize<A extends number, I, G>(
   const old = index.entries.get(id);
   if (!old) return;
 
-  const newRange = bucketRange(index.N, span, index.bucketSize);
-  const bucketsChanged = !Range.eq(NumericDefault, old.bucketRange, newRange);
+  const newRange = bucketRange(span, index.bucketSize);
+  const bucketsChanged = !Range.eq(old.bucketRange, newRange);
 
   if (bucketsChanged) {
     const groupMap = index.byGroup.get(old.group);
@@ -213,8 +207,7 @@ export function query<A extends number, I, G>(
   const groupMap = index.byGroup.get(group);
   if (!groupMap) return [];
 
-  const N = index.N;
-  const queryBR = bucketRange(N, view, index.bucketSize);
+  const queryBR = bucketRange(view, index.bucketSize);
 
   const candidates = new Set<I>();
   for (let b = queryBR.start; b <= queryBR.end; b++) {
@@ -229,7 +222,7 @@ export function query<A extends number, I, G>(
   const result: I[] = [];
   for (const id of candidates) {
     const entry = index.entries.get(id)!;
-    if (N.lt(entry.span.start, Span.end(N, view)) && N.gt(Span.end(N, entry.span), view.start)) {
+    if (N.lt(entry.span.start, Span.end(view)) && N.gt(Span.end(entry.span), view.start)) {
       result.push(id);
     }
   }

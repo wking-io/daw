@@ -1,11 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import * as Numeric from "../numeric";
 import * as SI from "../spatial-index";
 
-const N = Numeric.Default;
 const BUCKET = 4;
 
-const idx = () => SI.make(N, BUCKET);
+const idx = () => SI.make(BUCKET);
 
 describe("lib/spatial-index", () => {
   describe("make", () => {

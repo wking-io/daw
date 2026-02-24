@@ -14,7 +14,7 @@ function makeInitialTimeline(): Timeline.Timeline<QN.QN> {
   return {
     size: QN.QN(500),
     min: QN.QN(0.5),
-    view: Span.make(QN.Numeric, 32, 64),
+    view: Span.make(QN.QN(32), QN.QN(64)),
   };
 }
 

@@ -1,5 +1,6 @@
 import type { Handle } from "@remix-run/component";
 import type { MidiNote } from "@daw/core/domain/midi";
+import type { ClipProjection } from "@daw/core/lib/clip-projection";
 import { prepareCanvas } from "../utils/prepare-canvas";
 import { drawMidiNotes } from "../lib/midi-renderer";
 
@@ -7,50 +8,56 @@ export function MidiClipCanvas(handle: Handle) {
   let canvasEl: HTMLCanvasElement;
   let prev = {
     notes: null as readonly MidiNote[] | null,
-    clipSizeQN: NaN,
+    clipSize: NaN,
     isSelected: false,
     color: "",
+    clipWidth: NaN,
     visibleLeft: NaN,
     visibleWidth: NaN,
+    offset: NaN,
     cssH: 0,
   };
 
   return (props: {
     notes: readonly MidiNote[];
-    clipSizeQN: number;
+    clipSize: number;
     isSelected: boolean;
     color?: string;
-    visibleLeft: number;
-    visibleWidth: number;
-    clipWidth: number;
+    projection: ClipProjection;
+    offset: number;
   }) => {
     const dpr = window.devicePixelRatio || 1;
+    const offset = props.offset;
 
     handle.queueTask(() => {
       if (!canvasEl) return;
 
-      const cssW = props.visibleWidth;
+      const cssW = props.projection.visibleWidth;
       const cssH = canvasEl.parentElement?.clientHeight ?? 0;
       if (cssW === 0 || cssH === 0) return;
 
       // Skip redraw if nothing changed
       if (
         prev.notes === props.notes &&
-        prev.clipSizeQN === props.clipSizeQN &&
+        prev.clipSize === props.clipSize &&
         prev.isSelected === props.isSelected &&
         prev.color === (props.color ?? "") &&
-        prev.visibleLeft === props.visibleLeft &&
-        prev.visibleWidth === props.visibleWidth &&
+        prev.clipWidth === props.projection.clipWidth &&
+        prev.visibleLeft === props.projection.visibleLeft &&
+        prev.visibleWidth === props.projection.visibleWidth &&
+        prev.offset === offset &&
         prev.cssH === cssH
       )
         return;
       prev = {
         notes: props.notes,
-        clipSizeQN: props.clipSizeQN,
+        clipSize: props.clipSize,
         isSelected: props.isSelected,
         color: props.color ?? "",
-        visibleLeft: props.visibleLeft,
-        visibleWidth: props.visibleWidth,
+        clipWidth: props.projection.clipWidth,
+        visibleLeft: props.projection.visibleLeft,
+        visibleWidth: props.projection.visibleWidth,
+        offset,
         cssH,
       };
 
@@ -64,7 +71,15 @@ export function MidiClipCanvas(handle: Handle) {
       const colorVar = `--color-clip-fill${props.isSelected ? "-selected" : ""}`;
       const color = style.getPropertyValue(colorVar);
 
-      drawMidiNotes(ctx, props.notes, props.clipSizeQN, props.clipWidth, cssH, color, props.visibleLeft, props.visibleWidth);
+      drawMidiNotes(
+        ctx,
+        props.notes,
+        props.clipSize,
+        cssH,
+        color,
+        props.projection,
+        offset,
+      );
     });
 
     return (
@@ -73,7 +88,7 @@ export function MidiClipCanvas(handle: Handle) {
           canvasEl = node;
         }}
         class="block h-full clip-vars"
-        style={{ width: `${props.visibleWidth}px` }}
+        style={{ width: `${props.projection.visibleWidth}px` }}
       />
     );
   };

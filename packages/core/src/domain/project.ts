@@ -4,6 +4,9 @@ import type { ProjectCreate } from "../commands/project-ops";
 import type { EditorEvent } from "../events/editor";
 import type { ProjectCreated } from "../events/project";
 import { ProjectId } from "../ids";
+import * as N from "../lib/numeric";
+import * as QN from "../lib/qn";
+import * as Sec from "../lib/sec";
 import { TimeSignature } from "../lib/time-signature";
 import { ProjectVersion } from "../versions";
 import { AudioFile, type AudioFile as AudioFileType } from "./audio-file";
@@ -264,10 +267,10 @@ export function evolve(project: Project, event: EditorEvent): Project {
     case "clip.resized":
       return {
         ...project,
-        clips: updateById(project.clips, event.clipId, (c) => ({
-          ...c,
-          span: event.span,
-        })),
+        clips: updateById(project.clips, event.clipId, (c) => {
+          const startDelta = N.subtract(event.span.start, c.span.start);
+          return { ...c, span: event.span, offset: N.add(c.offset, startDelta) };
+        }),
       };
 
     case "clip.loopChanged":
@@ -390,7 +393,7 @@ export function evolve(project: Project, event: EditorEvent): Project {
           event.pointId,
           (p) => ({
             ...p,
-            ...(event.time !== undefined && { timeQN: event.time }),
+            ...(event.time !== undefined && { time: event.time }),
             ...(event.value !== undefined && { value: event.value }),
           }),
         ),
@@ -605,7 +608,8 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         span: command.span,
         loop: { enabled: false, length: command.span.size },
         sortOrder: project.clips.filter((c) => c.trackId === command.trackId).length,
-        payload: { kind: "midi", patternId: command.newPatternId },
+        payload: { kind: "midi", patternId: command.newPatternId, length: command.span.size },
+        offset: QN.zero,
       };
       return [{ t: "clip.created", clip, pattern }];
     }
@@ -621,8 +625,10 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         payload: {
           kind: "audio",
           audioFileId: command.audioFileId,
-          offsetSec: command.offsetSec ?? 0,
+          offset: command.offset ?? Sec.zero,
+          length: command.span.size,
         },
+        offset: QN.zero,
       };
       return [{ t: "clip.created", clip }];
     }
@@ -635,7 +641,7 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         {
           t: "clip.moved",
           clipId: command.clipId,
-          start: command.startQN,
+          start: command.start,
           ...(command.trackId !== undefined && {
             trackId: command.trackId,
           }),
@@ -734,7 +740,7 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
     case "automation.addPoint": {
       const point: AutomationPointType = {
         id: command.pointId,
-        timeQN: command.timeQN,
+        time: command.time,
         value: command.value,
         curve: command.curve ?? "linear",
       };
@@ -756,7 +762,7 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
           t: "automation.pointMoved",
           laneId: command.laneId,
           pointId: command.pointId,
-          ...(command.timeQN !== undefined && { time: command.timeQN }),
+          ...(command.time !== undefined && { time: command.time }),
           ...(command.value !== undefined && { value: command.value }),
         },
       ];
@@ -778,7 +784,7 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         name: command.name ?? command.sourcePath.split("/").pop() ?? "audio",
         originalPath: command.sourcePath,
         storedPath: command.sourcePath,
-        durationSec: 0,
+        duration: Sec.zero,
         sampleRate: 44100,
         channels: 2,
       };

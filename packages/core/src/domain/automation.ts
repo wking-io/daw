@@ -7,7 +7,7 @@ export type AutomationCurve = Schema.Schema.Type<typeof AutomationCurve>;
 
 export const AutomationPoint = Schema.Struct({
   id: AutomationPointId,
-  timeQN: QN.Schema,
+  time: QN.Schema,
   value: Schema.Number,
   curve: AutomationCurve,
 });

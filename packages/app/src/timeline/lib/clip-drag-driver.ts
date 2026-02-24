@@ -1,12 +1,8 @@
-// clip-drag-driver.ts — Effectful adapter for the clip drag state machine.
-//
-// Interprets DragEffect[] produced by the pure transition function.
-// Manages DOM side effects: cursor override, edge-scroll rAF loop,
-// timeline panning, and vertical scrolling.
-
+import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Timeline from "@daw/core/lib/timeline";
+import * as Span from "@daw/core/lib/span";
 import type { ProjectionContext } from "./projection-context";
 import type { TrackLayout } from "./track-layout";
 import type { TrackColor } from "../renderers/timeline/types";
@@ -20,85 +16,8 @@ import {
   transition,
   deriveGhost,
 } from "./clip-drag";
-import { computeEdgeDeltas } from "./edge-scroll";
-import type { Track } from "@daw/core/domain/track";
+import { CursorOverride, EdgeScrollDriver } from "./interaction-drivers";
 import type { ProjectView } from "@daw/core/domain/project-view";
-
-// ---------------------------------------------------------------------------
-// Cursor override
-// ---------------------------------------------------------------------------
-
-class CursorOverride {
-  #style: HTMLStyleElement | null = null;
-
-  set(cursor: string) {
-    if (!this.#style) {
-      this.#style = document.createElement("style");
-      document.head.appendChild(this.#style);
-    }
-    this.#style.textContent = `* { cursor: ${cursor} !important; }`;
-  }
-
-  clear() {
-    this.#style?.remove();
-    this.#style = null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Edge scroll driver
-// ---------------------------------------------------------------------------
-
-class EdgeScrollDriver {
-  #raf = 0;
-  #onTick: ((dx: number, dy: number) => void) | null = null;
-
-  #lastPointerClientX = 0;
-  #lastPointerClientY = 0;
-  #getHorizontalRect: () => DOMRect | null;
-  #getVerticalRect: () => DOMRect | null;
-
-  constructor(getHorizontalRect: () => DOMRect | null, getVerticalRect: () => DOMRect | null) {
-    this.#getHorizontalRect = getHorizontalRect;
-    this.#getVerticalRect = getVerticalRect;
-  }
-
-  updatePointer(clientX: number, clientY: number) {
-    this.#lastPointerClientX = clientX;
-    this.#lastPointerClientY = clientY;
-  }
-
-  start(onTick: (dx: number, dy: number) => void) {
-    this.#onTick = onTick;
-    const tick = () => {
-      const hRect = this.#getHorizontalRect();
-      const vRect = this.#getVerticalRect();
-      if (hRect && vRect) {
-        const { dx, dy } = computeEdgeDeltas(
-          this.#lastPointerClientX,
-          this.#lastPointerClientY,
-          hRect,
-          vRect,
-        );
-        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
-          this.#onTick?.(dx, dy);
-        }
-      }
-      this.#raf = requestAnimationFrame(tick);
-    };
-    this.#raf = requestAnimationFrame(tick);
-  }
-
-  stop() {
-    cancelAnimationFrame(this.#raf);
-    this.#raf = 0;
-    this.#onTick = null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Callbacks & render data
-// ---------------------------------------------------------------------------
 
 export type CommitCallback = (clipId: string, newStart: QN.QN, newTrackId: string) => void;
 export type UpdateCallback = () => void;
@@ -186,7 +105,7 @@ export class ClipDragDriver {
     e: PointerEvent,
     clip: {
       originTrackId: string;
-      origin: { start: QN.QN; size: QN.QN };
+      origin: Span.Span<QN.QN>;
       payloadKind: "midi" | "audio";
       color: TrackColor;
       width: Px.Px;
@@ -199,7 +118,7 @@ export class ClipDragDriver {
     // Compute grab offset: where within the clip the pointer landed (in QN)
     const pointerScreenX = Px.Px(e.clientX - containerRect.left);
     const pointerQN = this.#projection.screenToContentX(pointerScreenX);
-    const grabOffsetQN = QN.subtract(pointerQN, clip.origin.start);
+    const grabOffsetQN = N.subtract(pointerQN, clip.origin.start);
 
     // Vertical grab offset
     const trackLayout = this.#data?.trackLayouts.get(clip.originTrackId);
@@ -217,7 +136,7 @@ export class ClipDragDriver {
       color: clip.color,
       width: clip.width,
       height: clip.height,
-      grabOffsetQN,
+      grabOffset: grabOffsetQN,
       grabOffsetY,
       startClientX: e.clientX,
       startClientY: e.clientY,
@@ -295,9 +214,8 @@ export class ClipDragDriver {
 
         case "pan-timeline": {
           const nextTimeline = Timeline.panBy(
-            QN.Numeric,
             this.#projection.timeline,
-            effect.deltaQN,
+            effect.delta,
           );
           this.#setTimeline(nextTimeline);
           break;

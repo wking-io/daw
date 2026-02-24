@@ -1,10 +1,5 @@
-// clip-drag.ts — Pure clip drag state machine.
-//
-// Models the pending → dragging → idle lifecycle as a pure transition function.
-// All state transitions are deterministic; side effects are expressed as data
-// (DragEffect[]) to be interpreted by the driver layer.
-
 import { Option } from "effect";
+import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Span from "@daw/core/lib/span";
@@ -15,20 +10,13 @@ import type { TrackColor } from "../renderers/timeline/types";
 
 const DEAD_ZONE_PX = 3;
 
-// ---------------------------------------------------------------------------
-// Snap
-// ---------------------------------------------------------------------------
-
 export function snapToGrid(positionQN: QN.QN, scale: number, timeSignature: TimeSignature): QN.QN {
   const { interval } = computeGridInterval({ scale, timeSignature });
-  const raw = QN.divide(positionQN, interval);
-  const snapped = QN.multiply(interval, Math.round(raw));
-  return QN.max(QN.zero, snapped);
+  const raw = N.divide(positionQN, interval);
+  const snapped = N.multiply(interval, Math.round(raw));
+  return N.max(QN.zero, snapped);
 }
 
-// ---------------------------------------------------------------------------
-// Track hit-testing
-// ---------------------------------------------------------------------------
 
 export function hitTestTrack(
   pointerY: Px.Px,
@@ -38,17 +26,13 @@ export function hitTestTrack(
   for (const trackId of trackOrder) {
     const layout = trackLayouts.get(trackId);
     if (!layout) continue;
-    const bottom = Px.add(layout.y, layout.height);
-    if (Px.gte(pointerY, layout.y) && Px.lt(pointerY, bottom)) {
+    const bottom = N.add(layout.y, layout.height);
+    if (N.gte(pointerY, layout.y) && N.lt(pointerY, bottom)) {
       return Option.some(trackId);
     }
   }
   return Option.none();
 }
-
-// ---------------------------------------------------------------------------
-// Compatibility check
-// ---------------------------------------------------------------------------
 
 const COMPATIBLE_DROPS: ReadonlySet<string> = new Set(["midi:midi", "audio:audio"]);
 
@@ -58,10 +42,6 @@ export function isCompatibleDrop(
 ): boolean {
   return COMPATIBLE_DROPS.has(`${clipPayloadKind}:${targetTrackType}`);
 }
-
-// ---------------------------------------------------------------------------
-// Drag state (discriminated union)
-// ---------------------------------------------------------------------------
 
 type Idle = { phase: "idle" };
 
@@ -74,7 +54,7 @@ type Pending = {
   color: TrackColor;
   width: Px.Px;
   height: Px.Px;
-  grabOffsetQN: QN.QN;
+  grabOffset: QN.QN;
   grabOffsetY: Px.Px;
   startClientX: number;
   startClientY: number;
@@ -89,9 +69,9 @@ type Dragging = {
   color: TrackColor;
   width: Px.Px;
   height: Px.Px;
-  grabOffsetQN: QN.QN;
+  grabOffset: QN.QN;
   grabOffsetY: Px.Px;
-  ghostStartQN: QN.QN;
+  ghostStart: QN.QN;
   ghostTrackId: string;
   isValid: boolean;
   isOOB: boolean;
@@ -101,13 +81,9 @@ export type DragState = Idle | Pending | Dragging;
 
 export const idle: DragState = { phase: "idle" };
 
-// ---------------------------------------------------------------------------
-// Ghost (derived view)
-// ---------------------------------------------------------------------------
-
 export type GhostState = {
   clipId: string;
-  startQN: QN.QN;
+  start: QN.QN;
   trackId: string;
   width: Px.Px;
   height: Px.Px;
@@ -121,18 +97,18 @@ export function deriveGhost(
 ): Option.Option<GhostState> {
   if (state.phase !== "dragging") return Option.none();
 
-  const startQN = state.isOOB ? state.originSpan.start : state.ghostStartQN;
+  const startQN = state.isOOB ? state.originSpan.start : state.ghostStart;
   const trackId = state.isOOB ? state.originTrackId : state.ghostTrackId;
 
   // No ghost when the clip hasn't moved from its original position
-  if (QN.eq(startQN, state.originSpan.start) && trackId === state.originTrackId) {
+  if (N.eq(startQN, state.originSpan.start) && trackId === state.originTrackId) {
     return Option.none();
   }
 
   const targetTrack = trackById.get(trackId);
   return Option.some({
     clipId: state.clipId,
-    startQN,
+    start: startQN,
     trackId,
     width: state.width,
     height: state.height,
@@ -140,10 +116,6 @@ export function deriveGhost(
     isValid: state.isOOB ? false : state.isValid,
   });
 }
-
-// ---------------------------------------------------------------------------
-// Drag events (inputs to the state machine)
-// ---------------------------------------------------------------------------
 
 export type DragInput =
   | {
@@ -155,7 +127,7 @@ export type DragInput =
       color: TrackColor;
       width: Px.Px;
       height: Px.Px;
-      grabOffsetQN: QN.QN;
+      grabOffset: QN.QN;
       grabOffsetY: Px.Px;
       startClientX: number;
       startClientY: number;
@@ -165,23 +137,15 @@ export type DragInput =
   | { type: "escape" }
   | { type: "edge-scroll-tick"; dx: number; dy: number };
 
-// ---------------------------------------------------------------------------
-// Drag effects (outputs / side-effect descriptors)
-// ---------------------------------------------------------------------------
-
 export type DragEffect =
   | { type: "set-cursor"; cursor: string }
   | { type: "clear-cursor" }
   | { type: "start-edge-scroll" }
   | { type: "stop-edge-scroll" }
-  | { type: "pan-timeline"; deltaQN: QN.QN }
+  | { type: "pan-timeline"; delta: QN.QN }
   | { type: "scroll-vertical"; dy: number }
   | { type: "commit"; clipId: string; start: QN.QN; trackId: string }
   | { type: "request-update" };
-
-// ---------------------------------------------------------------------------
-// Transition context (read-only external data the transition needs)
-// ---------------------------------------------------------------------------
 
 export type TransitionContext = {
   containerRect: DOMRect;
@@ -194,10 +158,6 @@ export type TransitionContext = {
   trackOrder: readonly string[];
   trackById: Map<string, { type: "midi" | "audio" | "bus"; color: TrackColor }>;
 };
-
-// ---------------------------------------------------------------------------
-// Transition function
-// ---------------------------------------------------------------------------
 
 export type TransitionResult = {
   state: DragState;
@@ -227,10 +187,6 @@ export function transition(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
-
 function handleStartPending(input: DragInput & { type: "start-pending" }): TransitionResult {
   return {
     state: {
@@ -242,7 +198,7 @@ function handleStartPending(input: DragInput & { type: "start-pending" }): Trans
       color: input.color,
       width: input.width,
       height: input.height,
-      grabOffsetQN: input.grabOffsetQN,
+      grabOffset: input.grabOffset,
       grabOffsetY: input.grabOffsetY,
       startClientX: input.startClientX,
       startClientY: input.startClientY,
@@ -272,9 +228,9 @@ function handlePointerMove(
       color: state.color,
       width: state.width,
       height: state.height,
-      grabOffsetQN: state.grabOffsetQN,
+      grabOffset: state.grabOffset,
       grabOffsetY: state.grabOffsetY,
-      ghostStartQN: state.originSpan.start,
+      ghostStart: state.originSpan.start,
       ghostTrackId: state.originTrackId,
       isValid: true,
       isOOB: false,
@@ -309,7 +265,7 @@ function handlePointerUp(state: DragState): TransitionResult {
         {
           type: "commit",
           clipId: state.clipId,
-          start: state.ghostStartQN,
+          start: state.ghostStart,
           trackId: state.ghostTrackId,
         },
         { type: "stop-edge-scroll" },
@@ -338,7 +294,7 @@ function handleEdgeScrollTick(
 
   if (Math.abs(input.dx) > 0.01) {
     const deltaQN = QN.QN(input.dx / ctx.scale);
-    effects.push({ type: "pan-timeline", deltaQN });
+    effects.push({ type: "pan-timeline", delta: deltaQN });
     needsGhostUpdate = true;
   }
 
@@ -355,10 +311,6 @@ function handleEdgeScrollTick(
   effects.push({ type: "request-update" });
   return { state, effects };
 }
-
-// ---------------------------------------------------------------------------
-// Ghost computation (pure)
-// ---------------------------------------------------------------------------
 
 function updateGhost(
   state: Dragging,
@@ -377,7 +329,7 @@ function updateGhost(
   // Compute snapped QN position
   const pointerScreenX = Px.Px(clientX - ctx.containerRect.left);
   const pointerQN = ctx.screenToContentX(pointerScreenX);
-  const rawStartQN = QN.subtract(pointerQN, state.grabOffsetQN);
+  const rawStartQN = N.subtract(pointerQN, state.grabOffset);
   const snappedStartQN = snapToGrid(rawStartQN, ctx.scale, ctx.timeSignature);
 
   // Hit-test track
@@ -392,7 +344,7 @@ function updateGhost(
   return {
     state: {
       ...state,
-      ghostStartQN: snappedStartQN,
+      ghostStart: snappedStartQN,
       ghostTrackId,
       isValid: valid,
       isOOB: false,
@@ -400,10 +352,6 @@ function updateGhost(
     effects: [{ type: "set-cursor", cursor: valid ? "grabbing" : "not-allowed" }],
   };
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function cancel(state: DragState): TransitionResult {
   const effects: DragEffect[] = [{ type: "clear-cursor" }, { type: "request-update" }];

@@ -109,7 +109,7 @@ export function DialogRoot(handle: Handle<DialogRootContextValue>, setup?: Dialo
   };
 
   const close = () => {
-    if (!dialogRef) return;
+    if (!dialogRef || state === "closed") return;
 
     if (exitDuration > 0) {
       if (state === "closing") return;
