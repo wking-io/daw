@@ -2,6 +2,7 @@ import type { Handle } from "@remix-run/component";
 
 import * as Px from "@daw/core/lib/px";
 import { NavigatorRoot } from "./navigator-root";
+import { TimelineRoot } from "./timeline-root";
 import { cn } from "@daw/utils";
 import type { TimelineData, UIState } from "../renderers/timeline/types";
 import { TimelineSceneRenderer } from "../renderers/timeline/scene";
@@ -12,6 +13,7 @@ import { readTimelineTheme } from "../lib/theme";
 
 export function NavigatorCanvas(handle: Handle) {
   const projection = handle.context.get(NavigatorRoot);
+  const rootCtx = handle.context.get(TimelineRoot);
   let canvasEl: HTMLCanvasElement;
 
   handle.on(projection, { change: () => handle.update() });
@@ -45,6 +47,7 @@ export function NavigatorCanvas(handle: Handle) {
         surface: "navigator",
         canvasHeight: Px.Px(cssH),
         theme: readTimelineTheme(),
+        playheadPosition: rootCtx.transport.playheadPosition,
       };
 
       const scene = TimelineSceneRenderer.buildScene({

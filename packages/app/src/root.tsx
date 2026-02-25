@@ -13,9 +13,11 @@ import { AddIcon, CloseIcon, HomeIcon, StatusIcon } from "@daw/ui/icons";
 import { cn } from "@daw/utils";
 import { Button } from "./components/button";
 import { TimelineRoot } from "./timeline/components/timeline-root";
+import type { TransportState } from "./timeline/components/timeline-root";
 import {
   NavigatorCanvas,
   NavigatorTrack,
+  PlayheadLine,
   ProjectionCanvas,
   ProjectionContent,
   ProjectionTrackList,
@@ -30,6 +32,9 @@ import * as Clip from "@daw/core/domain/clip";
 import * as SI from "@daw/core/lib/spatial-index";
 import * as Span from "@daw/core/lib/span";
 import * as N from "@daw/core/lib/numeric";
+import * as QN from "@daw/core/lib/qn";
+import * as Sec from "@daw/core/lib/sec";
+import { formatPositionFull, computeBarSize, computeBeatSize } from "@daw/core/lib/ruler";
 import type { UIAction, UIState, TimelineData } from "./timeline/renderers/timeline/types";
 
 type Theme = "light" | "dark";
@@ -111,6 +116,89 @@ function MainApp(handle: Handle) {
 
   // Build view once from demo data
   const demoView = ProjectView.fromProject(demoProject);
+
+  // ---------------------------------------------------------------------------
+  // Transport state
+  // ---------------------------------------------------------------------------
+  const bpm = demoProject.bpm;
+  let playing = false;
+  let playheadPos: QN.QN = QN.zero;
+  let followEnabled = true;
+  let rafId = 0;
+  let playStartWallTime = 0;
+  let playStartQN: QN.QN = QN.zero;
+
+  function tick() {
+    if (!playing) return;
+    const elapsedMs = performance.now() - playStartWallTime;
+    const elapsedSec = Sec.Sec(elapsedMs / 1000);
+    const elapsedQN = Sec.toQN(elapsedSec, bpm);
+    playheadPos = N.add(playStartQN, elapsedQN);
+    handle.update();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  const transport: TransportState = {
+    get isPlaying() {
+      return playing;
+    },
+    get playheadPosition() {
+      return playheadPos;
+    },
+    get follow() {
+      return followEnabled;
+    },
+    get bpm() {
+      return bpm;
+    },
+    setPlayheadPosition(pos: QN.QN) {
+      playheadPos = N.max(pos, QN.zero);
+      if (playing) {
+        // Reset rAF anchor so playback continues from new position
+        playStartWallTime = performance.now();
+        playStartQN = playheadPos;
+      }
+      handle.update();
+    },
+    togglePlay() {
+      playing = !playing;
+      if (playing) {
+        playStartWallTime = performance.now();
+        playStartQN = playheadPos;
+        rafId = requestAnimationFrame(tick);
+      } else {
+        cancelAnimationFrame(rafId);
+      }
+      handle.update();
+    },
+    toggleFollow() {
+      followEnabled = !followEnabled;
+      handle.update();
+    },
+    disableFollow() {
+      if (!followEnabled) return;
+      followEnabled = false;
+      handle.update();
+    },
+  };
+
+  // Space key toggles playback
+  handle.on(document, {
+    keydown: (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        // Don't interfere with input fields
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        transport.togglePlay();
+      }
+    },
+  });
+
+  // Cleanup rAF on unmount
+  handle.signal.addEventListener("abort", () => {
+    cancelAnimationFrame(rafId);
+  });
 
   const handleUIAction = (action: UIAction) => {
     switch (action.type) {
@@ -273,14 +361,46 @@ function MainApp(handle: Handle) {
                 </div>
               </div>
             </ControlBar.Content>
-            <ControlBar.Content class="ml-auto pr-1 py-1">
-              {/* <ControlPanel.Content class="no-drag" /> */}
+            <ControlBar.Content class="ml-auto pr-1 py-1 no-drag">
+              <div class="flex items-center gap-1.5">
+                <button
+                  on={{ click: () => transport.togglePlay() }}
+                  class={cn(
+                    "px-2 py-0.5 rounded text-[11px] font-medium",
+                    "bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:rounded before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                    "relative",
+                  )}
+                >
+                  {transport.isPlaying ? "Stop" : "Play"}
+                </button>
+                <span class="tabular-nums text-[11px] font-mono text-foreground-muted min-w-[3.5rem] text-center">
+                  {formatPositionFull(
+                    Number(transport.playheadPosition),
+                    computeBeatSize(demoProject.timeSignature),
+                    computeBarSize(demoProject.timeSignature),
+                  )}
+                </span>
+                <button
+                  on={{ click: () => transport.toggleFollow() }}
+                  class={cn(
+                    "px-2 py-0.5 rounded text-[11px] font-medium relative",
+                    "shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:rounded before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                    transport.follow
+                      ? "bg-layer-3 text-foreground"
+                      : "bg-layer-1 text-foreground-muted",
+                  )}
+                >
+                  Follow
+                </button>
+              </div>
             </ControlBar.Content>
           </ControlBar.Root>
 
           {openTabs.map((tab) => (
             <Tabs.Panel setup={{ value: tab.id }} class="flex-1">
-              <TimelineRoot class="h-[50dvh] flex flex-col">
+              <TimelineRoot transport={transport} class="h-[50dvh] flex flex-col">
                 <div
                   class={cn(
                     "user-select-none relative bg-background shadow-recess shadow-foreground/10 dark:shadow-background/40",
@@ -312,6 +432,7 @@ function MainApp(handle: Handle) {
                           state={dawUIState}
                           dispatch={handleUIAction}
                         />
+                        <PlayheadLine />
                       </ProjectionContent>
                     </div>
                   </div>

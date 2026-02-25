@@ -1,6 +1,6 @@
 // Timeline compound component exports
 export { TimelineRoot as Root } from "./timeline-root";
-export type { TimelineRootContext } from "./timeline-root";
+export type { TimelineRootContext, TransportState } from "./timeline-root";
 
 // Navigator exports
 export { NavigatorRoot as Navigator } from "./navigator-root";
@@ -19,6 +19,9 @@ export { ProjectionTrackList } from "./projection-track-list";
 
 // Ruler
 export { RulerCanvas } from "./ruler-canvas";
+
+// Playhead
+export { PlayheadLine } from "./playhead-line";
 
 // Clip content renderers
 export { MidiClipCanvas } from "./midi-clip-canvas";

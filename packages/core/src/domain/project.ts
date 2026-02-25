@@ -273,13 +273,37 @@ export function evolve(project: Project, event: EditorEvent): Project {
         }),
       };
 
-    case "clip.loopChanged":
+    case "clip.loopSet":
       return {
         ...project,
-        clips: updateById(project.clips, event.clipId, (c) => ({
-          ...c,
-          loop: { enabled: event.enabled, length: event.length },
-        })),
+        clips: updateById(project.clips, event.clipId, (c) => {
+          const p = c.payload;
+          if (p.kind === "midi") {
+            return { ...c, payload: { ...p, kind: "midi-loop" as const, loop: event.loop } };
+          }
+          if (p.kind === "audio") {
+            return { ...c, payload: { ...p, kind: "audio-loop" as const, loop: event.loop } };
+          }
+          // Already a loop variant — update the loop region
+          return { ...c, payload: { ...p, loop: event.loop } };
+        }),
+      };
+
+    case "clip.loopRemoved":
+      return {
+        ...project,
+        clips: updateById(project.clips, event.clipId, (c) => {
+          const p = c.payload;
+          if (p.kind === "midi-loop") {
+            const { loop: _, ...rest } = p;
+            return { ...c, payload: { ...rest, kind: "midi" as const } };
+          }
+          if (p.kind === "audio-loop") {
+            const { loop: _, ...rest } = p;
+            return { ...c, payload: { ...rest, kind: "audio" as const } };
+          }
+          return c;
+        }),
       };
 
     case "midi.patternRenamed":
@@ -606,7 +630,6 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         projectId: project.id,
         trackId: command.trackId,
         span: command.span,
-        loop: { enabled: false, length: command.span.size },
         sortOrder: project.clips.filter((c) => c.trackId === command.trackId).length,
         payload: { kind: "midi", patternId: command.newPatternId, length: command.span.size },
         offset: QN.zero,
@@ -620,7 +643,6 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
         projectId: project.id,
         trackId: command.trackId,
         span: command.span,
-        loop: { enabled: false, length: command.span.size },
         sortOrder: project.clips.filter((c) => c.trackId === command.trackId).length,
         payload: {
           kind: "audio",
@@ -653,16 +675,17 @@ export function decide(project: Project, command: EditorCommandPayload): readonl
 
     case "clip.setLoop": {
       const clip = project.clips.find((c) => c.id === command.clipId);
-      const length = command.length ?? clip?.loop.length ?? clip?.span.size;
-      if (!length) return [];
-      return [
-        {
-          t: "clip.loopChanged",
-          clipId: command.clipId,
-          enabled: command.enabled,
-          length,
-        },
-      ];
+      if (!clip) return [];
+      return [{ t: "clip.loopSet", clipId: command.clipId, loop: command.loop }];
+    }
+
+    case "clip.removeLoop": {
+      const clip = project.clips.find((c) => c.id === command.clipId);
+      if (!clip) return [];
+      if (clip.payload.kind === "midi-loop" || clip.payload.kind === "audio-loop") {
+        return [{ t: "clip.loopRemoved", clipId: command.clipId }];
+      }
+      return [];
     }
 
     case "midi.renamePattern":

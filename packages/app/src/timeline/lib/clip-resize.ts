@@ -4,7 +4,7 @@
 // All state transitions are deterministic; side effects are expressed as data
 // (ResizeEffect[]) to be interpreted by the driver layer.
 
-import { Option } from "effect";
+import { Option, Schema } from "effect";
 import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
@@ -19,7 +19,9 @@ const DEAD_ZONE_PX = 3;
 // Resize edge
 // ---------------------------------------------------------------------------
 
-export type ResizeEdge = "left" | "right";
+export const ResizeEdge = Schema.Literal("left", "right");
+export type ResizeEdge = typeof ResizeEdge.Type;
+export const decodeResizeEdge = Schema.decodeUnknownOption(ResizeEdge);
 
 // ---------------------------------------------------------------------------
 // Resize state (discriminated union)
@@ -63,14 +65,6 @@ export type ResizeGhostState = {
 
 export function deriveResizeGhost(state: ResizeState): Option.Option<ResizeGhostState> {
   if (state.phase !== "resizing") return Option.none();
-
-  // No ghost when span hasn't changed
-  if (
-    N.eq(state.ghostSpan.start, state.originSpan.start) &&
-    N.eq(state.ghostSpan.size, state.originSpan.size)
-  ) {
-    return Option.none();
-  }
 
   return Option.some({
     clipId: state.clipId,

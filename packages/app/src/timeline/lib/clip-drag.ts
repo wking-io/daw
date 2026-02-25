@@ -17,7 +17,6 @@ export function snapToGrid(positionQN: QN.QN, scale: number, timeSignature: Time
   return N.max(QN.zero, snapped);
 }
 
-
 export function hitTestTrack(
   pointerY: Px.Px,
   trackLayouts: Map<string, TrackLayout>,

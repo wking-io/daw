@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Option } from "effect";
+import { Option, Schema } from "effect";
 import * as N from "@daw/core/lib/numeric";
 import * as QN from "@daw/core/lib/qn";
 import * as Px from "@daw/core/lib/px";
@@ -9,6 +9,7 @@ import {
   type ResizeState,
   type ResizeTransitionContext,
   type ResizeEffect,
+  ResizeEdge,
   idle,
   transition,
   deriveResizeGhost,
@@ -57,6 +58,29 @@ function findEffect(effects: ResizeEffect[], type: string) {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+const decodeResizeEdge = Schema.decodeUnknownSync(ResizeEdge);
+
+describe("ResizeEdge schema", () => {
+  it('parses "left"', () => {
+    expect(decodeResizeEdge("left")).toBe("left");
+  });
+
+  it('parses "right"', () => {
+    expect(decodeResizeEdge("right")).toBe("right");
+  });
+
+  it("rejects invalid strings", () => {
+    expect(() => decodeResizeEdge("top")).toThrow();
+    expect(() => decodeResizeEdge("")).toThrow();
+  });
+
+  it("rejects non-string values", () => {
+    expect(() => decodeResizeEdge(42)).toThrow();
+    expect(() => decodeResizeEdge(null)).toThrow();
+    expect(() => decodeResizeEdge(undefined)).toThrow();
+  });
+});
 
 describe("clip-resize state machine", () => {
   describe("start-pending", () => {

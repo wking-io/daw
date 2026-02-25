@@ -66,14 +66,17 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
       const factor = zoomFactorFromDelta(e.deltaY, rootCtx.timeline.view.size);
       const nextTimeline = Timeline.zoomAt(rootCtx.timeline, factor, zoomAnchor);
       rootCtx.setTimeline(nextTimeline);
+      rootCtx.transport.disableFollow();
     } else if (e.shiftKey) {
       // Shift+wheel → horizontal scroll only
       // Use whichever axis carries the delta (browsers may or may not swap axes)
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       containerNode.scrollLeft += delta;
+      rootCtx.transport.disableFollow();
     } else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       // Dominant horizontal delta (tilt wheel, trackpad horizontal swipe) → horizontal scroll
       containerNode.scrollLeft += e.deltaX;
+      rootCtx.transport.disableFollow();
     } else {
       // Dominant vertical delta → vertical scroll only
       let el = e.target as HTMLElement | null;
@@ -107,6 +110,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
     );
 
     rootCtx.setTimeline(nextTimeline);
+    rootCtx.transport.disableFollow();
   }
 
   return ({ class: classes, children, ...props }: Props<"div">) => {

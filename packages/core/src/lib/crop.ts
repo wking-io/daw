@@ -7,11 +7,7 @@ export type Crop<A extends number> = {
   offset: A;
 };
 
-export function make<A extends number>(
-  source: A,
-  visible: A,
-  offset: A,
-): Crop<A> {
+export function make<A extends number>(source: A, visible: A, offset: A): Crop<A> {
   return { source, visible, offset };
 }
 

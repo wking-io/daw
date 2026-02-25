@@ -142,6 +142,7 @@ export function ZoomWindow(handle: Handle) {
     // Start zoom interaction
     interaction = { kind: "zoom", initialTimeline: rootCtx.timeline };
     rootCtx.setIsInteracting(true);
+    rootCtx.transport.disableFollow();
 
     window.addEventListener("pointermove", handleScrubMove, true);
     window.addEventListener("pointerup", handleScrubUp, true);
@@ -170,6 +171,7 @@ export function ZoomWindow(handle: Handle) {
         offset: projection.view.start,
       });
       rootCtx.setIsInteracting(true);
+      rootCtx.transport.disableFollow();
       interaction = {
         kind: "pan",
         initialTimeline: rootCtx.timeline,
@@ -227,6 +229,7 @@ export function ZoomWindow(handle: Handle) {
           direction === "L" ? rootCtx.timeline.view.start : Span.end(rootCtx.timeline.view);
         const pointerOffset = N.subtract(pointerTimelinePos, edge);
 
+        rootCtx.transport.disableFollow();
         interaction = {
           kind: "resize",
           direction,

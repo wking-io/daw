@@ -60,6 +60,13 @@ export type TextNode = Readonly<{
   style: TextStyle;
 }>;
 
+export type PathNode = Readonly<{
+  kind: "path";
+  points: readonly Point[];
+  fill?: string;
+  stroke?: Stroke;
+}>;
+
 export type GroupNode<Action> = Readonly<{
   kind: "group";
   children: readonly SceneNode<Action>[];
@@ -71,7 +78,13 @@ export type GroupNode<Action> = Readonly<{
  * A scene node represents a visual element in the scene graph.
  * The Action type parameter is used for interactive nodes that can trigger actions.
  */
-export type SceneNode<Action> = RectNode | LineNode | LinesNode | TextNode | GroupNode<Action>;
+export type SceneNode<Action> =
+  | RectNode
+  | LineNode
+  | LinesNode
+  | TextNode
+  | PathNode
+  | GroupNode<Action>;
 
 /**
  * An interactive node extends a scene node with an optional action.
@@ -188,6 +201,20 @@ export function nodeBounds<A>(node: SceneNode<A>): Rect | undefined {
     case "text":
       // Text bounds are approximate - we don't have font metrics here
       return undefined;
+    case "path": {
+      if (node.points.length === 0) return undefined;
+      let minX = node.points[0]!.x;
+      let minY = node.points[0]!.y;
+      let maxX = minX;
+      let maxY = minY;
+      for (const p of node.points) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      }
+      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    }
     case "group":
       return undefined;
   }

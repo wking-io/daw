@@ -520,7 +520,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t1,
       span: Span.make(QN.QN(32), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p1, length: QN.QN(32) },
@@ -530,7 +530,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t1,
       span: Span.make(QN.QN(68), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p2, length: QN.QN(32) },
@@ -541,7 +541,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t2,
       span: Span.make(QN.QN(40), QN.QN(72)),
-      loop: { enabled: false, length: QN.QN(72) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p3, length: QN.QN(72) },
@@ -552,7 +552,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t3,
       span: Span.make(QN.QN(48), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p4, length: QN.QN(32) },
@@ -562,7 +562,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t3,
       span: Span.make(QN.QN(88), QN.QN(28)),
-      loop: { enabled: false, length: QN.QN(28) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p5, length: QN.QN(28) },
@@ -573,7 +573,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t4,
       span: Span.make(QN.QN(84), QN.QN(24)),
-      loop: { enabled: false, length: QN.QN(24) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p6, length: QN.QN(24) },
@@ -583,7 +583,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t4,
       span: Span.make(QN.QN(112), QN.QN(28)),
-      loop: { enabled: false, length: QN.QN(28) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p7, length: QN.QN(28) },
@@ -594,7 +594,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t5,
       span: Span.make(QN.QN(28), QN.QN(16)),
-      loop: { enabled: false, length: QN.QN(16) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p8, length: QN.QN(16) },
@@ -604,7 +604,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t5,
       span: Span.make(QN.QN(76), QN.QN(12)),
-      loop: { enabled: false, length: QN.QN(12) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p9, length: QN.QN(12) },
@@ -615,7 +615,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t6,
       span: Span.make(QN.QN(36), QN.QN(64)),
-      loop: { enabled: false, length: QN.QN(64) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p10, length: QN.QN(64) },
@@ -626,7 +626,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t7,
       span: Span.make(QN.QN(64), QN.QN(16)),
-      loop: { enabled: false, length: QN.QN(16) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p11, length: QN.QN(16) },
@@ -636,7 +636,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t7,
       span: Span.make(QN.QN(96), QN.QN(24)),
-      loop: { enabled: false, length: QN.QN(24) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p12, length: QN.QN(24) },
@@ -647,7 +647,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t8,
       span: Span.make(QN.QN(32), QN.QN(20)),
-      loop: { enabled: false, length: QN.QN(20) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p13, length: QN.QN(20) },
@@ -657,7 +657,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t8,
       span: Span.make(QN.QN(56), QN.QN(16)),
-      loop: { enabled: false, length: QN.QN(16) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p14, length: QN.QN(16) },
@@ -667,7 +667,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t8,
       span: Span.make(QN.QN(80), QN.QN(28)),
-      loop: { enabled: false, length: QN.QN(28) },
+
       sortOrder: 2,
       offset: QN.zero,
       payload: { kind: "midi", patternId: p15, length: QN.QN(28) },
@@ -678,7 +678,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t9,
       span: Span.make(QN.QN(32), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af1, offset: Sec.zero, length: QN.QN(32) },
@@ -688,7 +688,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t9,
       span: Span.make(QN.QN(72), QN.QN(24)),
-      loop: { enabled: false, length: QN.QN(24) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af2, offset: Sec.zero, length: QN.QN(24) },
@@ -698,7 +698,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t9,
       span: Span.make(QN.QN(100), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 2,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af3, offset: Sec.Sec(2.5), length: QN.QN(32) },
@@ -709,7 +709,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t10,
       span: Span.make(QN.QN(40), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af4, offset: Sec.zero, length: QN.QN(32) },
@@ -719,7 +719,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t10,
       span: Span.make(QN.QN(80), QN.QN(32)),
-      loop: { enabled: false, length: QN.QN(32) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af5, offset: Sec.zero, length: QN.QN(32) },
@@ -730,7 +730,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t11,
       span: Span.make(QN.QN(48), QN.QN(40)),
-      loop: { enabled: false, length: QN.QN(40) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af6, offset: Sec.zero, length: QN.QN(40) },
@@ -740,7 +740,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t11,
       span: Span.make(QN.QN(96), QN.QN(28)),
-      loop: { enabled: false, length: QN.QN(28) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af7, offset: Sec.Sec(1.2), length: QN.QN(28) },
@@ -751,7 +751,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t12,
       span: Span.make(QN.QN(0), QN.QN(48)),
-      loop: { enabled: false, length: QN.QN(48) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af8, offset: Sec.zero, length: QN.QN(48) },
@@ -761,7 +761,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t12,
       span: Span.make(QN.QN(56), QN.QN(44)),
-      loop: { enabled: false, length: QN.QN(44) },
+
       sortOrder: 1,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af9, offset: Sec.zero, length: QN.QN(44) },
@@ -772,7 +772,7 @@ export const demoProject: Project = {
       projectId,
       trackId: t13,
       span: Span.make(QN.QN(32), QN.QN(48)),
-      loop: { enabled: false, length: QN.QN(48) },
+
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "audio", audioFileId: af10, offset: Sec.zero, length: QN.QN(48) },

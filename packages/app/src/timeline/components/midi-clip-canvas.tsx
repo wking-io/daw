@@ -71,15 +71,7 @@ export function MidiClipCanvas(handle: Handle) {
       const colorVar = `--color-clip-fill${props.isSelected ? "-selected" : ""}`;
       const color = style.getPropertyValue(colorVar);
 
-      drawMidiNotes(
-        ctx,
-        props.notes,
-        props.clipSize,
-        cssH,
-        color,
-        props.projection,
-        offset,
-      );
+      drawMidiNotes(ctx, props.notes, props.clipSize, cssH, color, props.projection, offset);
     });
 
     return (

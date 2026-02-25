@@ -97,7 +97,25 @@ function findFinestInterval(
 }
 
 /** Format a QN position as bars[.beats[.sixteenths]] (all 1-indexed, trailing 1s omitted). */
-function formatPosition(pos: number, beat: QN.QN, bar: QN.QN): string {
+export function formatPosition(pos: number, beat: QN.QN, bar: QN.QN): string {
+  const { b, bt, s } = positionParts(pos, beat, bar);
+
+  if (s !== 1) return `${b}.${bt}.${s}`;
+  if (bt !== 1) return `${b}.${bt}`;
+  return `${b}`;
+}
+
+/** Format a QN position as bars.beats.sixteenths (all 1-indexed, always shows all parts). */
+export function formatPositionFull(pos: number, beat: QN.QN, bar: QN.QN): string {
+  const { b, bt, s } = positionParts(pos, beat, bar);
+  return `${b}.${bt}.${s}`;
+}
+
+function positionParts(
+  pos: number,
+  beat: QN.QN,
+  bar: QN.QN,
+): { b: number; bt: number; s: number } {
   const sixteenthsPerBeat = Math.round(beat / SIXTEENTH);
   const sixteenthsPerBar = Math.round(bar / SIXTEENTH);
   const total = Math.round(pos / SIXTEENTH);
@@ -107,13 +125,7 @@ function formatPosition(pos: number, beat: QN.QN, bar: QN.QN): string {
   const beatIdx = Math.floor(rem / sixteenthsPerBeat);
   const sixteenthIdx = rem - beatIdx * sixteenthsPerBeat;
 
-  const b = barIdx + 1;
-  const bt = beatIdx + 1;
-  const s = sixteenthIdx + 1;
-
-  if (s !== 1) return `${b}.${bt}.${s}`;
-  if (bt !== 1) return `${b}.${bt}`;
-  return `${b}`;
+  return { b: barIdx + 1, bt: beatIdx + 1, s: sixteenthIdx + 1 };
 }
 
 /** Map an interval to its tier number. Beat = tier 4, sub-beats go down, bars go up. */

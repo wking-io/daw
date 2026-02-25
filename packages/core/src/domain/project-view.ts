@@ -6,7 +6,7 @@
 
 import type { AudioFile } from "./audio-file";
 import type { AutomationLane } from "./automation";
-import type { Clip, ClipPayload } from "./clip";
+import { type Clip, type ClipPayload, isMidiPayload, isAudioPayload } from "./clip";
 import type { MidiPattern } from "./midi";
 import type { Project } from "./project";
 import type { Track } from "./track";
@@ -244,13 +244,48 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
       break;
     }
 
-    case "clip.loopChanged": {
+    case "clip.loopSet": {
       const clip = view.clipById.get(event.clipId);
       if (clip) {
-        view.clipById.set(event.clipId, {
-          ...clip,
-          loop: { enabled: event.enabled, length: event.length },
-        });
+        const p = clip.payload;
+        if (p.kind === "midi") {
+          view.clipById.set(event.clipId, {
+            ...clip,
+            payload: { ...p, kind: "midi-loop", loop: event.loop },
+          });
+        } else if (p.kind === "audio") {
+          view.clipById.set(event.clipId, {
+            ...clip,
+            payload: { ...p, kind: "audio-loop", loop: event.loop },
+          });
+        } else {
+          // Already a loop variant — update loop region
+          view.clipById.set(event.clipId, {
+            ...clip,
+            payload: { ...p, loop: event.loop },
+          });
+        }
+      }
+      break;
+    }
+
+    case "clip.loopRemoved": {
+      const clip = view.clipById.get(event.clipId);
+      if (clip) {
+        const p = clip.payload;
+        if (p.kind === "midi-loop") {
+          const { loop: _, ...rest } = p;
+          view.clipById.set(event.clipId, {
+            ...clip,
+            payload: { ...rest, kind: "midi" as const },
+          });
+        } else if (p.kind === "audio-loop") {
+          const { loop: _, ...rest } = p;
+          view.clipById.set(event.clipId, {
+            ...clip,
+            payload: { ...rest, kind: "audio" as const },
+          });
+        }
       }
       break;
     }
@@ -411,10 +446,10 @@ export function applyEvent(view: ProjectView, event: EditorEvent): void {
 
 /** Resolve a clip's display title via O(1) map lookups. */
 export function resolveClipTitle(payload: ClipPayload, view: ProjectView): string {
-  if (payload.kind === "midi") {
+  if (isMidiPayload(payload)) {
     return view.patternById.get(payload.patternId)?.name ?? "Untitled";
   }
-  if (payload.kind === "audio") {
+  if (isAudioPayload(payload)) {
     return view.audioFileById.get(payload.audioFileId)?.name ?? "Untitled";
   }
   return "Untitled";

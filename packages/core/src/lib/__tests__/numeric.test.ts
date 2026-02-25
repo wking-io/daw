@@ -293,14 +293,22 @@ describe("lib/numeric", () => {
 
   describe("comparison consistency", () => {
     it("lt and gte are complementary", () => {
-      const pairs: [number, number][] = [[1, 2], [2, 2], [3, 2]];
+      const pairs: [number, number][] = [
+        [1, 2],
+        [2, 2],
+        [3, 2],
+      ];
       for (const [a, b] of pairs) {
         expect(lt(TestBrand(a), TestBrand(b))).toBe(!gte(TestBrand(a), TestBrand(b)));
       }
     });
 
     it("gt and lte are complementary", () => {
-      const pairs: [number, number][] = [[1, 2], [2, 2], [3, 2]];
+      const pairs: [number, number][] = [
+        [1, 2],
+        [2, 2],
+        [3, 2],
+      ];
       for (const [a, b] of pairs) {
         expect(gt(TestBrand(a), TestBrand(b))).toBe(!lte(TestBrand(a), TestBrand(b)));
       }
@@ -359,7 +367,11 @@ describe("lib/numeric", () => {
     });
 
     it("total order: for any a, b exactly one of lt, eq, gt holds", () => {
-      const pairs: [number, number][] = [[1, 2], [2, 2], [3, 2]];
+      const pairs: [number, number][] = [
+        [1, 2],
+        [2, 2],
+        [3, 2],
+      ];
       for (const [x, y] of pairs) {
         const isLt = lt(x as TestBrand, y as TestBrand);
         const isEq = eq(x as TestBrand, y as TestBrand);

@@ -13,6 +13,7 @@ export function readTimelineTheme(el: Element = document.body): TimelineTheme {
     gridLineSecondary: getCssVar(style, "--color-gridline-secondary"),
     gridLabel: getCssVar(style, "--color-gridlabel"),
     barBackground: getCssVar(style, "--color-layer-1"),
+    playhead: getCssVar(style, "--color-foreground"),
     resolveColor: (color: TrackColor, name: string) => getCssVar(style, `--color-${color}-${name}`),
     resolveClipColor: (name: string) => getCssVar(style, `--color-clip-${name}`),
   };

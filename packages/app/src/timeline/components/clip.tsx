@@ -39,8 +39,14 @@ export function Clip(_handle: Handle) {
           {...(isSelected ? { "data-selected": "" } : {})}
         >
           {children}
-          <div class="absolute left-0 top-0 w-1 h-full cursor-ew-resize z-20" data-resize-edge="left" />
-          <div class="absolute right-0 top-0 w-1 h-full cursor-ew-resize z-20" data-resize-edge="right" />
+          <div
+            class="absolute left-0 top-0 w-1 h-full cursor-ew-resize z-20"
+            data-resize-edge="left"
+          />
+          <div
+            class="absolute right-0 top-0 w-1 h-full cursor-ew-resize z-20"
+            data-resize-edge="right"
+          />
         </div>
       </div>
     );

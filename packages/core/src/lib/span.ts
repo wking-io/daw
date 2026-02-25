@@ -8,16 +8,12 @@ export type Span<A extends number> = {
   size: A;
 };
 
-export const make = <A extends number>(
-  start: A,
-  size: A,
-): Span<A> => ({
+export const make = <A extends number>(start: A, size: A): Span<A> => ({
   start,
   size,
 });
 
-export const center = <A extends number>(s: Span<A>): A =>
-  N.add(s.start, N.divide(s.size, 2));
+export const center = <A extends number>(s: Span<A>): A => N.add(s.start, N.divide(s.size, 2));
 
 export const end = <A extends number>(s: Span<A>): A => N.add(s.start, s.size);
 
@@ -51,10 +47,7 @@ export const overlaps = <A extends number>(a: Span<A>, b: Span<A>): boolean => {
   return N.lt(a.start, end(b)) && N.lt(b.start, end(a));
 };
 
-export const intersection = <A extends number>(
-  a: Span<A>,
-  b: Span<A>,
-): Option.Option<Span<A>> => {
+export const intersection = <A extends number>(a: Span<A>, b: Span<A>): Option.Option<Span<A>> => {
   const iStart = N.max(a.start, b.start);
   const iEnd = N.min(end(a), end(b));
   return N.lt(iStart, iEnd)

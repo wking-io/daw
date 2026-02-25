@@ -213,10 +213,7 @@ export class ClipDragDriver {
           break;
 
         case "pan-timeline": {
-          const nextTimeline = Timeline.panBy(
-            this.#projection.timeline,
-            effect.delta,
-          );
+          const nextTimeline = Timeline.panBy(this.#projection.timeline, effect.delta);
           this.#setTimeline(nextTimeline);
           break;
         }

@@ -8,6 +8,7 @@ export type {
   LineNode,
   LinesNode,
   TextNode,
+  PathNode,
   GroupNode,
   SceneNode,
   InteractiveNode,

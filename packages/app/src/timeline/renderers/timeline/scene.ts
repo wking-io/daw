@@ -316,6 +316,19 @@ function buildNavigatorCanvasNodes({
     });
   }
 
+  // Playhead line (on top of clips)
+  if (env.playheadPosition != null) {
+    const phScreenX = Number(projection.contentToScreenX(env.playheadPosition));
+    if (phScreenX >= 0 && phScreenX <= projection.containerWidth) {
+      const x = phScreenX + 0.5;
+      nodes.push({
+        kind: "line",
+        points: [point(x, 0), point(x, Number(env.canvasHeight))],
+        stroke: stroke(env.theme.playhead, 1),
+      });
+    }
+  }
+
   return nodes;
 }
 
@@ -361,10 +374,7 @@ function buildDomNodes({
         // Clip title in title bar area
         {
           kind: "text",
-          position: point(
-            Px.Px(8),
-            N.divide(layout.titleBarHeight, 2),
-          ),
+          position: point(Px.Px(8), N.divide(layout.titleBarHeight, 2)),
           text: layout.title,
           style: {
             font: "12px system-ui, sans-serif",

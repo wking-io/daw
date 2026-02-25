@@ -1,4 +1,4 @@
-import type { SceneNode, Rect, Point, Stroke } from "./types";
+import type { SceneNode, Rect, Point, Stroke, PathNode } from "./types";
 
 /**
  * Render a list of scene nodes to a Canvas 2D context.
@@ -26,6 +26,9 @@ function renderNode(ctx: CanvasRenderingContext2D, node: SceneNode<never>): void
       break;
     case "text":
       renderText(ctx, node.position, node.text, node.style);
+      break;
+    case "path":
+      renderPath(ctx, node);
       break;
     case "group":
       renderGroup(ctx, node.children, node.clip);
@@ -104,6 +107,27 @@ function renderText(
   if (style.baseline) ctx.textBaseline = style.baseline;
 
   ctx.fillText(text, x, y);
+}
+
+function renderPath(ctx: CanvasRenderingContext2D, node: PathNode): void {
+  if (node.points.length < 2) return;
+
+  ctx.beginPath();
+  ctx.moveTo(node.points[0]!.x, node.points[0]!.y);
+  for (let i = 1; i < node.points.length; i++) {
+    ctx.lineTo(node.points[i]!.x, node.points[i]!.y);
+  }
+  ctx.closePath();
+
+  if (node.fill) {
+    ctx.fillStyle = node.fill;
+    ctx.fill();
+  }
+  if (node.stroke) {
+    ctx.strokeStyle = node.stroke.color;
+    ctx.lineWidth = node.stroke.width;
+    ctx.stroke();
+  }
 }
 
 function renderGroup(

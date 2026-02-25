@@ -65,7 +65,6 @@ const createClip = (id: string, trackId: string): Clip => ({
   projectId: ProjectId.make("proj-1"),
   trackId: TrackId.make(trackId),
   span: { start: QN.QN(0), size: QN.QN(4) },
-  loop: { enabled: false, length: QN.QN(4) },
   sortOrder: 0,
   offset: QN.zero,
   payload: { kind: "midi", patternId: PatternId.make("pattern-1"), length: QN.QN(4) },
@@ -496,22 +495,48 @@ describe("Project.evolve", () => {
       expect(first(result.clips).span.size).toBe(QN.QN(8));
     });
 
-    it("handles clip.loopChanged", () => {
+    it("handles clip.loopSet", () => {
       const project = {
         ...createBaseProject(),
         clips: [createClip("clip-1", "track-1")],
       };
       const event: EditorEvent = {
-        t: "clip.loopChanged",
+        t: "clip.loopSet",
         clipId: ClipId.make("clip-1"),
-        enabled: true,
-        length: QN.QN(2),
+        loop: { start: QN.QN(0), size: QN.QN(2) },
       };
 
       const result = evolve(project, event);
 
-      expect(first(result.clips).loop.enabled).toBe(true);
-      expect(first(result.clips).loop.length).toBe(QN.QN(2));
+      expect(first(result.clips).payload.kind).toBe("midi-loop");
+      if (first(result.clips).payload.kind === "midi-loop") {
+        expect(first(result.clips).payload.loop.size).toBe(QN.QN(2));
+      }
+    });
+
+    it("handles clip.loopRemoved", () => {
+      const project = {
+        ...createBaseProject(),
+        clips: [
+          {
+            ...createClip("clip-1", "track-1"),
+            payload: {
+              kind: "midi-loop" as const,
+              patternId: PatternId.make("pattern-1"),
+              length: QN.QN(4),
+              loop: { start: QN.QN(0), size: QN.QN(2) },
+            },
+          },
+        ],
+      };
+      const event: EditorEvent = {
+        t: "clip.loopRemoved",
+        clipId: ClipId.make("clip-1"),
+      };
+
+      const result = evolve(project, event);
+
+      expect(first(result.clips).payload.kind).toBe("midi");
     });
   });
 
@@ -1183,7 +1208,7 @@ describe("Project.decide", () => {
       });
     });
 
-    it("returns clip.loopChanged event for clip.setLoop command", () => {
+    it("returns clip.loopSet event for clip.setLoop command", () => {
       const project = {
         ...createBaseProject(),
         clips: [createClip("clip-1", "track-1")],
@@ -1191,19 +1216,61 @@ describe("Project.decide", () => {
       const command: EditorCommandPayload = {
         t: "clip.setLoop",
         clipId: ClipId.make("clip-1"),
-        enabled: true,
-        length: QN.QN(2),
+        loop: { start: QN.QN(0), size: QN.QN(2) },
       };
 
       const events = decide(project, command);
 
       expect(events).toHaveLength(1);
       expect(events[0]).toEqual({
-        t: "clip.loopChanged",
+        t: "clip.loopSet",
         clipId: ClipId.make("clip-1"),
-        enabled: true,
-        length: QN.QN(2),
+        loop: { start: QN.QN(0), size: QN.QN(2) },
       });
+    });
+
+    it("returns clip.loopRemoved event for clip.removeLoop command", () => {
+      const project = {
+        ...createBaseProject(),
+        clips: [
+          {
+            ...createClip("clip-1", "track-1"),
+            payload: {
+              kind: "midi-loop" as const,
+              patternId: PatternId.make("pattern-1"),
+              length: QN.QN(4),
+              loop: { start: QN.QN(0), size: QN.QN(2) },
+            },
+          },
+        ],
+      };
+      const command: EditorCommandPayload = {
+        t: "clip.removeLoop",
+        clipId: ClipId.make("clip-1"),
+      };
+
+      const events = decide(project, command);
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual({
+        t: "clip.loopRemoved",
+        clipId: ClipId.make("clip-1"),
+      });
+    });
+
+    it("returns empty for clip.removeLoop on non-looping clip", () => {
+      const project = {
+        ...createBaseProject(),
+        clips: [createClip("clip-1", "track-1")],
+      };
+      const command: EditorCommandPayload = {
+        t: "clip.removeLoop",
+        clipId: ClipId.make("clip-1"),
+      };
+
+      const events = decide(project, command);
+
+      expect(events).toHaveLength(0);
     });
   });
 

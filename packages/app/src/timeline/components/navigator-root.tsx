@@ -7,7 +7,7 @@ import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
 import { ProjectionContext, type ProjectionRules } from "../lib/projection-context";
 
-const DEFAULT_HEIGHT = 22;
+const DEFAULT_HEIGHT = 27;
 
 const navigatorRules: ProjectionRules = {
   scale: (ctx) => {

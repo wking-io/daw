@@ -110,7 +110,6 @@ function createClip(
       projectId: PROJECT_ID,
       trackId: trackId as any,
       span: Span.make(QN.QN(start), QN.QN(end - start)),
-      loop: { enabled: false, length: QN.QN(end - start) },
       sortOrder: 0,
       offset: QN.zero,
       payload: { kind: "midi", patternId, length: QN.QN(end - start) },

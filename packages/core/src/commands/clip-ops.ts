@@ -48,10 +48,15 @@ export type ClipResize = Schema.Schema.Type<typeof ClipResize>;
 export const ClipSetLoop = Schema.Struct({
   t: Schema.Literal("clip.setLoop"),
   clipId: ClipId,
-  enabled: Schema.Boolean,
-  length: Schema.optional(QN.Schema),
+  loop: QNSpan,
 });
 export type ClipSetLoop = Schema.Schema.Type<typeof ClipSetLoop>;
+
+export const ClipRemoveLoop = Schema.Struct({
+  t: Schema.Literal("clip.removeLoop"),
+  clipId: ClipId,
+});
+export type ClipRemoveLoop = Schema.Schema.Type<typeof ClipRemoveLoop>;
 
 export const ClipOperation = Schema.Union(
   ClipCreateMidi,
@@ -60,5 +65,6 @@ export const ClipOperation = Schema.Union(
   ClipMove,
   ClipResize,
   ClipSetLoop,
+  ClipRemoveLoop,
 );
 export type ClipOperation = Schema.Schema.Type<typeof ClipOperation>;

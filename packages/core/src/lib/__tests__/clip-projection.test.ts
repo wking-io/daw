@@ -32,9 +32,9 @@ describe("ClipProjection", () => {
     // source=32, visible=16, offset=4 → scale=2, ratio=0.25
     const crop = Crop.make(32, 16, 4);
     const p = ClipProjection.make(crop, 200, 10, 100);
-    expect(p.clipWidth).toBe(400);            // 200 * 2
-    expect(p.visibleLeft).toBe(60);           // 10 + 200 * 0.25
-    expect(p.visibleRight).toBe(160);         // 60 + 100
+    expect(p.clipWidth).toBe(400); // 200 * 2
+    expect(p.visibleLeft).toBe(60); // 10 + 200 * 0.25
+    expect(p.visibleRight).toBe(160); // 60 + 100
     expect(p.visibleWidth).toBe(100);
   });
 

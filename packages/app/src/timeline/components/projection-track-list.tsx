@@ -8,7 +8,14 @@ import * as Range from "@daw/core/lib/range";
 import * as Crop from "@daw/core/lib/crop";
 import * as ClipProjection from "@daw/core/lib/clip-projection";
 import * as Sec from "@daw/core/lib/sec";
-import type { Clip, MidiClipPayload } from "@daw/core/domain/clip";
+import {
+  type Clip,
+  type MidiClipPayload,
+  type MidiLoopPayload,
+  isMidiPayload,
+  isAudioPayload,
+  payloadFamily,
+} from "@daw/core/domain/clip";
 
 import { Clip as ClipComponent, ClipContent, ClipHeader } from "./clip";
 import { ProjectionRoot } from "./projection-root";
@@ -19,10 +26,10 @@ import { resolveClipTitle } from "@daw/core/domain/project-view";
 import type { UIAction, TimelineData, UIState, TrackColor } from "../renderers/timeline/types";
 import type { ProjectionContext } from "../lib/projection-context";
 import { buildTrackLayouts, TITLE_BAR_HEIGHT } from "../lib/track-layout";
-import { Option } from "effect";
+import { Option, Function, pipe } from "effect";
 import { ClipDragDriver } from "../lib/clip-drag-driver";
 import { ClipResizeDriver } from "../lib/clip-resize-driver";
-import type { ResizeEdge } from "../lib/clip-resize";
+import { decodeResizeEdge, ResizeEdge } from "../lib/clip-resize";
 
 const CLIP_VERTICAL_PADDING = Px.Px(1);
 
@@ -114,84 +121,89 @@ export function ProjectionTrackList(handle: Handle) {
       >
         {mapClips(
           { view: data.view, projection },
-          ({ color, visible, x, y, width, height, ...clip }) => (
-            <ClipComponent
-              key={clip.id}
-              color={color}
-              isSelected={state.selectedClipId === clip.id}
-              x={visible.start}
-              y={y}
-              height={height}
-              width={visible.size}
-              on={{
-                pointerdown: (e: PointerEvent) => {
-                  const target = e.target as HTMLElement;
-                  const resizeEdge = target.dataset.resizeEdge as ResizeEdge | undefined;
-                  if (resizeEdge) {
-                    e.stopPropagation();
-                    dispatch({ type: "select-clip", clipId: clip.id });
-                    resize.startPending(clip.id, resizeEdge, e, clip.span, color);
-                  }
-                },
-              }}
-            >
-              <ClipHeader
+          ({ color, visible, x, y, width, height, ...clip }) =>
+            pipe(
+              resize.ghost,
+              Option.flatMap((ghost) =>
+                ghost.clipId === clip.id ? Option.some(ghost) : Option.none(),
+              ),
+              Option.isNone,
+            ) && (
+              <ClipComponent
+                key={clip.id}
+                color={color}
+                isSelected={state.selectedClipId === clip.id}
+                x={visible.start}
+                y={y}
+                height={height}
+                width={visible.size}
                 on={{
-                  pointerdown: (e) => {
-                    e.stopPropagation();
-                    dispatch({ type: "select-clip", clipId: clip.id });
-                    drag.startPending(clip.id, e, {
-                      originTrackId: clip.trackId,
-                      origin: clip.span,
-                      payloadKind: clip.payload.kind,
-                      color,
-                      width,
-                      height,
+                  pointerdown: (e: PointerEvent) => {
+                    Option.match(checkResizeEdge(e), {
+                      onSome: (edge) => {
+                        e.stopPropagation();
+                        dispatch({ type: "select-clip", clipId: clip.id });
+                        resize.startPending(clip.id, edge, e, clip.span, color);
+                      },
+                      onNone: Function.constVoid,
                     });
                   },
                 }}
               >
-                {resolveClipTitle(clip.payload, data.view)}
-              </ClipHeader>
-              {!clip.compact && (
-                <ClipContent height={height} isSelected={state.selectedClipId === clip.id}>
-                  {clip.payload.kind === "midi" && (
-                    <MidiClipCanvas
-                      notes={getNotes(data.view, clip.payload)}
-                      clipSize={clip.span.size}
-                      isSelected={state.selectedClipId === clip.id}
-                      color={color}
-                      projection={ClipProjection.make(
-                        Crop.make(clip.span.size, clip.span.size, QN.zero),
+                <ClipHeader
+                  on={{
+                    pointerdown: (e) => {
+                      e.stopPropagation();
+                      dispatch({ type: "select-clip", clipId: clip.id });
+                      drag.startPending(clip.id, e, {
+                        originTrackId: clip.trackId,
+                        origin: clip.span,
+                        payloadKind: payloadFamily(clip.payload),
+                        color,
                         width,
-                        x,
-                        visible.size,
-                      )}
-                      offset={clip.offset}
-                    />
-                  )}
-                  {clip.payload.kind === "audio" && (
-                    <AudioClipCanvas
-                      audioFileId={clip.payload.audioFileId}
-                      offset={clip.payload.offset}
-                      duration={Sec.fromQN(
-                        N.add(clip.offset, clip.payload.length),
-                        data.project.bpm,
-                      )}
-                      isSelected={state.selectedClipId === clip.id}
-                      color={color}
-                      projection={ClipProjection.make(
-                        Crop.make(clip.payload.length, clip.span.size, clip.offset),
-                        width,
-                        x,
-                        visible.size,
-                      )}
-                    />
-                  )}
-                </ClipContent>
-              )}
-            </ClipComponent>
-          ),
+                        height,
+                      });
+                    },
+                  }}
+                >
+                  {resolveClipTitle(clip.payload, data.view)}
+                </ClipHeader>
+                {!clip.compact && (
+                  <ClipContent height={height} isSelected={state.selectedClipId === clip.id}>
+                    {isMidiPayload(clip.payload) && (
+                      <MidiClipCanvas
+                        notes={getNotes(data.view, clip.payload)}
+                        clipSize={clip.span.size}
+                        isSelected={state.selectedClipId === clip.id}
+                        color={color}
+                        projection={ClipProjection.make(
+                          Crop.make(clip.span.size, clip.span.size, QN.zero),
+                          width,
+                          x,
+                          visible.size,
+                        )}
+                        offset={clip.offset}
+                      />
+                    )}
+                    {isAudioPayload(clip.payload) && (
+                      <AudioClipCanvas
+                        audioFileId={clip.payload.audioFileId}
+                        offset={clip.payload.offset}
+                        duration={Sec.fromQN(clip.payload.length, data.project.bpm)}
+                        isSelected={state.selectedClipId === clip.id}
+                        color={color}
+                        projection={ClipProjection.make(
+                          Crop.make(clip.payload.length, clip.span.size, clip.offset),
+                          width,
+                          x,
+                          visible.size,
+                        )}
+                      />
+                    )}
+                  </ClipContent>
+                )}
+              </ClipComponent>
+            ),
         )}
         {Option.match(drag.ghost, {
           onNone: () => null,
@@ -223,7 +235,7 @@ export function ProjectionTrackList(handle: Handle) {
                   <ClipHeader>{resolveClipTitle(clip.payload, data.view)}</ClipHeader>
                   {!trackLayout.compact && (
                     <ClipContent height={ghostHeight} isSelected={true}>
-                      {clip.payload.kind === "midi" && (
+                      {isMidiPayload(clip.payload) && (
                         <MidiClipCanvas
                           notes={getNotes(data.view, clip.payload)}
                           clipSize={clip.span.size}
@@ -238,7 +250,7 @@ export function ProjectionTrackList(handle: Handle) {
                           offset={clip.offset}
                         />
                       )}
-                      {clip.payload.kind === "audio" &&
+                      {isAudioPayload(clip.payload) &&
                         (() => {
                           const src = N.add(clip.offset, clip.span.size);
                           return (
@@ -273,6 +285,7 @@ export function ProjectionTrackList(handle: Handle) {
             const trackLayout = trackLayouts.get(clip.trackId);
             if (!trackLayout) return null;
 
+            // Ghost span (the resized clip preview)
             const ghostX = projection.contentToScreenX(ghost.span.start);
             const ghostEndX = projection.contentToScreenX(Span.end(ghost.span));
             const ghostWidth = N.subtract(ghostEndX, ghostX);
@@ -284,17 +297,69 @@ export function ProjectionTrackList(handle: Handle) {
                   N.subtract(trackLayout.height, N.multiply(CLIP_VERTICAL_PADDING, 2)),
                 );
 
-            // Render ghost content at the original clip's scale so the
-            // waveform/notes stay visually anchored — resize looks like a crop.
-            const origStartX = projection.contentToScreenX(ghost.originSpan.start);
-            const origEndX = projection.contentToScreenX(Span.end(ghost.originSpan));
-            const origWidth = N.subtract(origEndX, origStartX);
-            // visibleLeft: offset into the original content.
-            //   right edge (anchor left): 0 — content stays left-aligned
-            //   left edge  (anchor right): origWidth - ghostWidth (may be negative when extending)
-            const cropLeft = ghost.edge === "right" ? Px.zero : N.subtract(origWidth, ghostWidth);
+            // Full source extent on the timeline
+            const sourceStartQN = N.subtract(ghost.originSpan.start, clip.offset);
+            const sourceEndQN = N.add(sourceStartQN, clip.payload.length);
+            const sourceX = projection.contentToScreenX(sourceStartQN);
+            const sourceEndX = projection.contentToScreenX(sourceEndQN);
+            const sourceWidth = N.subtract(sourceEndX, sourceX);
+
+            // Offset into the source for the ghost span's start position
+            const ghostOffset = N.add(
+              clip.offset,
+              N.subtract(ghost.span.start, ghost.originSpan.start),
+            );
+
             return (
-              <div class="pointer-events-none opacity-50 z-30 absolute inset-0">
+              <div class="pointer-events-none z-30 absolute inset-0">
+                {/* Full source extent — ghosted background */}
+                {!trackLayout.compact && (
+                  <div class="opacity-35 dark:opacity-25">
+                    <ClipComponent
+                      x={sourceX}
+                      y={ghostY}
+                      width={sourceWidth}
+                      height={ghostHeight}
+                      color={ghost.color}
+                      isSelected={false}
+                    >
+                      <ClipHeader>{""}</ClipHeader>
+                      <ClipContent height={ghostHeight} isSelected={false}>
+                        {isMidiPayload(clip.payload) && (
+                          <MidiClipCanvas
+                            notes={getNotes(data.view, clip.payload)}
+                            clipSize={clip.payload.length}
+                            isSelected={false}
+                            color={ghost.color}
+                            projection={ClipProjection.make(
+                              Crop.make(clip.payload.length, clip.payload.length, QN.zero),
+                              sourceWidth,
+                              Px.zero,
+                              sourceWidth,
+                            )}
+                            offset={0}
+                          />
+                        )}
+                        {isAudioPayload(clip.payload) && (
+                          <AudioClipCanvas
+                            audioFileId={clip.payload.audioFileId}
+                            offset={clip.payload.offset}
+                            duration={Sec.fromQN(clip.payload.length, data.project.bpm)}
+                            isSelected={false}
+                            color={ghost.color}
+                            projection={ClipProjection.make(
+                              Crop.make(clip.payload.length, clip.payload.length, QN.zero),
+                              sourceWidth,
+                              Px.zero,
+                              sourceWidth,
+                            )}
+                          />
+                        )}
+                      </ClipContent>
+                    </ClipComponent>
+                  </div>
+                )}
+                {/* Resized clip — solid, rendered on top */}
                 <ClipComponent
                   x={ghostX}
                   y={ghostY}
@@ -306,28 +371,23 @@ export function ProjectionTrackList(handle: Handle) {
                   <ClipHeader>{resolveClipTitle(clip.payload, data.view)}</ClipHeader>
                   {!trackLayout.compact && (
                     <ClipContent height={ghostHeight} isSelected={true}>
-                      {clip.payload.kind === "midi" && (
+                      {isMidiPayload(clip.payload) && (
                         <MidiClipCanvas
                           notes={getNotes(data.view, clip.payload)}
-                          clipSize={ghost.originSpan.size}
+                          clipSize={clip.payload.length}
                           isSelected={true}
                           color={ghost.color}
                           projection={ClipProjection.make(
-                            Crop.make(ghost.originSpan.size, ghost.originSpan.size, QN.zero),
-                            origWidth,
-                            cropLeft,
+                            Crop.make(clip.payload.length, ghost.span.size, ghostOffset),
+                            ghostWidth,
+                            Px.zero,
                             ghostWidth,
                           )}
-                          offset={clip.offset}
+                          offset={0}
                         />
                       )}
-                      {clip.payload.kind === "audio" &&
+                      {isAudioPayload(clip.payload) &&
                         (() => {
-                          const startDelta = N.subtract(ghost.span.start, ghost.originSpan.start);
-                          const crop = Crop.move(
-                            Crop.make(clip.payload.length, ghost.originSpan.size, clip.offset),
-                            startDelta,
-                          );
                           return (
                             <AudioClipCanvas
                               audioFileId={clip.payload.audioFileId}
@@ -336,8 +396,8 @@ export function ProjectionTrackList(handle: Handle) {
                               isSelected={true}
                               color={ghost.color}
                               projection={ClipProjection.make(
-                                crop,
-                                origWidth,
+                                Crop.make(clip.payload.length, ghost.span.size, ghostOffset),
+                                ghostWidth,
                                 Px.zero,
                                 ghostWidth,
                               )}
@@ -409,7 +469,14 @@ function mapClips<T>(
   });
 }
 
-function getNotes(view: TimelineData["view"], payload: MidiClipPayload) {
+function getNotes(view: TimelineData["view"], payload: MidiClipPayload | MidiLoopPayload) {
   const pattern = view.patternById.get(payload.patternId);
   return pattern?.notes ?? [];
+}
+
+function checkResizeEdge(e: PointerEvent): Option.Option<ResizeEdge> {
+  if (e.target instanceof HTMLElement) {
+    return decodeResizeEdge(e.target.dataset.resizeEdge);
+  }
+  return Option.none();
 }

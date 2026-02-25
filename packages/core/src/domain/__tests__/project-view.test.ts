@@ -64,7 +64,6 @@ function makeClip(
     projectId,
     trackId: trackId as any,
     span: Span.make(QN.QN(start), QN.QN(size)),
-    loop: { enabled: false, length: QN.QN(size) },
     sortOrder: 0,
     offset: QN.zero,
     payload: { kind: "midi" as const, patternId: patternId as any, length: QN.QN(size) },
@@ -83,10 +82,14 @@ function makeAudioClip(
     projectId,
     trackId: trackId as any,
     span: Span.make(QN.QN(start), QN.QN(size)),
-    loop: { enabled: false, length: QN.QN(size) },
     sortOrder: 0,
     offset: QN.zero,
-    payload: { kind: "audio" as const, audioFileId: audioFileId as any, offset: Sec.zero, length: QN.QN(size) },
+    payload: {
+      kind: "audio" as const,
+      audioFileId: audioFileId as any,
+      offset: Sec.zero,
+      length: QN.QN(size),
+    },
   };
 }
 
@@ -375,7 +378,9 @@ describe("lib/project-view", () => {
 
         expect(view.clipById.has("c1")).toBe(true);
         expect(view.patternById.has("pat-c1")).toBe(true);
-        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(4)))).toEqual(["c1"] as ClipId[]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(4)))).toEqual([
+          "c1",
+        ] as ClipId[]);
       });
 
       it("clip.created without pattern (audio clip)", () => {
@@ -423,7 +428,9 @@ describe("lib/project-view", () => {
         expect(Number(clip.span.start)).toBe(8);
         expect(String(clip.trackId)).toBe("t2");
         expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(0), QN.QN(12)))).toEqual([]);
-        expect(SI.query(view.clipIndex, "t2", Span.make(QN.QN(8), QN.QN(4)))).toEqual(["c1"] as ClipId[]);
+        expect(SI.query(view.clipIndex, "t2", Span.make(QN.QN(8), QN.QN(4)))).toEqual([
+          "c1",
+        ] as ClipId[]);
       });
 
       it("clip.resized updates span and index", () => {
@@ -442,10 +449,12 @@ describe("lib/project-view", () => {
         } as unknown as EditorEvent);
 
         expect(Number(view.clipById.get("c1")!.span.size)).toBe(12);
-        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(8), QN.QN(4)))).toEqual(["c1"] as ClipId[]);
+        expect(SI.query(view.clipIndex, "t1", Span.make(QN.QN(8), QN.QN(4)))).toEqual([
+          "c1",
+        ] as ClipId[]);
       });
 
-      it("clip.loopChanged updates loop settings", () => {
+      it("clip.loopSet transforms payload to loop variant", () => {
         const view = PV.fromProject(
           makeProject({
             tracks: [makeTrack("t1")],
@@ -455,15 +464,44 @@ describe("lib/project-view", () => {
         );
 
         PV.applyEvent(view, {
-          t: "clip.loopChanged",
+          t: "clip.loopSet",
           clipId: "c1",
-          enabled: true,
-          length: QN.QN(8),
+          loop: { start: QN.QN(0), size: QN.QN(4) },
         } as unknown as EditorEvent);
 
         const clip = view.clipById.get("c1")!;
-        expect(clip.loop.enabled).toBe(true);
-        expect(Number(clip.loop.length)).toBe(8);
+        expect(clip.payload.kind).toBe("midi-loop");
+        if (clip.payload.kind === "midi-loop") {
+          expect(Number(clip.payload.loop.size)).toBe(4);
+        }
+      });
+
+      it("clip.loopRemoved transforms payload back to non-loop variant", () => {
+        const view = PV.fromProject(
+          makeProject({
+            tracks: [makeTrack("t1")],
+            clips: [
+              {
+                ...makeClip("c1", "t1", 0, 4),
+                payload: {
+                  kind: "midi-loop" as const,
+                  patternId: "pat-c1" as any,
+                  length: QN.QN(4),
+                  loop: { start: QN.QN(0), size: QN.QN(4) },
+                },
+              },
+            ],
+            midiPatterns: [makePattern("pat-c1", "Beat")],
+          }),
+        );
+
+        PV.applyEvent(view, {
+          t: "clip.loopRemoved",
+          clipId: "c1",
+        } as unknown as EditorEvent);
+
+        const clip = view.clipById.get("c1")!;
+        expect(clip.payload.kind).toBe("midi");
       });
     });
 
@@ -492,7 +530,12 @@ describe("lib/project-view", () => {
           }),
         );
 
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
+        const note = {
+          id: "n1" as any,
+          pitch: 60,
+          velocity: 100,
+          span: Span.make(QN.QN(0), QN.QN(1)),
+        };
         PV.applyEvent(view, {
           t: "midi.noteAdded",
           patternId: "p1",
@@ -504,7 +547,12 @@ describe("lib/project-view", () => {
       });
 
       it("midi.noteDeleted removes note from pattern", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
+        const note = {
+          id: "n1" as any,
+          pitch: 60,
+          velocity: 100,
+          span: Span.make(QN.QN(0), QN.QN(1)),
+        };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -521,7 +569,12 @@ describe("lib/project-view", () => {
       });
 
       it("midi.noteMoved updates note span", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
+        const note = {
+          id: "n1" as any,
+          pitch: 60,
+          velocity: 100,
+          span: Span.make(QN.QN(0), QN.QN(1)),
+        };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -541,7 +594,12 @@ describe("lib/project-view", () => {
       });
 
       it("midi.noteVelocityChanged updates velocity", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
+        const note = {
+          id: "n1" as any,
+          pitch: 60,
+          velocity: 100,
+          span: Span.make(QN.QN(0), QN.QN(1)),
+        };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],
@@ -559,7 +617,12 @@ describe("lib/project-view", () => {
       });
 
       it("midi.notePitchChanged updates pitch", () => {
-        const note = { id: "n1" as any, pitch: 60, velocity: 100, span: Span.make(QN.QN(0), QN.QN(1)) };
+        const note = {
+          id: "n1" as any,
+          pitch: 60,
+          velocity: 100,
+          span: Span.make(QN.QN(0), QN.QN(1)),
+        };
         const view = PV.fromProject(
           makeProject({
             midiPatterns: [{ ...makePattern("p1", "Beat"), notes: [note] }],

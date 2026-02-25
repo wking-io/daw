@@ -1,4 +1,5 @@
 import * as Px from "@daw/core/lib/px";
+import type * as QN from "@daw/core/lib/qn";
 import type { ProjectionContext } from "../lib/projection-context";
 import type { TrackColor } from "./timeline/types";
 
@@ -8,6 +9,7 @@ export type TimelineTheme = Readonly<{
   gridLineSecondary: string;
   gridLabel: string;
   barBackground: string;
+  playhead: string;
   resolveColor: (color: TrackColor, name: string) => string;
   resolveClipColor: (name: string) => string;
 }>;
@@ -16,6 +18,7 @@ export type TimelineEnv = Readonly<{
   surface: "main" | "navigator";
   canvasHeight: Px.Px;
   theme: TimelineTheme;
+  playheadPosition?: QN.QN;
 }>;
 
 export type TimelineRendererCore<Data, State, Action, RenderModel = unknown> = Readonly<{

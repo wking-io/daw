@@ -67,11 +67,7 @@ export function panBy<A extends number>(t: Timeline<A>, delta: A): Timeline<A> {
 }
 
 // Zoom factor: > 0. Convention: size' = size / factor (factor>1 zooms in)
-export function zoomAt<A extends number>(
-  t: Timeline<A>,
-  factor: number,
-  anchor: A,
-): Timeline<A> {
+export function zoomAt<A extends number>(t: Timeline<A>, factor: number, anchor: A): Timeline<A> {
   const tt = normalize(t);
 
   // Clamp anchor into content [0, contentSize] (anchor at end is allowed; treat it as position 1)
@@ -96,10 +92,7 @@ export function zoomAt<A extends number>(
 }
 
 // Resize left/right by deltas in content units (positive means move edge right)
-export function resizeLeftBy<A extends number>(
-  t: Timeline<A>,
-  delta: A,
-): Timeline<A> {
+export function resizeLeftBy<A extends number>(t: Timeline<A>, delta: A): Timeline<A> {
   const tt = normalize(t);
   const v = tt.view;
 
@@ -112,10 +105,7 @@ export function resizeLeftBy<A extends number>(
   return normalize({ ...tt, view: S.make(nextStart, nextSize) });
 }
 
-export function resizeRightBy<A extends number>(
-  t: Timeline<A>,
-  delta: A,
-): Timeline<A> {
+export function resizeRightBy<A extends number>(t: Timeline<A>, delta: A): Timeline<A> {
   const tt = normalize(t);
   const v = tt.view;
   // Keep left edge fixed; size -> size+delta

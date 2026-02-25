@@ -227,9 +227,7 @@ describe("lib/span", () => {
           const i = Span.intersection(a, b);
           if (Option.isSome(i)) {
             expect(i.value.start).toBeGreaterThanOrEqual(Math.max(a.start, b.start));
-            expect(Span.end(i.value)).toBeLessThanOrEqual(
-              Math.min(Span.end(a), Span.end(b)),
-            );
+            expect(Span.end(i.value)).toBeLessThanOrEqual(Math.min(Span.end(a), Span.end(b)));
           }
         }
       });
