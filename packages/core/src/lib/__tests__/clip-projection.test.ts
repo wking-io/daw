@@ -9,7 +9,7 @@ describe("ClipProjection", () => {
     const crop = Crop.make(16, 16, 0); // scale=1, ratio=0
     const p = ClipProjection.make(crop, Px.Px(200), Span.make(Px.Px(30), Px.Px(100)));
     expect(p.scale).toBe(200 / 16);
-    expect(p.view.start).toBe(Px.Px(0)); // ratio=0
+    expect(p.view.start).toBe(Px.Px(30)); // view.start + width*ratio = 30 + 200*0
     expect(p.view.size).toBe(Px.Px(100)); // visible width passed through
     expect(p.width).toBe(Px.Px(200)); // 200 * 1
   });
@@ -38,9 +38,27 @@ describe("ClipProjection", () => {
     const crop = Crop.make(32, 16, 4);
     const p = ClipProjection.make(crop, Px.Px(200), Span.make(Px.Px(10), Px.Px(100)));
     expect(p.scale).toBe(400 / 32);
-    expect(p.view.start).toBeCloseTo(52.5); // (10+200) * 0.25
+    expect(p.view.start).toBeCloseTo(60); // view.start + width*ratio = 10 + 200*0.25
     expect(p.view.size).toBe(Px.Px(100)); // visible width passed through
     expect(p.width).toBe(Px.Px(400)); // 200 * 2
+  });
+
+  it("clip partially off-screen left accounts for off-screen portion", () => {
+    // Simulates a clip that extends past the left viewport edge:
+    // 1000px wide clip with 500px off-screen, so view.start=500, visible=500px
+    const crop = Crop.make(10, 10, 2); // scale=1, ratio=0.2
+    const p = ClipProjection.make(crop, Px.Px(1000), Span.make(Px.Px(500), Px.Px(500)));
+    // Content offset = off-screen portion + crop offset = 500 + 1000*0.2 = 700
+    expect(p.view.start).toBe(Px.Px(700));
+    expect(p.view.size).toBe(Px.Px(500));
+  });
+
+  it("clip fully on-screen has view.start equal to crop offset only", () => {
+    const crop = Crop.make(10, 10, 2); // scale=1, ratio=0.2
+    const p = ClipProjection.make(crop, Px.Px(1000), Span.make(Px.Px(0), Px.Px(1000)));
+    // No off-screen portion, so content offset is just the crop offset
+    expect(p.view.start).toBe(Px.Px(200)); // 0 + 1000*0.2
+    expect(p.view.size).toBe(Px.Px(1000));
   });
 
   // Laws
@@ -69,7 +87,7 @@ describe("ClipProjection", () => {
         const p = ClipProjection.make(crop, Px.Px(size), Span.make(Px.Px(start), Px.Px(size)));
         expect(p.view.size).toBe(Px.Px(size));
         expect(p.width).toBe(Px.Px(size));
-        expect(p.view.start).toBe(Px.Px(0)); // ratio=0
+        expect(p.view.start).toBe(Px.Px(start)); // view.start + size*0 = start
       }
     }
   });

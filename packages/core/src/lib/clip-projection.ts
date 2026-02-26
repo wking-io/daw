@@ -24,7 +24,7 @@ export function make<A extends number>(
   view: Span.Span<Px.Px>,
 ): ClipProjection {
   const scaledWidth = Numeric.multiply(width, Crop.scale(crop));
-  const visibleLeft = Numeric.multiply(Numeric.add(view.start, width), Crop.ratio(crop));
+  const visibleLeft = Numeric.add(view.start, Numeric.multiply(width, Crop.ratio(crop)));
   return {
     scale: Projection.scaleFor(crop.source, scaledWidth),
     view: Span.make(visibleLeft, view.size),
