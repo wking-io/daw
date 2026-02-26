@@ -1,63 +1,51 @@
-import type { Projection1D } from '../foundation/projection1d'
-import type { Px } from '@daw/core/lib/px'
-
-export type CanvasEnv = Readonly<{
-	dpr: number
-	widthPx: Px
-	heightPx: Px
-}>
+import * as Px from "@daw/core/lib/px";
+import type * as QN from "@daw/core/lib/qn";
+import type { ProjectionContext } from "../lib/projection-context";
+import type { TrackColor } from "./timeline/types";
 
 export type TimelineTheme = Readonly<{
-	/** Color for grid lines and track separators */
-	gridLine: string
-	/** Default clip fill when track color can't be parsed */
-	clipFallbackFill: string
-	/** Clip fill when selected and track color can't be parsed */
-	clipFallbackFillSelected: string
-	/** Default clip border when track color can't be parsed */
-	clipFallbackBorder: string
-	/** Clip border when selected */
-	clipBorderSelected: string
-}>
+  tick: string;
+  gridLinePrimary: string;
+  gridLineSecondary: string;
+  gridLabel: string;
+  barBackground: string;
+  playhead: string;
+  resolveColor: (color: TrackColor, name: string) => string;
+  resolveClipColor: (name: string) => string;
+}>;
 
-export type TimelineHostEnv = Readonly<{
-	canvas: CanvasEnv
-	surface: 'main' | 'navigator'
-	/** If true, the renderer should scale/compress vertical layout to fit `canvas.heightPx`. */
-	fitToHeight: boolean
-	theme: TimelineTheme
-}>
+export type TimelineEnv = Readonly<{
+  surface: "main" | "navigator";
+  canvasHeight: Px.Px;
+  theme: TimelineTheme;
+  playheadPosition?: QN.QN;
+}>;
 
-export type TimelineRendererCore<
-	Data,
-	UiState,
-	Action,
-	RenderModel = unknown,
-> = Readonly<{
-	kind: string
-	buildModel: (args: {
-		data: Data
-		projection: Projection1D<Px>
-		ui: UiState
-		env: TimelineHostEnv
-	}) => RenderModel
-	drawCanvas?: (args: {
-		ctx: CanvasRenderingContext2D
-		model: RenderModel
-		projection: Projection1D<Px>
-		ui: UiState
-		env: TimelineHostEnv
-	}) => void
-	/**
-	 * Optional pure hit-testing. If provided, the UI host can implement pointer handling
-	 * without coupling event handlers to the overlay tree.
-	 */
-	hitTest?: (args: {
-		model: RenderModel
-		projection: Projection1D<Px>
-		ui: UiState
-		env: TimelineHostEnv
-		xPx: Px
-		yPx: Px
-	}) => Action | null
-}>
+export type TimelineRendererCore<Data, State, Action, RenderModel = unknown> = Readonly<{
+  kind: string;
+  buildModel: (args: {
+    data: Data;
+    projection: ProjectionContext;
+    state: State;
+    env: TimelineEnv;
+  }) => RenderModel;
+  drawCanvas?: (args: {
+    ctx: CanvasRenderingContext2D;
+    model: RenderModel;
+    projection: ProjectionContext;
+    state: State;
+    env: TimelineEnv;
+  }) => void;
+  /**
+   * Optional pure hit-testing. If provided, the UI host can implement pointer handling
+   * without coupling event handlers to the overlay tree.
+   */
+  hitTest?: (args: {
+    model: RenderModel;
+    projection: ProjectionContext;
+    state: State;
+    env: TimelineEnv;
+    x: Px.Px;
+    y: Px.Px;
+  }) => Action | null;
+}>;
