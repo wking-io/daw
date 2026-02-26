@@ -42,6 +42,7 @@
     "./lib/sec": "./src/lib/sec.ts",
     "./lib/ruler": "./src/lib/ruler.ts",
     "./lib/time-signature": "./src/lib/time-signature.ts",
+    "./utils/shallow-equal": "./src/utils/shallow-equal.ts",
     "./lib/spatial-index": "./src/lib/spatial-index.ts",
     "./domain/project-view": "./src/domain/project-view.ts"
   },

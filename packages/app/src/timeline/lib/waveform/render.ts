@@ -1,5 +1,6 @@
 import type { ClipProjection } from "@daw/core/lib/clip-projection";
 import * as Projection from "@daw/core/lib/projection";
+import * as Span from "@daw/core/lib/span";
 import { PEAKS_PER_BIN } from "./bin";
 
 export function drawWaveform(
@@ -19,9 +20,9 @@ export function drawWaveform(
   const centerY = canvasH / 2;
   ctx.fillStyle = color;
 
-  const scale = Projection.scaleFor(totalPeaks, projection.clipWidth);
+  const scale = Projection.scaleFor(totalPeaks, projection.width);
 
-  if (totalPeaks <= projection.clipWidth) {
+  if (totalPeaks <= projection.width) {
     // Fewer peaks than clip pixels: spread across clip width
     let peakIdx = 0;
     for (const bin of bins) {
@@ -31,10 +32,10 @@ export function drawWaveform(
         peakIdx++;
 
         // Skip peaks entirely outside the visible window
-        if (clipXEnd < projection.visibleLeft || clipX > projection.visibleRight) continue;
+        if (clipXEnd < projection.view.start || clipX > Span.end(projection.view)) continue;
 
         const magnitude = (bin[i]! / 255) * centerY;
-        const x = clipX - projection.visibleLeft;
+        const x = clipX - projection.view.start;
         ctx.fillRect(x, centerY - magnitude, Math.max(1, scale), magnitude * 2);
       }
     }
@@ -42,8 +43,8 @@ export function drawWaveform(
     // More peaks than clip pixels: downsample (take max per pixel column)
     // Only iterate over the visible pixel columns
     const peaksPerPixel = 1 / scale;
-    const startPx = Math.max(0, Math.floor(projection.visibleLeft));
-    const endPx = Math.min(Math.ceil(projection.clipWidth), Math.ceil(projection.visibleRight));
+    const startPx = Math.max(0, Math.floor(projection.view.start));
+    const endPx = Math.min(Math.ceil(projection.width), Math.ceil(Span.end(projection.view)));
 
     for (let clipPx = startPx; clipPx < endPx; clipPx++) {
       const peakStart = Math.floor(clipPx * peaksPerPixel);
@@ -61,7 +62,7 @@ export function drawWaveform(
       }
 
       const magnitude = (max / 255) * centerY;
-      const x = clipPx - projection.visibleLeft;
+      const x = clipPx - projection.view.start;
       ctx.fillRect(x, centerY - magnitude, 1, magnitude * 2);
     }
   }

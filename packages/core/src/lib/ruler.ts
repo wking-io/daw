@@ -111,11 +111,7 @@ export function formatPositionFull(pos: number, beat: QN.QN, bar: QN.QN): string
   return `${b}.${bt}.${s}`;
 }
 
-function positionParts(
-  pos: number,
-  beat: QN.QN,
-  bar: QN.QN,
-): { b: number; bt: number; s: number } {
+function positionParts(pos: number, beat: QN.QN, bar: QN.QN): { b: number; bt: number; s: number } {
   const sixteenthsPerBeat = Math.round(beat / SIXTEENTH);
   const sixteenthsPerBar = Math.round(bar / SIXTEENTH);
   const total = Math.round(pos / SIXTEENTH);

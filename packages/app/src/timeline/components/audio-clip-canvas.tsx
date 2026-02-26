@@ -1,5 +1,6 @@
 import type { Handle } from "@remix-run/component";
 import type { ClipProjection } from "@daw/core/lib/clip-projection";
+import { shallowEqual } from "@daw/core/utils/shallow-equal";
 import { prepareCanvas } from "../utils/prepare-canvas";
 import { getPeakCache, drawWaveform } from "../lib/waveform";
 import * as Sec from "@daw/core/lib/sec";
@@ -14,10 +15,11 @@ export function AudioClipCanvas(handle: Handle) {
     duration: NaN,
     isSelected: false,
     color: "",
-    clipWidth: NaN,
-    visibleLeft: NaN,
-    visibleWidth: NaN,
     cssH: 0,
+    scale: NaN,
+    width: NaN,
+    start: NaN,
+    size: NaN,
   };
 
   handle.on(cache, {
@@ -45,34 +47,24 @@ export function AudioClipCanvas(handle: Handle) {
     handle.queueTask(() => {
       if (!canvasEl) return;
 
-      const cssW = props.projection.visibleWidth;
+      const cssW = props.projection.view.size;
       const cssH = canvasEl.parentElement?.clientHeight ?? 0;
       if (cssW === 0 || cssH === 0) return;
 
-      // Skip redraw if nothing changed
-      if (
-        prev.audioFileId === props.audioFileId &&
-        prev.offset === props.offset &&
-        prev.duration === props.duration &&
-        prev.isSelected === props.isSelected &&
-        prev.color === (props.color ?? "") &&
-        prev.clipWidth === props.projection.clipWidth &&
-        prev.visibleLeft === props.projection.visibleLeft &&
-        prev.visibleWidth === props.projection.visibleWidth &&
-        prev.cssH === cssH
-      )
-        return;
-      prev = {
+      const next = {
         audioFileId: props.audioFileId,
         offset: props.offset,
         duration: props.duration,
         isSelected: props.isSelected,
         color: props.color ?? "",
-        clipWidth: props.projection.clipWidth,
-        visibleLeft: props.projection.visibleLeft,
-        visibleWidth: props.projection.visibleWidth,
         cssH,
+        scale: props.projection.scale,
+        width: props.projection.width,
+        ...props.projection.view,
       };
+
+      if (shallowEqual(prev, next)) return;
+      prev = next;
 
       const ctx = prepareCanvas({ canvas: canvasEl, cssW, cssH, dpr });
       if (!ctx) return;
@@ -96,7 +88,7 @@ export function AudioClipCanvas(handle: Handle) {
           canvasEl = node;
         }}
         class="block h-full clip-vars"
-        style={{ width: `${props.projection.visibleWidth}px` }}
+        style={{ width: `${props.projection.view.size}px` }}
       />
     );
   };

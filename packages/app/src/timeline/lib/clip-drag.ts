@@ -352,4 +352,3 @@ function cancel(state: DragState): TransitionResult {
   }
   return { state: idle, effects };
 }
-

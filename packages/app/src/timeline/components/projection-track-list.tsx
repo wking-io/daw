@@ -173,14 +173,12 @@ export function ProjectionTrackList(handle: Handle) {
                     {isMidiPayload(clip.payload) && (
                       <MidiClipCanvas
                         notes={getNotes(data.view, clip.payload)}
-                        clipSize={clip.span.size}
                         isSelected={state.selectedClipId === clip.id}
                         color={color}
                         projection={ClipProjection.make(
                           Crop.make(clip.span.size, clip.span.size, QN.zero),
                           width,
-                          x,
-                          visible.size,
+                          Span.make(x, visible.size),
                         )}
                         offset={clip.offset}
                       />
@@ -195,8 +193,7 @@ export function ProjectionTrackList(handle: Handle) {
                         projection={ClipProjection.make(
                           Crop.make(clip.payload.length, clip.span.size, clip.offset),
                           width,
-                          x,
-                          visible.size,
+                          Span.make(x, visible.size),
                         )}
                       />
                     )}
@@ -238,14 +235,12 @@ export function ProjectionTrackList(handle: Handle) {
                       {isMidiPayload(clip.payload) && (
                         <MidiClipCanvas
                           notes={getNotes(data.view, clip.payload)}
-                          clipSize={clip.span.size}
                           isSelected={true}
                           color={ghost.color}
                           projection={ClipProjection.make(
                             Crop.make(clip.span.size, clip.span.size, QN.zero),
                             ghost.width,
-                            Px.zero,
-                            ghost.width,
+                            Span.make(Px.zero, ghost.width),
                           )}
                           offset={clip.offset}
                         />
@@ -263,8 +258,7 @@ export function ProjectionTrackList(handle: Handle) {
                               projection={ClipProjection.make(
                                 Crop.make(src, clip.span.size, clip.offset),
                                 ghost.width,
-                                Px.zero,
-                                ghost.width,
+                                Span.make(Px.zero, ghost.width),
                               )}
                             />
                           );
@@ -328,14 +322,12 @@ export function ProjectionTrackList(handle: Handle) {
                         {isMidiPayload(clip.payload) && (
                           <MidiClipCanvas
                             notes={getNotes(data.view, clip.payload)}
-                            clipSize={clip.payload.length}
                             isSelected={false}
                             color={ghost.color}
                             projection={ClipProjection.make(
                               Crop.make(clip.payload.length, clip.payload.length, QN.zero),
                               sourceWidth,
-                              Px.zero,
-                              sourceWidth,
+                              Span.make(Px.zero, sourceWidth),
                             )}
                             offset={0}
                           />
@@ -350,8 +342,7 @@ export function ProjectionTrackList(handle: Handle) {
                             projection={ClipProjection.make(
                               Crop.make(clip.payload.length, clip.payload.length, QN.zero),
                               sourceWidth,
-                              Px.zero,
-                              sourceWidth,
+                              Span.make(Px.zero, sourceWidth),
                             )}
                           />
                         )}
@@ -374,14 +365,12 @@ export function ProjectionTrackList(handle: Handle) {
                       {isMidiPayload(clip.payload) && (
                         <MidiClipCanvas
                           notes={getNotes(data.view, clip.payload)}
-                          clipSize={clip.payload.length}
                           isSelected={true}
                           color={ghost.color}
                           projection={ClipProjection.make(
                             Crop.make(clip.payload.length, ghost.span.size, ghostOffset),
                             ghostWidth,
-                            Px.zero,
-                            ghostWidth,
+                            Span.make(Px.zero, ghostWidth),
                           )}
                           offset={0}
                         />
@@ -398,8 +387,7 @@ export function ProjectionTrackList(handle: Handle) {
                               projection={ClipProjection.make(
                                 Crop.make(clip.payload.length, ghost.span.size, ghostOffset),
                                 ghostWidth,
-                                Px.zero,
-                                ghostWidth,
+                                Span.make(Px.zero, ghostWidth),
                               )}
                             />
                           );

@@ -1,8 +1,8 @@
 // projection.ts
 import * as N from "./numeric";
 
-export function scaleFor<A extends number, B extends number>(size: A, width: B): number {
-  return width / size;
+export function scaleFor<A extends number, B extends number>(source: A, width: B): number {
+  return width / source;
 }
 
 const toScale = <A extends number, B extends number>(value: A, scale: number): B =>

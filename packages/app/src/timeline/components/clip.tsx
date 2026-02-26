@@ -1,4 +1,4 @@
-import type { Handle, Props } from "@remix-run/component";
+import type { Props } from "@remix-run/component";
 import { cn } from "@daw/utils";
 import * as Px from "@daw/core/lib/px";
 import type { TrackColor } from "../renderers/timeline/types";
@@ -12,7 +12,7 @@ export interface ClipProps extends Props<"div"> {
   isSelected: boolean;
 }
 
-export function Clip(_handle: Handle) {
+export function Clip() {
   return (props: ClipProps) => {
     const { x, y, width, height, color, isSelected, children, ...rest } = props;
     const themeClass = `theme-${color}`;

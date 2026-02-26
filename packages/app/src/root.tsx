@@ -14,16 +14,6 @@ import { cn } from "@daw/utils";
 import { Button } from "./components/button";
 import { TimelineRoot } from "./timeline/components/timeline-root";
 import type { TransportState } from "./timeline/components/timeline-root";
-import {
-  NavigatorCanvas,
-  NavigatorTrack,
-  PlayheadLine,
-  ProjectionCanvas,
-  ProjectionContent,
-  ProjectionTrackList,
-  RulerCanvas,
-  ZoomWindow,
-} from "./timeline/components";
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
 import { demoProject } from "./timeline/demo/daw-data";
@@ -36,6 +26,14 @@ import * as QN from "@daw/core/lib/qn";
 import * as Sec from "@daw/core/lib/sec";
 import { formatPositionFull, computeBarSize, computeBeatSize } from "@daw/core/lib/ruler";
 import type { UIAction, UIState, TimelineData } from "./timeline/renderers/timeline/types";
+import { NavigatorTrack } from "./timeline/components/navigator-track";
+import { NavigatorCanvas } from "./timeline/components/navigator-canvas";
+import { ZoomWindow } from "./timeline/components/zoom-window";
+import { RulerCanvas } from "./timeline/components/ruler-canvas";
+import { ProjectionContent } from "./timeline/components/projection-content";
+import { ProjectionCanvas } from "./timeline/components/projection-canvas";
+import { ProjectionTrackList } from "./timeline/components/projection-track-list";
+import { PlayheadLine } from "./timeline/components/playhead-line";
 
 type Theme = "light" | "dark";
 
