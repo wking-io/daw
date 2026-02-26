@@ -5,8 +5,8 @@ import * as Span from "../span";
 
 describe("timeline/lib/projection", () => {
   it("scaleFor maps view width to viewport width", () => {
-    const view = Span.make(Px.Numeric, 10, 10); // width 10
-    const scale = Projection.scaleFor(Px.Numeric, view.size, Px.Px(100)); // => 10px/unit
+    const view = Span.make(10, 10); // width 10
+    const scale = Projection.scaleFor(view.size, Px.Px(100)); // => 10px/unit
     expect(scale).toBe(10);
   });
 
@@ -15,10 +15,10 @@ describe("timeline/lib/projection", () => {
     const scale = 2;
     const at = Px.Px(17);
 
-    const px = Projection.toScreen(Px.Numeric, from, at, scale);
+    const px = Projection.to(from, at, scale);
     expect(px).toBe(Px.Px(14));
 
-    const roundTrip = Projection.fromScreen(Px.Numeric, from, px, scale);
+    const roundTrip = Projection.from(from, px, scale);
     expect(roundTrip).toBe(at);
   });
 });

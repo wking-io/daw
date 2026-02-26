@@ -1,15 +1,20 @@
 // projection.ts
-import type { Numeric } from "./numeric";
-import * as Px from "./px";
+import * as N from "./numeric";
 
-export function scaleFor<A extends number>(N: Numeric<A>, size: A, width: Px.Px): number {
-  return N.make(width / size);
+export function scaleFor<A extends number, B extends number>(size: A, width: B): number {
+  return width / size;
 }
 
-export function toScreen<A extends number>(N: Numeric<A>, from: A, at: A, scale: number): Px.Px {
-  return Px.Px(N.subtract(at, from) * scale);
+const toScale = <A extends number, B extends number>(value: A, scale: number): B =>
+  (value * scale) as B;
+
+const fromScale = <A extends number, B extends number>(value: B, scale: number): A =>
+  (value / scale) as A;
+
+export function to<A extends number, B extends number>(from: A, at: A, scale: number): B {
+  return toScale(N.subtract(at, from), scale);
 }
 
-export function fromScreen<A extends number>(N: Numeric<A>, from: A, at: Px.Px, scale: number): A {
-  return N.make(from + at / scale);
+export function from<A extends number, B extends number>(from: A, at: B, scale: number): A {
+  return N.add(from, fromScale(at, scale));
 }
