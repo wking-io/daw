@@ -1,90 +1,134 @@
-import type { Handle, RemixNode } from "@remix-run/component";
-import { cn } from "@daw/utils";
-
-import { makeProjection1D } from "../foundation/projection1d";
-import type { Projection1D } from "../foundation/projection1d";
+import type { Handle, Props } from "@remix-run/component";
 import * as Projection from "@daw/core/lib/projection";
+import * as N from "@daw/core/lib/numeric";
 import * as Px from "@daw/core/lib/px";
 import * as QN from "@daw/core/lib/qn";
 import * as Scroll from "@daw/core/lib/scroll";
 import * as Timeline from "@daw/core/lib/timeline";
-import { getPointerPosition } from "../utils/get-pointer-position";
 import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
+import { cn } from "@daw/utils";
+import { ProjectionContext, type ProjectionRules } from "../lib/projection-context";
+import { zoomFactorFromDelta } from "../utils/interaction-math";
 
-const DEFAULT_HEIGHT = 240;
-
-export type ProjectionRootContext = {
-  size: { width: number; height: number };
-  scale: number;
-  projection: Projection1D<QN.QN>;
-  height: number;
-  getPointerPosition: (e: PointerEvent) => { x: number; y: number };
+const timelineRules: ProjectionRules = {
+  scale: (ctx) => {
+    if (ctx.containerWidth === 0) return 1;
+    return Projection.scaleFor(ctx.timeline.view.size, ctx.containerWidth);
+  },
+  origin: (ctx) => ctx.timeline.view.start,
 };
 
-export function ProjectionRoot(handle: Handle<ProjectionRootContext>) {
+export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   const rootCtx: TimelineRootContext = handle.context.get(TimelineRoot);
-  let containerEl: HTMLDivElement | null = null;
-  let size = { width: 0, height: 0 };
+
+  const projectionCtx: ProjectionContext = new ProjectionContext(
+    () => rootCtx.timeline,
+    timelineRules,
+  );
+  handle.context.set(projectionCtx);
+
+  // TODO: Make this more robust
+  const isMac = navigator.platform.startsWith("Mac");
+
+  let containerNode: HTMLElement | null = null;
   let suppressScrollEvents = false;
 
-  function getScale() {
-    if (size.width === 0) return 1;
-    return Projection.scaleFor(QN.Numeric, rootCtx.timeline.view.size, Px.Px(size.width));
+  let zoomAnchor: QN.QN | null = null;
+  let zoomTimeout = 0;
+
+  // TODO: Make this a generic helper for checking super key
+  function isZoomModifier(e: WheelEvent) {
+    // ctrlKey covers trackpad pinch (all platforms) and Ctrl+wheel (Windows/Linux)
+    // metaKey covers Cmd+wheel (macOS)
+    return e.ctrlKey || (isMac && e.metaKey);
   }
 
-  function onScroll() {
-    if (suppressScrollEvents || !containerEl) return;
+  // TODO: Extract individual event paths as helpers
+  function onWheel(e: WheelEvent) {
+    if (!containerNode) return;
 
-    const scale = getScale();
-    const nextStart = Scroll.fromScroll(QN.Numeric, Px.Px(containerEl.scrollLeft), scale);
+    e.preventDefault();
+
+    if (isZoomModifier(e)) {
+      // Trackpad pinch / Ctrl+wheel / Cmd+wheel → zoom at pointer
+      if (zoomAnchor === null) {
+        const rect = containerNode.getBoundingClientRect();
+        const pointerX = Px.Px(e.clientX - rect.left);
+        zoomAnchor = projectionCtx.screenToContentX(pointerX);
+      }
+
+      clearTimeout(zoomTimeout);
+      zoomTimeout = window.setTimeout(() => {
+        zoomAnchor = null;
+      }, 120);
+
+      const factor = zoomFactorFromDelta(e.deltaY, rootCtx.timeline.view.size);
+      const nextTimeline = Timeline.zoomAt(rootCtx.timeline, factor, zoomAnchor);
+      rootCtx.setTimeline(nextTimeline);
+      rootCtx.transport.disableFollow();
+    } else if (e.shiftKey) {
+      // Shift+wheel → horizontal scroll only
+      // Use whichever axis carries the delta (browsers may or may not swap axes)
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      containerNode.scrollLeft += delta;
+      rootCtx.transport.disableFollow();
+    } else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      // Dominant horizontal delta (tilt wheel, trackpad horizontal swipe) → horizontal scroll
+      containerNode.scrollLeft += e.deltaX;
+      rootCtx.transport.disableFollow();
+    } else {
+      // Dominant vertical delta → vertical scroll only
+      let el = e.target as HTMLElement | null;
+      while (el && el !== containerNode) {
+        if (el.scrollHeight > el.clientHeight) {
+          el.scrollTop += e.deltaY;
+          return;
+        }
+        el = el.parentElement;
+      }
+    }
+  }
+
+  function onScroll(e: Event) {
+    if (
+      suppressScrollEvents ||
+      rootCtx.isInteracting ||
+      e.currentTarget instanceof HTMLElement === false
+    ) {
+      return;
+    }
+
+    const nextStart = Scroll.fromScroll<QN.QN, Px.Px>(
+      Px.Px(e.currentTarget.scrollLeft),
+      projectionCtx.scale,
+    );
 
     const nextTimeline = Timeline.panBy(
-      QN.Numeric,
       rootCtx.timeline,
-      QN.subtract(nextStart, rootCtx.timeline.view.start),
+      N.subtract(nextStart, rootCtx.timeline.view.start),
     );
 
     rootCtx.setTimeline(nextTimeline);
+    rootCtx.transport.disableFollow();
   }
 
-  handle.context.set({
-    get size() {
-      return size;
-    },
-    get scale() {
-      return getScale();
-    },
-    get projection() {
-      return makeProjection1D({
-        N: QN.Numeric,
-        timeline: rootCtx.timeline,
-        viewportWidthPx: Px.Px(size.width || 1),
-      });
-    },
-    get height() {
-      return size.height;
-    },
-    getPointerPosition(e: PointerEvent) {
-      return getPointerPosition(e, containerEl);
-    },
-  });
-
-  return (props: { children?: RemixNode; height?: number; class?: string }) => {
-    const h = props.height ?? DEFAULT_HEIGHT;
-    const scale = getScale();
-    const contentWidth = Scroll.width(QN.Numeric, rootCtx.timeline.size, scale);
+  return ({ class: classes, children, ...props }: Props<"div">) => {
+    projectionCtx.notifyChange();
 
     // State → DOM: sync scroll position after render
     handle.queueTask(() => {
-      if (!containerEl || rootCtx.isInteracting) return;
+      if (!containerNode || rootCtx.isInteracting) return;
 
-      const nextScrollLeft = Scroll.toScroll(QN.Numeric, rootCtx.timeline.view.start, scale);
+      const nextScrollLeft = Scroll.toScroll<QN.QN, Px.Px>(
+        rootCtx.timeline.view.start,
+        projectionCtx.scale,
+      );
 
-      if (Math.abs(containerEl.scrollLeft - nextScrollLeft) < 0.5) return;
+      if (Math.abs(containerNode.scrollLeft - nextScrollLeft) < 0.5) return;
 
       suppressScrollEvents = true;
-      containerEl.scrollLeft = nextScrollLeft;
+      containerNode.scrollLeft = nextScrollLeft;
       requestAnimationFrame(() => {
         suppressScrollEvents = false;
       });
@@ -92,41 +136,32 @@ export function ProjectionRoot(handle: Handle<ProjectionRootContext>) {
 
     return (
       <div
-        connect={(node: HTMLDivElement, signal: AbortSignal) => {
-          containerEl = node;
+        connect={(node, signal) => {
+          containerNode = node;
+          projectionCtx.setContainer(node);
+
           const observer = new ResizeObserver((entries) => {
             const entry = entries[0];
             if (entry) {
-              size = {
-                width: Math.round(entry.contentRect.width),
-                height: Math.round(entry.contentRect.height),
-              };
+              projectionCtx.setContainerWidth(Px.Px(Math.round(entry.contentRect.width)));
               handle.update();
             }
           });
           observer.observe(node);
           signal.addEventListener("abort", () => observer.disconnect());
-
-          node.addEventListener("scroll", onScroll, { signal });
         }}
-        class={cn("no-scrollbar relative overflow-x-auto overflow-y-hidden", props.class)}
-        style={{
-          height: `${h}px`,
-          overscrollBehaviorX: "none",
+        on={{
+          scroll: onScroll,
+          wheel: { listener: onWheel, passive: false },
         }}
+        class={cn(
+          "no-scrollbar relative overflow-x-auto overflow-y-hidden overscroll-x-none",
+          classes,
+        )}
+        {...props}
       >
-        {/* Spacer defines scroll range */}
-        <div class="h-0" style={{ width: `${Math.max(1, contentWidth)}px` }} />
-        {/* Content container */}
-        <div
-          class="pointer-events-none sticky top-0 left-0"
-          style={{
-            width: size.width ? `${size.width}px` : "100%",
-            height: `${h}px`,
-          }}
-        >
-          {props.children}
-        </div>
+        <div class="h-0" style={{ width: `${Math.max(1, projectionCtx.contentWidth)}px` }} />
+        {children}
       </div>
     );
   };
