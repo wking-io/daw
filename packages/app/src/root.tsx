@@ -13,20 +13,27 @@ import { AddIcon, CloseIcon, HomeIcon, StatusIcon } from "@daw/ui/icons";
 import { cn } from "@daw/utils";
 import { Button } from "./components/button";
 import { TimelineRoot } from "./timeline/components/timeline-root";
-import {
-  InsetPanel,
-  NavigatorCanvas,
-  NavigatorDom,
-  NavigatorTrack,
-  ProjectionCanvas,
-  ProjectionDom,
-  ZoomWindow,
-} from "./timeline/components";
+import type { TransportState } from "./timeline/components/timeline-root";
 import { NavigatorRoot } from "./timeline/components/navigator-root";
 import { ProjectionRoot } from "./timeline/components/projection-root";
-import { DawSkeletonSceneRenderer } from "./timeline/renderers/daw-skeleton/scene";
-import { demoDawData } from "./timeline/demo/daw-data";
-import type { DawAction, DawUiState } from "./timeline/renderers/daw-skeleton/types";
+import { demoProject } from "./timeline/demo/daw-data";
+import * as ProjectView from "@daw/core/domain/project-view";
+import * as Clip from "@daw/core/domain/clip";
+import * as SI from "@daw/core/lib/spatial-index";
+import * as Span from "@daw/core/lib/span";
+import * as N from "@daw/core/lib/numeric";
+import * as QN from "@daw/core/lib/qn";
+import * as Sec from "@daw/core/lib/sec";
+import { formatPositionFull, computeBarSize, computeBeatSize } from "@daw/core/lib/ruler";
+import type { UIAction, UIState, TimelineData } from "./timeline/renderers/timeline/types";
+import { NavigatorTrack } from "./timeline/components/navigator-track";
+import { NavigatorCanvas } from "./timeline/components/navigator-canvas";
+import { ZoomWindow } from "./timeline/components/zoom-window";
+import { RulerCanvas } from "./timeline/components/ruler-canvas";
+import { ProjectionContent } from "./timeline/components/projection-content";
+import { ProjectionCanvas } from "./timeline/components/projection-canvas";
+import { ProjectionTrackList } from "./timeline/components/projection-track-list";
+import { PlayheadLine } from "./timeline/components/playhead-line";
 
 type Theme = "light" | "dark";
 
@@ -57,13 +64,11 @@ export function Root(handle: Handle<{ theme: Theme }>) {
   });
 
   return () => (
-    <div class="flex-1">
-      <RegistryProvider>
-        <ControlPanel.Root>
-          <App />
-        </ControlPanel.Root>
-      </RegistryProvider>
-    </div>
+    <RegistryProvider>
+      <ControlPanel.Root>
+        <App />
+      </ControlPanel.Root>
+    </RegistryProvider>
   );
 }
 
@@ -107,12 +112,151 @@ function MainApp(handle: Handle) {
   const [getTabs, setTabs] = getAtom(handle, tabsAtom);
   let selectedClipId: string | null = null;
 
-  const handleDawAction = (action: DawAction) => {
+  // Build view once from demo data
+  const demoView = ProjectView.fromProject(demoProject);
+
+  // ---------------------------------------------------------------------------
+  // Transport state
+  // ---------------------------------------------------------------------------
+  const bpm = demoProject.bpm;
+  let playing = false;
+  let playheadPos: QN.QN = QN.zero;
+  let followEnabled = true;
+  let rafId = 0;
+  let playStartWallTime = 0;
+  let playStartQN: QN.QN = QN.zero;
+
+  function tick() {
+    if (!playing) return;
+    const elapsedMs = performance.now() - playStartWallTime;
+    const elapsedSec = Sec.Sec(elapsedMs / 1000);
+    const elapsedQN = Sec.toQN(elapsedSec, bpm);
+    playheadPos = N.add(playStartQN, elapsedQN);
+    handle.update();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  const transport: TransportState = {
+    get isPlaying() {
+      return playing;
+    },
+    get playheadPosition() {
+      return playheadPos;
+    },
+    get follow() {
+      return followEnabled;
+    },
+    get bpm() {
+      return bpm;
+    },
+    setPlayheadPosition(pos: QN.QN) {
+      playheadPos = N.max(pos, QN.zero);
+      if (playing) {
+        // Reset rAF anchor so playback continues from new position
+        playStartWallTime = performance.now();
+        playStartQN = playheadPos;
+      }
+      handle.update();
+    },
+    togglePlay() {
+      playing = !playing;
+      if (playing) {
+        playStartWallTime = performance.now();
+        playStartQN = playheadPos;
+        rafId = requestAnimationFrame(tick);
+      } else {
+        cancelAnimationFrame(rafId);
+      }
+      handle.update();
+    },
+    toggleFollow() {
+      followEnabled = !followEnabled;
+      handle.update();
+    },
+    disableFollow() {
+      if (!followEnabled) return;
+      followEnabled = false;
+      handle.update();
+    },
+  };
+
+  // Space key toggles playback
+  handle.on(document, {
+    keydown: (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        // Don't interfere with input fields
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        transport.togglePlay();
+      }
+    },
+  });
+
+  // Cleanup rAF on unmount
+  handle.signal.addEventListener("abort", () => {
+    cancelAnimationFrame(rafId);
+  });
+
+  const handleUIAction = (action: UIAction) => {
     switch (action.type) {
       case "select-clip":
         selectedClipId = action.clipId;
         handle.update();
         break;
+      case "commit-clip-move": {
+        const clip = demoView.clipById.get(action.clipId);
+        const targetTrack = demoView.trackById.get(action.newTrackId);
+        if (!clip || !targetTrack) break;
+
+        // Resolve overlaps on the target track
+        const delta = N.subtract(action.newStart, clip.span.start);
+        const movedSpan = Span.move(clip.span, delta);
+        const overlappingIds = SI.query(demoView.clipIndex, action.newTrackId, movedSpan);
+        for (const id of overlappingIds) {
+          if (id === action.clipId) continue;
+          const existing = demoView.clipById.get(id);
+          if (!existing) continue;
+          for (const event of Clip.resolveOverlap(existing, movedSpan)) {
+            ProjectView.applyEvent(demoView, event);
+          }
+        }
+
+        // Apply the move (use branded IDs from the view entities)
+        ProjectView.applyEvent(demoView, {
+          t: "clip.moved",
+          clipId: clip.id,
+          start: action.newStart,
+          ...(targetTrack.id !== clip.trackId && { trackId: targetTrack.id }),
+        });
+
+        handle.update();
+        break;
+      }
+      case "commit-clip-resize": {
+        const clip = demoView.clipById.get(action.clipId);
+        if (!clip) break;
+
+        // Resolve overlaps on the same track
+        const overlappingIds = SI.query(demoView.clipIndex, clip.trackId, action.span);
+        for (const id of overlappingIds) {
+          if (id === action.clipId) continue;
+          const existing = demoView.clipById.get(id);
+          if (!existing) continue;
+          for (const event of Clip.resolveOverlap(existing, action.span)) {
+            ProjectView.applyEvent(demoView, event);
+          }
+        }
+
+        ProjectView.applyEvent(demoView, {
+          t: "clip.resized",
+          clipId: clip.id,
+          span: action.span,
+        });
+
+        handle.update();
+        break;
+      }
     }
   };
 
@@ -163,7 +307,8 @@ function MainApp(handle: Handle) {
 
   return () => {
     const { openTabs, activeTabId } = getTabs();
-    const dawUIState: DawUiState = { selectedClipId };
+    const dawUIState: UIState = { selectedClipId };
+    const dawData: TimelineData = { project: demoProject, view: demoView };
 
     return (
       <CreateProjectDialog.Root>
@@ -181,7 +326,7 @@ function MainApp(handle: Handle) {
                   setup={{ activateOnFocus: false }}
                   class={cn(
                     "flex relative bg-layer-1 rounded-sm shadow-recess shadow-foreground/10 dark:shadow-background/40",
-                    "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+                    "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:before:border-background/40",
                   )}
                 >
                   {openTabs.map((t) => (
@@ -214,56 +359,83 @@ function MainApp(handle: Handle) {
                 </div>
               </div>
             </ControlBar.Content>
-            <ControlBar.Content class="ml-auto pr-1 py-1">
-              <ControlPanel.Content class="no-drag" />
+            <ControlBar.Content class="ml-auto pr-1 py-1 no-drag">
+              <div class="flex items-center gap-1.5">
+                <button
+                  on={{ click: () => transport.togglePlay() }}
+                  class={cn(
+                    "px-2 py-0.5 rounded text-[11px] font-medium",
+                    "bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:rounded before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                    "relative",
+                  )}
+                >
+                  {transport.isPlaying ? "Stop" : "Play"}
+                </button>
+                <span class="tabular-nums text-[11px] font-mono text-foreground-muted min-w-[3.5rem] text-center">
+                  {formatPositionFull(
+                    Number(transport.playheadPosition),
+                    computeBeatSize(demoProject.timeSignature),
+                    computeBarSize(demoProject.timeSignature),
+                  )}
+                </span>
+                <button
+                  on={{ click: () => transport.toggleFollow() }}
+                  class={cn(
+                    "px-2 py-0.5 rounded text-[11px] font-medium relative",
+                    "shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:rounded before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                    transport.follow
+                      ? "bg-layer-3 text-foreground"
+                      : "bg-layer-1 text-foreground-muted",
+                  )}
+                >
+                  Follow
+                </button>
+              </div>
             </ControlBar.Content>
           </ControlBar.Root>
 
           {openTabs.map((tab) => (
-            <Tabs.Panel setup={{ value: tab.id }}>
-              <div class="mt-4">
-                <TimelineRoot>
-                  {/* Navigator (minimap) */}
+            <Tabs.Panel setup={{ value: tab.id }} class="flex-1">
+              <TimelineRoot transport={transport} class="h-[50dvh] flex flex-col">
+                <div
+                  class={cn(
+                    "user-select-none relative bg-background shadow-recess shadow-foreground/10 dark:shadow-background/40",
+                    "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40",
+                  )}
+                >
+                  <NavigatorRoot class="relative h-full w-full overflow-hidden">
+                    <NavigatorTrack>
+                      <NavigatorCanvas data={dawData} state={dawUIState} />
+                      <ZoomWindow />
+                    </NavigatorTrack>
+                  </NavigatorRoot>
+                </div>
+
+                <ProjectionRoot class="flex flex-col">
+                  <RulerCanvas timeSignature={dawData.project.timeSignature} class="shrink-0" />
                   <div
                     class={cn(
-                      "user-select-none relative bg-layer-1 shadow-recess shadow-foreground/10 dark:shadow-background/40",
-                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+                      "sticky left-0 user-select-none relative bg-background overflow-hidden min-h-0",
+                      "after:absolute after:inset-0 after:shadow-recess after:shadow-foreground/10 dark:after:shadow-background/40 after:pointer-events-none after:z-10",
+                      "before:absolute before:inset-0 before:pointer-events-none before:border-y-[0.5px] before:border-foreground/10 dark:before:border-background/40 before:z-20",
                     )}
                   >
-                    <NavigatorRoot height={26} class="relative h-full w-full overflow-hidden">
-                      <NavigatorTrack>
-                        <NavigatorCanvas
-                          renderer={DawSkeletonSceneRenderer}
-                          data={demoDawData}
-                          ui={dawUIState}
+                    <div data-vertical-scroll class="overflow-y-auto no-scrollbar h-full">
+                      <ProjectionContent data={dawData}>
+                        <ProjectionCanvas data={dawData} state={dawUIState} />
+                        <ProjectionTrackList
+                          data={dawData}
+                          state={dawUIState}
+                          dispatch={handleUIAction}
                         />
-                        <NavigatorDom
-                          renderer={DawSkeletonSceneRenderer}
-                          data={demoDawData}
-                          ui={dawUIState}
-                          dispatch={handleDawAction}
-                        />
-                        <ZoomWindow />
-                      </NavigatorTrack>
-                    </NavigatorRoot>
-
-                    {/* Projection (main view) */}
-                    <ProjectionRoot height={240} class="">
-                      <ProjectionCanvas
-                        renderer={DawSkeletonSceneRenderer}
-                        data={demoDawData}
-                        ui={dawUIState}
-                      />
-                      <ProjectionDom
-                        renderer={DawSkeletonSceneRenderer}
-                        data={demoDawData}
-                        ui={dawUIState}
-                        dispatch={handleDawAction}
-                      />
-                    </ProjectionRoot>
+                        <PlayheadLine />
+                      </ProjectionContent>
+                    </div>
                   </div>
-                </TimelineRoot>
-              </div>
+                </ProjectionRoot>
+              </TimelineRoot>
             </Tabs.Panel>
           ))}
 

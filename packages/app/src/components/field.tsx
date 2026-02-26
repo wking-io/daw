@@ -122,7 +122,7 @@ export function FieldControl(_handle: Handle) {
         class={cn(
           // Wrapper with recess shadow (similar to Button wrapper)
           "relative bg-layer-2 shadow-recess shadow-foreground/10 dark:shadow-background/40 rounded-sm",
-          "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 before:dark:border-background/40",
+          "before:absolute before:inset-0 before:rounded-sm before:pointer-events-none before:border-[0.5px] before:border-foreground/10 dark:befeore:border-background/40",
           // Focus ring
         )}
       >

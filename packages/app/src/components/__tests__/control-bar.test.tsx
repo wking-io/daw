@@ -4,7 +4,7 @@ import { ControlBar } from "../control-bar";
 
 describe("ControlBar", () => {
   describe("Root", () => {
-    it("renders with fixed positioning and correct classes", () => {
+    it("renders with correct classes", () => {
       const container = document.createElement("div");
       const root = createRoot(container);
 
@@ -13,8 +13,9 @@ describe("ControlBar", () => {
 
       const el = container.querySelector("div");
       expect(el).not.toBeNull();
-      expect(el?.classList.contains("fixed")).toBe(true);
-      expect(el?.classList.contains("top-0")).toBe(true);
+      expect(el?.classList.contains("drag-region")).toBe(true);
+      expect(el?.classList.contains("w-full")).toBe(true);
+      expect(el?.classList.contains("flex")).toBe(true);
     });
 
     it("renders children", () => {

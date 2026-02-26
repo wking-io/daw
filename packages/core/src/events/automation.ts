@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { AutomationCurve, AutomationLane, AutomationPoint } from "../domain/automation";
 import * as Ids from "../ids";
-import { QN } from "../ids";
+import * as QN from "../lib/qn";
 
 export const AutomationLaneCreated = Schema.Struct({
   t: Schema.Literal("automation.laneCreated"),
@@ -33,7 +33,7 @@ export const AutomationPointMoved = Schema.Struct({
   t: Schema.Literal("automation.pointMoved"),
   laneId: Ids.AutomationLaneId,
   pointId: Ids.AutomationPointId,
-  time: Schema.optional(QN),
+  time: Schema.optional(QN.Schema),
   value: Schema.optional(Schema.Number),
 });
 export type AutomationPointMoved = Schema.Schema.Type<typeof AutomationPointMoved>;

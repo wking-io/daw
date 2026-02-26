@@ -15,7 +15,7 @@
     "./domain/automation": "./src/domain/automation.ts",
     "./domain/clip": "./src/domain/clip.ts",
     "./domain/midi": "./src/domain/midi.ts",
-"./domain/track": "./src/domain/track.ts",
+    "./domain/track": "./src/domain/track.ts",
     "./commands/command": "./src/commands/command.ts",
     "./commands/project-ops": "./src/commands/project-ops.ts",
     "./commands/editor-ops": "./src/commands/editor-ops.ts",
@@ -28,6 +28,8 @@
     "./events/project": "./src/events/project.ts",
     "./events/server": "./src/events/server.ts",
     "./events/event-batch": "./src/events/event-batch.ts",
+    "./lib/clip-projection": "./src/lib/clip-projection.ts",
+    "./lib/crop": "./src/lib/crop.ts",
     "./lib/numeric": "./src/lib/numeric.ts",
     "./lib/range": "./src/lib/range.ts",
     "./lib/span": "./src/lib/span.ts",
@@ -37,7 +39,12 @@
     "./lib/scroll": "./src/lib/scroll.ts",
     "./lib/timeline": "./src/lib/timeline.ts",
     "./lib/qn": "./src/lib/qn.ts",
-    "./lib/time-signature": "./src/lib/time-signature.ts"
+    "./lib/sec": "./src/lib/sec.ts",
+    "./lib/ruler": "./src/lib/ruler.ts",
+    "./lib/time-signature": "./src/lib/time-signature.ts",
+    "./utils/shallow-equal": "./src/utils/shallow-equal.ts",
+    "./lib/spatial-index": "./src/lib/spatial-index.ts",
+    "./domain/project-view": "./src/domain/project-view.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

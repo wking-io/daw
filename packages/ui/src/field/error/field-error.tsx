@@ -1,5 +1,9 @@
 import type { Handle, RemixNode } from "@remix-run/component";
-import { FieldRoot, type FieldValidityState, getFieldStateDataAttributes } from "../root/field-root";
+import {
+  FieldRoot,
+  type FieldValidityState,
+  getFieldStateDataAttributes,
+} from "../root/field-root";
 import { generateId } from "../../utils/generate-id";
 
 /**

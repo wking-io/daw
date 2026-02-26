@@ -326,7 +326,39 @@
   --color-foreground: var(--color-oatmeal-12);
   --color-foreground-muted: --alpha(var(--color-foreground) / 65%);
 
+  --color-tick: var(--color-oatmeal-5);
+  --color-gridline-primary: var(--color-oatmeal-5);
+  --color-gridline-secondary: var(--color-oatmeal-4);
+  --color-gridlabel: var(--color-oatmeal-10);
+  --color-zoom-control: var(--color-oatmeal-9);
+  --color-zoom-control-active: var(--color-oatmeal-10);
   --text-xxs: 10px;
+}
+
+:root {
+  --color-plum-primary: var(--color-plum-5);
+  --color-oatmeal-primary: var(--color-oatmeal-5);
+  --color-strawberry-primary: var(--color-strawberry-5);
+  --color-ruby-primary: var(--color-ruby-5);
+  --color-tangerine-primary: var(--color-tangerine-5);
+  --color-ochre-primary: var(--color-ochre-5);
+  --color-honey-primary: var(--color-honey-5);
+  --color-lemon-primary: var(--color-lemon-5);
+  --color-pear-primary: var(--color-pear-5);
+  --color-pistachio-primary: var(--color-pistachio-5);
+  --color-jade-primary: var(--color-jade-5);
+  --color-emerald-primary: var(--color-emerald-5);
+  --color-aqua-primary: var(--color-aqua-5);
+  --color-ocean-primary: var(--color-ocean-5);
+  --color-sky-primary: var(--color-sky-5);
+  --color-cobalt-primary: var(--color-cobalt-5);
+  --color-denim-primary: var(--color-denim-5);
+  --color-iris-primary: var(--color-iris-5);
+  --color-grape-primary: var(--color-grape-5);
+  --color-lilac-primary: var(--color-lilac-5);
+  --color-fuchsia-primary: var(--color-fuchsia-5);
+  --color-blush-primary: var(--color-blush-5);
+  --color-primary-primary: var(--color-primary-5);
 }
 
 .dark {
@@ -337,7 +369,37 @@
   --color-layer-4: var(--color-oatmeal-9);
   --color-foreground: var(--color-oatmeal-0);
   --color-foreground-muted: --alpha(var(--color-foreground) / 70%);
-  --shadow-recess: inset 0 0.5px 2px 1px #000;
+
+  --color-tick: var(--color-oatmeal-3);
+  --color-gridline-primary: var(--color-oatmeal-9);
+  --color-gridline-secondary: var(--color-oatmeal-10);
+  --color-gridlabel: var(--color-oatmeal-1);
+  --color-zoom-control: var(--color-oatmeal-2);
+  --color-zoom-control-active: var(--color-oatmeal-1);
+
+  --color-plum-primary: var(--color-plum-6);
+  --color-oatmeal-primary: var(--color-oatmeal-6);
+  --color-strawberry-primary: var(--color-strawberry-6);
+  --color-ruby-primary: var(--color-ruby-6);
+  --color-tangerine-primary: var(--color-tangerine-6);
+  --color-ochre-primary: var(--color-ochre-6);
+  --color-honey-primary: var(--color-honey-6);
+  --color-lemon-primary: var(--color-lemon-6);
+  --color-pear-primary: var(--color-pear-6);
+  --color-pistachio-primary: var(--color-pistachio-6);
+  --color-jade-primary: var(--color-jade-6);
+  --color-emerald-primary: var(--color-emerald-6);
+  --color-aqua-primary: var(--color-aqua-6);
+  --color-ocean-primary: var(--color-ocean-6);
+  --color-sky-primary: var(--color-sky-6);
+  --color-cobalt-primary: var(--color-cobalt-6);
+  --color-denim-primary: var(--color-denim-6);
+  --color-iris-primary: var(--color-iris-6);
+  --color-grape-primary: var(--color-grape-6);
+  --color-lilac-primary: var(--color-lilac-6);
+  --color-fuchsia-primary: var(--color-fuchsia-6);
+  --color-blush-primary: var(--color-blush-6);
+  --color-primary-primary: var(--color-primary-6);
 }
 
 .theme-strawberry {
@@ -682,7 +744,6 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  padding-top: 32px;
 }
 
 @layer base {

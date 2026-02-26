@@ -29,3 +29,4 @@ Use bun. If a dependency is only used by one package, install it locally; otherw
 
 - Logging: docs/logging-best-practices.md
 - DOM events: docs/dom-event-patterns.md
+- Domain modeling: docs/domain-modeling.md

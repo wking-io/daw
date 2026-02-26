@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { Schema } from "effect";
 import type { AudioFileId, ProjectId } from "../../ids";
+import * as Sec from "../../lib/sec";
 import { AudioFile } from "../audio-file";
 
 describe("AudioFile schema", () => {
@@ -10,7 +11,7 @@ describe("AudioFile schema", () => {
     name: "kick.wav",
     originalPath: "/sounds/kick.wav",
     storedPath: "/stored/kick.wav",
-    durationSec: 0.5,
+    duration: 0.5,
     sampleRate: 44100,
     channels: 2,
   };
@@ -19,6 +20,6 @@ describe("AudioFile schema", () => {
     const decoded = Schema.decodeUnknownSync(AudioFile)(validAudioFile);
     expect(decoded.id).toBe("audio-1" as AudioFileId);
     expect(decoded.name).toBe("kick.wav");
-    expect(decoded.durationSec).toBe(0.5);
+    expect(decoded.duration).toBe(Sec.Sec(0.5));
   });
 });

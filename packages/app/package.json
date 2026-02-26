@@ -15,7 +15,6 @@
     "fmt": "oxfmt"
   },
   "dependencies": {
-    "@base-ui/remix": "file:../base-ui/packages/remix",
     "@daw/atom-remix": "workspace:*",
     "@daw/core": "workspace:*",
     "@daw/form": "workspace:*",
@@ -31,6 +30,7 @@
     "@tailwindcss/vite": "catalog:",
     "@types/bun": "catalog:",
     "happy-dom": "20.4.0",
+    "mediabunny": "1.34.4",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "tailwindcss": "catalog:",

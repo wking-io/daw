@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { Clip, QNSpan } from "../domain/clip";
 import { MidiPattern } from "../domain/midi";
 import * as Ids from "../ids";
-import { QN } from "../ids";
+import * as QN from "../lib/qn";
 
 export const ClipCreated = Schema.Struct({
   t: Schema.Literal("clip.created"),
@@ -20,7 +20,7 @@ export type ClipDeleted = Schema.Schema.Type<typeof ClipDeleted>;
 export const ClipMoved = Schema.Struct({
   t: Schema.Literal("clip.moved"),
   clipId: Ids.ClipId,
-  start: QN,
+  start: QN.Schema,
   trackId: Schema.optional(Ids.TrackId),
 });
 export type ClipMoved = Schema.Schema.Type<typeof ClipMoved>;
@@ -32,19 +32,25 @@ export const ClipResized = Schema.Struct({
 });
 export type ClipResized = Schema.Schema.Type<typeof ClipResized>;
 
-export const ClipLoopChanged = Schema.Struct({
-  t: Schema.Literal("clip.loopChanged"),
+export const ClipLoopSet = Schema.Struct({
+  t: Schema.Literal("clip.loopSet"),
   clipId: Ids.ClipId,
-  enabled: Schema.Boolean,
-  length: QN,
+  loop: QNSpan,
 });
-export type ClipLoopChanged = Schema.Schema.Type<typeof ClipLoopChanged>;
+export type ClipLoopSet = Schema.Schema.Type<typeof ClipLoopSet>;
+
+export const ClipLoopRemoved = Schema.Struct({
+  t: Schema.Literal("clip.loopRemoved"),
+  clipId: Ids.ClipId,
+});
+export type ClipLoopRemoved = Schema.Schema.Type<typeof ClipLoopRemoved>;
 
 export const ClipEvent = Schema.Union(
   ClipCreated,
   ClipDeleted,
   ClipMoved,
   ClipResized,
-  ClipLoopChanged,
+  ClipLoopSet,
+  ClipLoopRemoved,
 );
 export type ClipEvent = Schema.Schema.Type<typeof ClipEvent>;
