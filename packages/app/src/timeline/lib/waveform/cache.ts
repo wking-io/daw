@@ -1,17 +1,31 @@
+import type { PeakBin } from "./bin";
 import { decodeAudio } from "./decode";
 import { binPeaks, synthesizeBins, BIN_DURATION_SEC } from "./bin";
+import { buildMipPyramid } from "./mip";
 import { PeakStore } from "./store";
 import * as Sec from "@daw/core/lib/sec";
 import * as N from "@daw/core/lib/numeric";
 
+type CachedPyramid = {
+  levels: PeakBin[][];
+  depth: number;
+};
+
 export class PeakCache extends EventTarget {
   private store = new PeakStore();
-  private memory = new Map<string, Uint8Array[]>();
+  private memory = new Map<string, CachedPyramid>();
   private pending = new Set<string>();
 
-  /** Get peaks for a time range. Returns null if not yet loaded (triggers async load). */
-  getPeaks(audioFileId: string, start: Sec.Sec, end: Sec.Sec): Uint8Array[] | null {
-    const bins = this.memory.get(audioFileId);
+  /**
+   * Get peaks for a time range at a specific mip level.
+   * Returns null if not yet loaded. Level 0 = base resolution.
+   */
+  getPeaks(audioFileId: string, start: Sec.Sec, end: Sec.Sec, level: number = 0): PeakBin[] | null {
+    const pyramid = this.memory.get(audioFileId);
+    if (!pyramid) return null;
+
+    const clampedLevel = Math.min(level, pyramid.depth - 1);
+    const bins = pyramid.levels[clampedLevel];
     if (!bins) return null;
 
     const startBin = N.floor(N.divide(start, BIN_DURATION_SEC));
@@ -20,21 +34,26 @@ export class PeakCache extends EventTarget {
     return bins.slice(startBin, endBin);
   }
 
-  /** Request decode + bin for an audio file. Emits "load" when ready. */
+  /** Get the number of mip levels for an audio file, or 0 if not loaded. */
+  getMipDepth(audioFileId: string): number {
+    return this.memory.get(audioFileId)?.depth ?? 0;
+  }
+
+  /** Request decode + bin + pyramid for an audio file. Emits "load" when ready. */
   async prepare(audioFileId: string, source: string | ArrayBuffer): Promise<void> {
     if (this.memory.has(audioFileId) || this.pending.has(audioFileId)) return;
     this.pending.add(audioFileId);
 
     try {
-      // Check IndexedDB first
       const inDb = await this.store.hasBins(audioFileId);
       if (inDb) {
         await this.loadFromStore(audioFileId);
       } else {
         const { pcm, sampleRate } = await decodeAudio(source);
-        const bins = binPeaks(pcm, sampleRate);
-        await this.store.putBins(audioFileId, bins);
-        this.memory.set(audioFileId, bins);
+        const baseBins = binPeaks(pcm, sampleRate);
+        const levels = buildMipPyramid(baseBins);
+        await this.store.putPyramid(audioFileId, levels);
+        this.memory.set(audioFileId, { levels, depth: levels.length });
       }
 
       this.dispatchEvent(new CustomEvent("load", { detail: audioFileId }));
@@ -46,11 +65,15 @@ export class PeakCache extends EventTarget {
   /** Generate synthetic peaks for an audio file (used when source is unavailable). */
   prepareSynthetic(audioFileId: string, duration: Sec.Sec): void {
     const existing = this.memory.get(audioFileId);
-    if (existing && existing.length >= N.ceil(N.divide(duration, BIN_DURATION_SEC))) return;
-    this.memory.set(audioFileId, synthesizeBins(audioFileId, duration));
+    const neededBins = N.ceil(N.divide(duration, BIN_DURATION_SEC));
+    if (existing && existing.levels[0]!.length >= neededBins) return;
+
+    const baseBins = synthesizeBins(audioFileId, duration);
+    const levels = buildMipPyramid(baseBins);
+    this.memory.set(audioFileId, { levels, depth: levels.length });
   }
 
-  /** Release cached bins for an audio file (call when clip is culled). */
+  /** Release cached pyramid for an audio file. */
   release(audioFileId: string): void {
     this.memory.delete(audioFileId);
   }
@@ -63,14 +86,19 @@ export class PeakCache extends EventTarget {
   }
 
   private async loadFromStore(audioFileId: string): Promise<void> {
-    const bins: Uint8Array[] = [];
-    let i = 0;
-    while (true) {
-      const bin = await this.store.getBin(audioFileId, i);
-      if (!bin) break;
-      bins.push(bin);
-      i++;
+    const meta = await this.store.getMeta(audioFileId);
+    if (!meta) return;
+
+    const levels: PeakBin[][] = [];
+    for (let level = 0; level < meta.depth; level++) {
+      const bins: PeakBin[] = [];
+      for (let i = 0; i < meta.binCounts[level]!; i++) {
+        const bin = await this.store.getBin(audioFileId, level, i);
+        if (bin) bins.push(bin);
+      }
+      levels.push(bins);
     }
-    this.memory.set(audioFileId, bins);
+
+    this.memory.set(audioFileId, { levels, depth: meta.depth });
   }
 }

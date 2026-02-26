@@ -1,8 +1,20 @@
 export { PeakCache } from "./cache";
 export { drawWaveform } from "./render";
-export { binPeaks, PEAKS_PER_SECOND, BIN_DURATION_SEC, PEAKS_PER_BIN } from "./bin";
+export {
+  binPeaks,
+  synthesizeBins,
+  PEAKS_PER_SECOND,
+  BIN_DURATION_SEC,
+  PEAKS_PER_BIN,
+  MIP_REDUCTION,
+  peakMin,
+  peakMax,
+  peakCount,
+  type PeakBin,
+} from "./bin";
 export { PeakStore } from "./store";
 export { decodeAudio } from "./decode";
+export { buildMipPyramid, reduceLevel, selectMipLevel } from "./mip";
 
 import { PeakCache } from "./cache";
 

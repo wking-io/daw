@@ -2,7 +2,8 @@ import type { Handle } from "@remix-run/component";
 import type { ClipProjection } from "@daw/core/lib/clip-projection";
 import { shallowEqual } from "@daw/core/utils/shallow-equal";
 import { prepareCanvas } from "../utils/prepare-canvas";
-import { getPeakCache, drawWaveform } from "../lib/waveform";
+import { getPeakCache, drawWaveform, PEAKS_PER_SECOND } from "../lib/waveform";
+import { selectMipLevel } from "../lib/waveform/mip";
 import * as Sec from "@daw/core/lib/sec";
 import * as N from "@daw/core/lib/numeric";
 
@@ -72,7 +73,12 @@ export function AudioClipCanvas(handle: Handle) {
       // Clear inline height set by prepareCanvas so h-full class controls display size
       canvasEl.style.height = "";
 
-      const bins = cache.getPeaks(props.audioFileId, start, end);
+      const depth = cache.getMipDepth(props.audioFileId);
+      const baseTotalPeaks = Math.ceil(N.multiply(props.duration, PEAKS_PER_SECOND));
+      const peaksPerPixel = baseTotalPeaks / props.projection.width;
+      const level = selectMipLevel(peaksPerPixel, depth);
+
+      const bins = cache.getPeaks(props.audioFileId, start, end, level);
       if (bins) {
         const style = getComputedStyle(canvasEl);
         const colorVar = `--color-clip-fill${props.isSelected ? "-selected" : ""}`;
