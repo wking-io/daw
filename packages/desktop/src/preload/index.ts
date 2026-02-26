@@ -1,4 +1,8 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webFrame } from "electron";
+
+// Disable Electron's built-in pinch-to-zoom so trackpad gestures
+// reach the DOM as wheel events (handled by the timeline).
+webFrame.setVisualZoomLevelLimits(1, 1);
 
 // Expose minimal platform info to renderer
 contextBridge.exposeInMainWorld("electronAPI", {

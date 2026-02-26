@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import { createWriteStream, type WriteStream } from "node:fs";
+import { tmpdir } from "node:os";
 import { BrowserWindow, Menu } from "electron";
 import { setupMenu } from "./menu";
 
@@ -36,6 +38,21 @@ export function createWindow(): BrowserWindow {
       ]).popup();
     });
   }
+
+  // Pipe renderer console.debug to a log file for canvas debugging
+  const logPath = join(tmpdir(), "daw-canvas-debug.log");
+  const logStream: WriteStream = createWriteStream(logPath, { flags: "w" });
+  console.log(`[daw] Canvas debug log: ${logPath}`);
+  mainWindow.webContents.on("console-message", (_event, _level, message) => {
+    if (
+      message.startsWith("[clip-layout]") ||
+      message.startsWith("[midi-canvas]") ||
+      message.startsWith("[audio-canvas]")
+    ) {
+      logStream.write(message + "\n");
+    }
+  });
+  mainWindow.on("closed", () => logStream.end());
 
   // Maximize and show when ready
   mainWindow.on("ready-to-show", () => {
