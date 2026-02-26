@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { TrackType } from "../domain/track";
+import { TrackColor, TrackType } from "../domain/track";
 import { ClipId, TrackId } from "../ids";
 
 export const TrackCreate = Schema.Struct({
@@ -7,7 +7,7 @@ export const TrackCreate = Schema.Struct({
   trackId: TrackId,
   type: TrackType,
   name: Schema.String,
-  color: Schema.optional(Schema.String),
+  color: Schema.optional(TrackColor),
   index: Schema.optional(Schema.Number),
 });
 export type TrackCreate = Schema.Schema.Type<typeof TrackCreate>;
@@ -28,7 +28,7 @@ export type TrackRename = Schema.Schema.Type<typeof TrackRename>;
 export const TrackSetColor = Schema.Struct({
   t: Schema.Literal("track.setColor"),
   trackId: TrackId,
-  color: Schema.String,
+  color: TrackColor,
 });
 export type TrackSetColor = Schema.Schema.Type<typeof TrackSetColor>;
 
@@ -60,6 +60,20 @@ export const TrackSetSolo = Schema.Struct({
 });
 export type TrackSetSolo = Schema.Schema.Type<typeof TrackSetSolo>;
 
+export const TrackSetCompact = Schema.Struct({
+  t: Schema.Literal("track.setCompact"),
+  trackId: TrackId,
+  compact: Schema.Boolean,
+});
+export type TrackSetCompact = Schema.Schema.Type<typeof TrackSetCompact>;
+
+export const TrackSetHeightMultiplier = Schema.Struct({
+  t: Schema.Literal("track.setHeightMultiplier"),
+  trackId: TrackId,
+  heightMultiplier: Schema.Number,
+});
+export type TrackSetHeightMultiplier = Schema.Schema.Type<typeof TrackSetHeightMultiplier>;
+
 export const TrackReorderClips = Schema.Struct({
   t: Schema.Literal("track.reorderClips"),
   trackId: TrackId,
@@ -76,6 +90,8 @@ export const TrackOperation = Schema.Union(
   TrackSetPan,
   TrackSetMute,
   TrackSetSolo,
+  TrackSetCompact,
+  TrackSetHeightMultiplier,
   TrackReorderClips,
 );
 export type TrackOperation = Schema.Schema.Type<typeof TrackOperation>;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Schema } from "effect";
 import type { AutomationLaneId, AutomationPointId, ProjectId, TrackId } from "../../ids";
 import { AutomationLane, AutomationPoint } from "../automation";
-import type { QN } from "../../lib/qn";
+import * as QN from "../../lib/qn";
 
 describe("AutomationLane schema", () => {
   const validLane = {
@@ -23,7 +23,7 @@ describe("AutomationLane schema", () => {
 describe("AutomationPoint schema", () => {
   const validPoint = {
     id: "point-1" as AutomationPointId,
-    timeQN: 0 as QN,
+    time: QN.QN(0),
     value: 0.5,
     curve: "linear" as const,
   };

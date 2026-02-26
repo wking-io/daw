@@ -32,19 +32,25 @@ export const ClipResized = Schema.Struct({
 });
 export type ClipResized = Schema.Schema.Type<typeof ClipResized>;
 
-export const ClipLoopChanged = Schema.Struct({
-  t: Schema.Literal("clip.loopChanged"),
+export const ClipLoopSet = Schema.Struct({
+  t: Schema.Literal("clip.loopSet"),
   clipId: Ids.ClipId,
-  enabled: Schema.Boolean,
-  length: QN.Schema,
+  loop: QNSpan,
 });
-export type ClipLoopChanged = Schema.Schema.Type<typeof ClipLoopChanged>;
+export type ClipLoopSet = Schema.Schema.Type<typeof ClipLoopSet>;
+
+export const ClipLoopRemoved = Schema.Struct({
+  t: Schema.Literal("clip.loopRemoved"),
+  clipId: Ids.ClipId,
+});
+export type ClipLoopRemoved = Schema.Schema.Type<typeof ClipLoopRemoved>;
 
 export const ClipEvent = Schema.Union(
   ClipCreated,
   ClipDeleted,
   ClipMoved,
   ClipResized,
-  ClipLoopChanged,
+  ClipLoopSet,
+  ClipLoopRemoved,
 );
 export type ClipEvent = Schema.Schema.Type<typeof ClipEvent>;
