@@ -1,6 +1,8 @@
 import type { Track } from "@daw/core/domain/track";
 import * as Px from "@daw/core/lib/px";
 
+// TODO: I don't know if this is right. Revisit.
+
 export const TITLE_BAR_HEIGHT = 22;
 export const CONTENT_UNIT_HEIGHT = 22;
 export const COMPACT_VERTICAL_PADDING = 1;
