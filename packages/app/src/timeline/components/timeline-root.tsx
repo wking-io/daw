@@ -4,6 +4,7 @@ import * as N from "@daw/core/lib/numeric";
 import * as Timeline from "@daw/core/lib/timeline";
 import * as Span from "@daw/core/lib/span";
 
+// TODO: I don't like this. Come back and make this whole thing better.
 export type TransportState = Readonly<{
   isPlaying: boolean;
   playheadPosition: QN.QN;
