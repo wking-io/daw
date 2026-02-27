@@ -23,3 +23,4 @@ target
 
 # Local dev files
 *.bun-build
+agents/counselors
