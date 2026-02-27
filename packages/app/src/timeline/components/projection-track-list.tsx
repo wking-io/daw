@@ -137,6 +137,8 @@ export function ProjectionTrackList(handle: Handle) {
                 y={y}
                 height={height}
                 width={visible.size}
+                leftOverflow={x}
+                rightOverflow={N.subtract(width, N.add(x, visible.size))}
                 on={{
                   pointerdown: (e: PointerEvent) => {
                     Option.match(checkResizeEdge(e), {
@@ -169,7 +171,12 @@ export function ProjectionTrackList(handle: Handle) {
                   {resolveClipTitle(clip.payload, data.view)}
                 </ClipHeader>
                 {!clip.compact && (
-                  <ClipContent height={height} isSelected={state.selectedClipId === clip.id}>
+                  <ClipContent
+                    height={height}
+                    isSelected={state.selectedClipId === clip.id}
+                    leftOverflow={x}
+                    rightOverflow={N.subtract(width, N.add(x, visible.size))}
+                  >
                     {isMidiPayload(clip.payload) && (
                       <MidiClipCanvas
                         notes={getNotes(data.view, clip.payload)}
