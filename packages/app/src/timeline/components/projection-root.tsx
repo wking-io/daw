@@ -9,6 +9,7 @@ import { TimelineRoot } from "./timeline-root";
 import type { TimelineRootContext } from "./timeline-root";
 import { cn } from "@daw/utils";
 import { ProjectionContext, type ProjectionRules } from "../lib/projection-context";
+import { ScrollSync } from "../lib/scroll-sync";
 import { zoomFactorFromDelta } from "../utils/interaction-math";
 
 const timelineRules: ProjectionRules = {
@@ -32,7 +33,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   const isMac = navigator.platform.startsWith("Mac");
 
   let containerNode: HTMLElement | null = null;
-  let suppressScrollEvents = false;
+  const scrollSync = new ScrollSync();
 
   let zoomAnchor: QN.QN | null = null;
   let zoomTimeout = 0;
@@ -91,11 +92,9 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
   }
 
   function onScroll(e: Event) {
-    if (
-      suppressScrollEvents ||
-      rootCtx.isInteracting ||
-      e.currentTarget instanceof HTMLElement === false
-    ) {
+    if (scrollSync.isSuppressed()) return;
+
+    if (rootCtx.isInteracting || e.currentTarget instanceof HTMLElement === false) {
       return;
     }
 
@@ -125,13 +124,7 @@ export function ProjectionRoot(handle: Handle<ProjectionContext>) {
         projectionCtx.scale,
       );
 
-      if (Math.abs(containerNode.scrollLeft - nextScrollLeft) < 0.5) return;
-
-      suppressScrollEvents = true;
-      containerNode.scrollLeft = nextScrollLeft;
-      requestAnimationFrame(() => {
-        suppressScrollEvents = false;
-      });
+      scrollSync.writeTo(containerNode, nextScrollLeft);
     });
 
     return (
